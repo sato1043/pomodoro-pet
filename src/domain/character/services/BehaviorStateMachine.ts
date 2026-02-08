@@ -1,0 +1,155 @@
+import type { CharacterStateName } from '../value-objects/CharacterState'
+import { STATE_CONFIGS } from '../value-objects/CharacterState'
+import type { Position3D } from '../value-objects/Position3D'
+
+export type StateTrigger =
+  | { type: 'timeout' }
+  | { type: 'prompt'; action: CharacterStateName }
+  | { type: 'interaction'; kind: 'click' | 'hover' | 'drag_start' | 'drag_end' }
+
+export interface StateTickResult {
+  stateChanged: boolean
+  newState?: CharacterStateName
+  movementDelta?: Position3D
+}
+
+export interface BehaviorStateMachine {
+  readonly currentState: CharacterStateName
+  transition(trigger: StateTrigger): CharacterStateName
+  tick(deltaMs: number): StateTickResult
+  start(): void
+}
+
+// タイムアウト時の遷移先テーブル
+const TIMEOUT_TRANSITIONS: Record<CharacterStateName, CharacterStateName> = {
+  idle: 'wander',
+  wander: 'sit',
+  sit: 'idle',
+  sleep: 'idle',
+  happy: 'idle',
+  reaction: 'idle',
+  dragged: 'dragged' // draggedはタイムアウトしない
+}
+
+function randomRange(min: number, max: number): number {
+  return min + Math.random() * (max - min)
+}
+
+export function createBehaviorStateMachine(): BehaviorStateMachine {
+  let currentState: CharacterStateName = 'idle'
+  let elapsedMs = 0
+  let currentDurationMs = randomDuration(currentState)
+  let wanderTarget: Position3D | null = null
+  let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
+
+  function randomDuration(state: CharacterStateName): number {
+    const config = STATE_CONFIGS[state]
+    return randomRange(config.minDurationMs, config.maxDurationMs)
+  }
+
+  function enterState(state: CharacterStateName): void {
+    currentState = state
+    elapsedMs = 0
+    currentDurationMs = randomDuration(state)
+
+    if (state === 'wander') {
+      pickNewWanderTarget()
+    } else {
+      wanderTarget = null
+    }
+  }
+
+  function pickNewWanderTarget(): void {
+    const angle = Math.random() * Math.PI * 2
+    const dist = 1 + Math.random() * 3
+    wanderTarget = {
+      x: Math.cos(angle) * dist,
+      y: 0,
+      z: Math.sin(angle) * dist
+    }
+    const len = dist
+    wanderDirection = {
+      x: Math.cos(angle) / len,
+      y: 0,
+      z: Math.sin(angle) / len
+    }
+  }
+
+  return {
+    get currentState() { return currentState },
+
+    transition(trigger: StateTrigger): CharacterStateName {
+      switch (trigger.type) {
+        case 'timeout': {
+          const next = TIMEOUT_TRANSITIONS[currentState]
+          enterState(next)
+          return currentState
+        }
+
+        case 'prompt': {
+          // draggedへはプロンプトで遷移できない
+          if (trigger.action === 'dragged') return currentState
+          enterState(trigger.action)
+          return currentState
+        }
+
+        case 'interaction': {
+          if (trigger.kind === 'click') {
+            enterState('reaction')
+            return currentState
+          }
+          if (trigger.kind === 'drag_start') {
+            enterState('dragged')
+            return currentState
+          }
+          if (trigger.kind === 'drag_end') {
+            enterState('idle')
+            return currentState
+          }
+          // hover: 変化なし
+          return currentState
+        }
+      }
+    },
+
+    tick(deltaMs: number): StateTickResult {
+      elapsedMs += deltaMs
+
+      // dragged状態はタイムアウトしない
+      if (currentState === 'dragged') {
+        return { stateChanged: false }
+      }
+
+      // 最大持続時間チェック
+      if (elapsedMs >= currentDurationMs) {
+        const next = TIMEOUT_TRANSITIONS[currentState]
+        enterState(next)
+        return {
+          stateChanged: true,
+          newState: currentState
+        }
+      }
+
+      // wander中は移動量を返す
+      if (currentState === 'wander' && wanderTarget) {
+        const speed = 1.5 // units/sec
+        const moveDist = speed * (deltaMs / 1000)
+        return {
+          stateChanged: false,
+          movementDelta: {
+            x: wanderDirection.x * moveDist,
+            y: 0,
+            z: wanderDirection.z * moveDist
+          }
+        }
+      }
+
+      return { stateChanged: false }
+    },
+
+    start(): void {
+      elapsedMs = 0
+      currentDurationMs = randomDuration(currentState)
+    }
+  }
+}
