@@ -6,8 +6,14 @@ import type { TimerEvent } from '../../../src/domain/timer/events/TimerEvents'
 describe('PomodoroSession', () => {
   let session: PomodoroSession
 
-  // テスト用に短い設定: 作業3秒、休憩2秒
-  const testConfig = createConfig(3000, 2000)
+  // テスト用に短い設定: 作業3秒、休憩2秒、長時間休憩4秒、4セット
+  const testConfig = createConfig(3000, 2000, 4000, 4)
+
+  // セットを1つ消化するヘルパー（work + break）
+  function consumeOneSet(s: PomodoroSession): void {
+    s.tick(3000) // work完了 → break開始
+    s.tick(2000) // break完了 → 次set work開始
+  }
 
   beforeEach(() => {
     session = createPomodoroSession(testConfig)
@@ -138,12 +144,170 @@ describe('PomodoroSession', () => {
   })
 
   describe('completedCycles', () => {
-    it('作業→休憩の1サイクル完了でカウントが増える', () => {
+    it('1セット完了ではサイクルカウントは増えない', () => {
       session.start()
       expect(session.completedCycles).toBe(0)
-      session.tick(3000) // 作業完了
-      session.tick(2000) // 休憩完了
+      session.tick(3000) // set1 work完了
+      session.tick(2000) // set1 break完了
+      expect(session.completedCycles).toBe(0)
+    })
+
+    it('4セット+long-break完了で1サイクル完了になる', () => {
+      session.start()
+      consumeOneSet(session) // set1
+      consumeOneSet(session) // set2
+      consumeOneSet(session) // set3
+      session.tick(3000)     // set4 work完了 → long-break開始
+      session.tick(4000)     // long-break完了
       expect(session.completedCycles).toBe(1)
+    })
+
+    it('2サイクル完了でcompletedCyclesが2になる', () => {
+      session.start()
+      // 1サイクル目
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000)
+      session.tick(4000)
+      // 1サイクル完了で自動停止するため再開
+      session.start()
+      // 2サイクル目
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000)
+      session.tick(4000)
+      expect(session.completedCycles).toBe(2)
+    })
+  })
+
+  describe('セット構造の初期状態', () => {
+    it('currentSetが1である', () => {
+      expect(session.currentSet).toBe(1)
+    })
+
+    it('totalSetsが4である', () => {
+      expect(session.totalSets).toBe(4)
+    })
+
+    it('completedSetsが0である', () => {
+      expect(session.completedSets).toBe(0)
+    })
+  })
+
+  describe('セット進行', () => {
+    it('set1完了後にcurrentSetが2になる', () => {
+      session.start()
+      consumeOneSet(session)
+      expect(session.currentSet).toBe(2)
+      expect(session.completedSets).toBe(1)
+      expect(session.currentPhase.type).toBe('work')
+    })
+
+    it('set1のwork完了後はshort breakになる', () => {
+      session.start()
+      const events = session.tick(3000)
+      expect(session.currentPhase.type).toBe('break')
+      expect(session.currentPhase.durationMs).toBe(2000)
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'PhaseStarted', phase: 'break' })
+      )
+    })
+
+    it('set1のbreak完了時にSetCompletedイベントが発生する', () => {
+      session.start()
+      session.tick(3000)
+      const events = session.tick(2000)
+      expect(events).toContainEqual(
+        expect.objectContaining({
+          type: 'SetCompleted',
+          setNumber: 1,
+          totalSets: 4
+        })
+      )
+    })
+  })
+
+  describe('long-break', () => {
+    it('set4のwork完了後はlong-breakになる', () => {
+      session.start()
+      consumeOneSet(session) // set1
+      consumeOneSet(session) // set2
+      consumeOneSet(session) // set3
+      const events = session.tick(3000) // set4 work完了
+      expect(session.currentPhase.type).toBe('long-break')
+      expect(session.currentPhase.durationMs).toBe(4000)
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'PhaseStarted', phase: 'long-break' })
+      )
+    })
+
+    it('long-break完了後にCycleCompletedイベントが発生する', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000) // set4 work完了
+      const events = session.tick(4000) // long-break完了
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'CycleCompleted', cycleNumber: 1 })
+      )
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'SetCompleted', setNumber: 4, totalSets: 4 })
+      )
+    })
+
+    it('long-break完了後にset1のworkに戻りタイマーが停止する', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000) // set4 work完了
+      session.tick(4000) // long-break完了
+      expect(session.currentSet).toBe(1)
+      expect(session.completedSets).toBe(0)
+      expect(session.completedCycles).toBe(1)
+      expect(session.currentPhase.type).toBe('work')
+      expect(session.isRunning).toBe(false)
+    })
+  })
+
+  describe('resetとセット情報', () => {
+    it('リセットでセット情報も初期化される', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.reset()
+      expect(session.currentSet).toBe(1)
+      expect(session.completedSets).toBe(0)
+      expect(session.completedCycles).toBe(0)
+      expect(session.currentPhase.type).toBe('work')
+    })
+  })
+
+  describe('setsPerCycle=1のエッジケース', () => {
+    it('set1のwork完了後すぐにlong-breakになる', () => {
+      const singleSetConfig = createConfig(3000, 2000, 4000, 1)
+      const s = createPomodoroSession(singleSetConfig)
+      s.start()
+      s.tick(3000)
+      expect(s.currentPhase.type).toBe('long-break')
+      expect(s.currentPhase.durationMs).toBe(4000)
+    })
+  })
+
+  describe('TimerConfig バリデーション', () => {
+    it('longBreakDurationMsが0以下ならエラー', () => {
+      expect(() => createConfig(3000, 2000, 0, 4)).toThrow()
+    })
+
+    it('setsPerCycleが0以下ならエラー', () => {
+      expect(() => createConfig(3000, 2000, 4000, 0)).toThrow()
+    })
+
+    it('setsPerCycleが小数ならエラー', () => {
+      expect(() => createConfig(3000, 2000, 4000, 2.5)).toThrow()
     })
   })
 })

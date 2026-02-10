@@ -35,6 +35,7 @@ export function bridgeTimerToCharacter(
       if (event.phase === 'work') {
         applyAction('sit')
       } else {
+        // 'break' および 'long-break' は同じ扱い（自由行動）
         applyAction('idle')
       }
     }

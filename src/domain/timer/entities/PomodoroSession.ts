@@ -1,6 +1,6 @@
 import type { TimerConfig } from '../value-objects/TimerConfig'
 import type { TimerPhase } from '../value-objects/TimerPhase'
-import { createWorkPhase, createBreakPhase } from '../value-objects/TimerPhase'
+import { createWorkPhase, createBreakPhase, createLongBreakPhase } from '../value-objects/TimerPhase'
 import type { TimerEvent } from '../events/TimerEvents'
 
 export interface PomodoroSession {
@@ -9,6 +9,9 @@ export interface PomodoroSession {
   readonly elapsedMs: number
   readonly remainingMs: number
   readonly completedCycles: number
+  readonly currentSet: number
+  readonly totalSets: number
+  readonly completedSets: number
   start(): TimerEvent[]
   tick(deltaMs: number): TimerEvent[]
   pause(): TimerEvent[]
@@ -20,6 +23,8 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
   let isRunning = false
   let elapsedMs = 0
   let completedCycles = 0
+  let currentSet = 1
+  let completedSetsInCycle = 0
 
   function now(): number {
     return Date.now()
@@ -31,16 +36,46 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
 
     events.push({ type: 'PhaseCompleted', phase: completedType, timestamp: now() })
 
-    if (completedType === 'break') {
+    let next: TimerPhase
+
+    if (completedType === 'work') {
+      if (currentSet >= config.setsPerCycle) {
+        next = createLongBreakPhase(config.longBreakDurationMs)
+      } else {
+        next = createBreakPhase(config.breakDurationMs)
+      }
+    } else if (completedType === 'break') {
+      completedSetsInCycle++
+      events.push({
+        type: 'SetCompleted',
+        setNumber: currentSet,
+        totalSets: config.setsPerCycle,
+        timestamp: now()
+      })
+      currentSet++
+      next = createWorkPhase(config.workDurationMs)
+    } else {
+      // long-break完了
+      completedSetsInCycle++
+      events.push({
+        type: 'SetCompleted',
+        setNumber: currentSet,
+        totalSets: config.setsPerCycle,
+        timestamp: now()
+      })
       completedCycles++
+      events.push({
+        type: 'CycleCompleted',
+        cycleNumber: completedCycles,
+        timestamp: now()
+      })
+      currentSet = 1
+      completedSetsInCycle = 0
+      isRunning = false
+      next = createWorkPhase(config.workDurationMs)
     }
 
-    const next = completedType === 'work'
-      ? createBreakPhase(config.breakDurationMs)
-      : createWorkPhase(config.workDurationMs)
-
     events.push({ type: 'PhaseStarted', phase: next.type, timestamp: now() })
-
     return { phase: next, events }
   }
 
@@ -50,6 +85,9 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
     get elapsedMs() { return elapsedMs },
     get remainingMs() { return currentPhase.durationMs - elapsedMs },
     get completedCycles() { return completedCycles },
+    get currentSet() { return currentSet },
+    get totalSets() { return config.setsPerCycle },
+    get completedSets() { return completedSetsInCycle },
 
     start(): TimerEvent[] {
       if (isRunning) return []
@@ -86,6 +124,8 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
       elapsedMs = 0
       currentPhase = createWorkPhase(config.workDurationMs)
       completedCycles = 0
+      currentSet = 1
+      completedSetsInCycle = 0
       return [{ type: 'TimerReset' }]
     }
   }

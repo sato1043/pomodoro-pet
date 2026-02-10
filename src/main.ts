@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { createEventBus } from './domain/shared/EventBus'
 import { createPomodoroSession } from './domain/timer/entities/PomodoroSession'
-import { createDefaultConfig } from './domain/timer/value-objects/TimerConfig'
+import { createDefaultConfig, createConfig } from './domain/timer/value-objects/TimerConfig'
 import { tickTimer } from './application/timer/TimerUseCases'
 import { createTimerOverlay } from './adapters/ui/TimerOverlay'
 import { createCharacter } from './domain/character/entities/Character'
@@ -86,9 +86,10 @@ async function main(): Promise<void> {
 
   // ポモドーロタイマー初期化
   const bus = createEventBus()
-  const config = createDefaultConfig()
+  const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
+  const config = isDebugTimer ? createConfig(5000, 3000, 4000, 4) : createDefaultConfig()
   const session = createPomodoroSession(config)
-  const timerUI = createTimerOverlay(session, bus)
+  const timerUI = createTimerOverlay(session, bus, config)
   document.body.appendChild(timerUI.container)
 
   // キャラクター初期化

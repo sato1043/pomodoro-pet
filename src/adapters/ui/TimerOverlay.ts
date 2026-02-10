@@ -1,4 +1,6 @@
 import type { PomodoroSession } from '../../domain/timer/entities/PomodoroSession'
+import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
+import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import type { EventBus } from '../../domain/shared/EventBus'
 import { startTimer, pauseTimer, resetTimer } from '../../application/timer/TimerUseCases'
 
@@ -9,8 +11,41 @@ function formatTime(ms: number): string {
   return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 }
 
-function phaseLabel(type: string): string {
-  return type === 'work' ? 'WORK' : 'BREAK'
+function phaseLabel(type: PhaseType): string {
+  switch (type) {
+    case 'work': return 'WORK'
+    case 'break': return 'BREAK'
+    case 'long-break': return 'LONG BREAK'
+  }
+}
+
+function buildFlowText(
+  phaseType: PhaseType,
+  currentSet: number,
+  totalSets: number,
+  config: TimerConfig
+): string {
+  const workMin = Math.round(config.workDurationMs / 60000)
+
+  if (phaseType === 'long-break') {
+    const longMin = Math.round(config.longBreakDurationMs / 60000)
+    return `▸ ${longMin}min long break`
+  }
+
+  if (currentSet >= totalSets && phaseType === 'work') {
+    const longMin = Math.round(config.longBreakDurationMs / 60000)
+    return `▸ ${workMin}min work → ${longMin}min long break`
+  }
+
+  const breakMin = Math.round(config.breakDurationMs / 60000)
+  return `▸ ${workMin}min work → ${breakMin}min break`
+}
+
+function buildProgressDots(completedSets: number, totalSets: number): string {
+  const dots = Array.from({ length: totalSets }, (_, i) =>
+    i < completedSets ? '●' : '○'
+  ).join('')
+  return `[${dots}]`
 }
 
 export interface TimerOverlayElements {
@@ -20,14 +55,19 @@ export interface TimerOverlayElements {
 
 export function createTimerOverlay(
   session: PomodoroSession,
-  bus: EventBus
+  bus: EventBus,
+  config: TimerConfig
 ): TimerOverlayElements {
   const container = document.createElement('div')
   container.id = 'timer-overlay'
   container.innerHTML = `
-    <div class="timer-phase" id="timer-phase">WORK</div>
-    <div class="timer-display" id="timer-display">25:00</div>
-    <div class="timer-cycles" id="timer-cycles">Cycle: 0</div>
+    <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
+    <div class="timer-phase-time">
+      <span class="timer-phase" id="timer-phase">WORK</span>
+      <span class="timer-display" id="timer-display">25:00</span>
+    </div>
+    <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
+    <div class="timer-progress" id="timer-progress">[○○○○]</div>
     <div class="timer-controls">
       <button id="btn-start" class="timer-btn">Start</button>
       <button id="btn-pause" class="timer-btn" disabled>Pause</button>
@@ -52,26 +92,44 @@ export function createTimerOverlay(
       min-width: 200px;
       user-select: none;
     }
+    .timer-set-info {
+      font-size: 12px;
+      color: #aaa;
+      margin-bottom: 4px;
+      letter-spacing: 1px;
+    }
+    .timer-phase-time {
+      display: flex;
+      align-items: baseline;
+      justify-content: center;
+      gap: 12px;
+    }
     .timer-phase {
       font-size: 14px;
       font-weight: 600;
       letter-spacing: 2px;
-      margin-bottom: 4px;
       color: #4caf50;
     }
     .timer-phase.break {
       color: #42a5f5;
+    }
+    .timer-phase.long-break {
+      color: #ab47bc;
     }
     .timer-display {
       font-size: 48px;
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       line-height: 1.1;
-      margin-bottom: 4px;
     }
-    .timer-cycles {
-      font-size: 12px;
-      color: #aaa;
+    .timer-flow {
+      font-size: 11px;
+      color: #888;
+      margin: 4px 0;
+    }
+    .timer-progress {
+      font-size: 16px;
+      letter-spacing: 4px;
       margin-bottom: 12px;
     }
     .timer-controls {
@@ -99,18 +157,23 @@ export function createTimerOverlay(
   `
   document.head.appendChild(style)
 
-  const displayEl = container.querySelector('#timer-display') as HTMLDivElement
-  const phaseEl = container.querySelector('#timer-phase') as HTMLDivElement
-  const cyclesEl = container.querySelector('#timer-cycles') as HTMLDivElement
+  const setInfoEl = container.querySelector('#timer-set-info') as HTMLDivElement
+  const displayEl = container.querySelector('#timer-display') as HTMLSpanElement
+  const phaseEl = container.querySelector('#timer-phase') as HTMLSpanElement
+  const flowEl = container.querySelector('#timer-flow') as HTMLDivElement
+  const progressEl = container.querySelector('#timer-progress') as HTMLDivElement
   const btnStart = container.querySelector('#btn-start') as HTMLButtonElement
   const btnPause = container.querySelector('#btn-pause') as HTMLButtonElement
   const btnReset = container.querySelector('#btn-reset') as HTMLButtonElement
 
   function updateDisplay(): void {
+    const phase = session.currentPhase.type
     displayEl.textContent = formatTime(session.remainingMs)
-    phaseEl.textContent = phaseLabel(session.currentPhase.type)
-    phaseEl.className = `timer-phase ${session.currentPhase.type === 'break' ? 'break' : ''}`
-    cyclesEl.textContent = `Cycle: ${session.completedCycles}`
+    phaseEl.textContent = phaseLabel(phase)
+    phaseEl.className = `timer-phase ${phase !== 'work' ? phase : ''}`
+    setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
+    flowEl.textContent = buildFlowText(phase, session.currentSet, session.totalSets, config)
+    progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
     btnStart.disabled = session.isRunning
     btnPause.disabled = !session.isRunning
   }

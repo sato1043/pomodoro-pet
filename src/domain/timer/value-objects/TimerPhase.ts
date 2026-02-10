@@ -1,4 +1,4 @@
-export type PhaseType = 'work' | 'break'
+export type PhaseType = 'work' | 'break' | 'long-break'
 
 export interface TimerPhase {
   readonly type: PhaseType
@@ -11,4 +11,8 @@ export function createWorkPhase(durationMs: number): TimerPhase {
 
 export function createBreakPhase(durationMs: number): TimerPhase {
   return { type: 'break', durationMs }
+}
+
+export function createLongBreakPhase(durationMs: number): TimerPhase {
+  return { type: 'long-break', durationMs }
 }

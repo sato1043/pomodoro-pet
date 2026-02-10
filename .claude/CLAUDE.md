@@ -68,12 +68,24 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読めない。`ThreeCharacterAdapter` でPNGテクスチャを手動適用し、`mat.color.set(0xffffff)` でFBXLoaderが設定する暗いベースカラーをリセットする必要がある。
 
+## Debug
+
+`.env.development` で開発用の設定を行う。`.env.development.example` を参照。
+
+```bash
+# タイマー短縮モード（work=5s / break=3s / long-break=4s）
+# .env.development に以下を記述して npm run dev で起動
+VITE_DEBUG_TIMER=1
+```
+
+`.env.development` は `.gitignore` に含まれるためコミットされない。
+
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（50件）。Three.js依存のアダプター/インフラ層はテスト対象外。
+テストはドメイン層とアプリケーション層に集中（66件）。Three.js依存のアダプター/インフラ層はテスト対象外。
 
 ```
-tests/domain/timer/PomodoroSession.test.ts    — 13件
+tests/domain/timer/PomodoroSession.test.ts    — 29件
 tests/domain/character/BehaviorStateMachine.test.ts — 18件
 tests/domain/shared/EventBus.test.ts          — 4件
 tests/application/character/InterpretPrompt.test.ts — 14件
