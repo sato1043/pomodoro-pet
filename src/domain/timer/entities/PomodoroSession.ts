@@ -75,7 +75,11 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
       next = createWorkPhase(config.workDurationMs)
     }
 
-    events.push({ type: 'PhaseStarted', phase: next.type, timestamp: now() })
+    // サイクル完了（自動停止）時はPhaseStartedを発行しない
+    // 次回start()でPhaseStartedが発行される
+    if (isRunning) {
+      events.push({ type: 'PhaseStarted', phase: next.type, timestamp: now() })
+    }
     return { phase: next, events }
   }
 

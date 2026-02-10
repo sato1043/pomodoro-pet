@@ -135,10 +135,18 @@ type TimerEvent =
 
 ### フェーズ完了時のイベント発行順序
 
+通常のフェーズ完了時:
 1. `PhaseCompleted`（完了したフェーズのtype）
 2. 条件により `SetCompleted`（break/long-break完了時）
-3. 条件により `CycleCompleted`（long-break完了時）
-4. `PhaseStarted`（次フェーズのtype）
+3. `PhaseStarted`（次フェーズのtype）
+
+サイクル完了時（long-break完了）:
+1. `PhaseCompleted(long-break)`
+2. `SetCompleted`
+3. `CycleCompleted`
+4. **`PhaseStarted`は発行しない**（`isRunning=false`のため）
+
+次回`start()`が呼ばれたときに`PhaseStarted(work)`が発行される。
 
 **注意**: `SetCompleted`は`break`完了時と`long-break`完了時に発行される。`work`完了時ではない。
 
@@ -168,9 +176,22 @@ EventBus経由でタイマーイベントとAppModeイベントを購読し、�
 
 `tick()`は`elapsedMs >= durationMs`の間whileループする。1フレームで複数フェーズをまたぐケース（デバッグ短縮モードで大きなdeltaMs等）に対応している。overflow（超過分）は次フェーズに繰り越される。
 
-### 2. サイクル完了の自動停止
+### 2. サイクル完了の自動停止とPhaseStarted抑制
 
 `long-break`完了時に`isRunning=false`を設定する。次サイクルを開始するにはユーザーが再度`start()`を呼ぶ必要がある。`currentPhase`は`work`に設定されるため、再開すると次サイクルのSet 1から始まる。
+
+**重要**: サイクル完了時（`isRunning=false`設定後）は`PhaseStarted`を発行しない。これはイベントの同期的な処理順序に起因する問題を防ぐための設計判断である。
+
+もし発行した場合のイベント連鎖:
+```
+CycleCompleted
+  → AppModeManager: exitPomodoro() → AppModeChanged(free)
+    → TimerCharacterBridge: scrollingAllowed=false + idle ✓
+PhaseStarted(work)  ← CycleCompletedと同じtick()のイベント配列に含まれている
+  → TimerCharacterBridge: scrollingAllowed=true + wander ✗ (AppMode=freeなのに歩く)
+```
+
+`PhaseStarted`を抑制することで、AppMode=free時にキャラクターがscrolling状態に入ることを防ぐ。
 
 ### 3. reset()の影響範囲
 
