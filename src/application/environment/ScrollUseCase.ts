@@ -27,7 +27,7 @@ export function createScrollManager(
   chunkCount: number
 ): ScrollManager {
   const depth = chunkSpec.depth
-  const recycleThreshold = depth * 1.5 // 30 for depth=20
+  const recycleThreshold = (chunkCount - 1) * depth // 全チャンクが初期配置に収まる閾値
 
   let chunkOffsets = createInitialOffsets(chunkCount, depth)
   let recycledChunkIndex: number | null = null

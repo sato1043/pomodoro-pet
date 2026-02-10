@@ -33,12 +33,12 @@ describe('SceneConfig', () => {
   describe('createDefaultChunkSpec', () => {
     it('デフォルト値が正しい', () => {
       const spec = createDefaultChunkSpec()
-      expect(spec.width).toBe(40)
-      expect(spec.depth).toBe(20)
-      expect(spec.treeCount).toBe(4)
-      expect(spec.grassCount).toBe(100)
-      expect(spec.rockCount).toBe(2)
-      expect(spec.flowerCount).toBe(7)
+      expect(spec.width).toBe(20)
+      expect(spec.depth).toBe(10)
+      expect(spec.treeCount).toBe(2)
+      expect(spec.grassCount).toBe(50)
+      expect(spec.rockCount).toBe(1)
+      expect(spec.flowerCount).toBe(3)
     })
   })
 })

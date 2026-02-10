@@ -35,8 +35,8 @@ function createScene(): {
     0.1,
     1000
   )
-  camera.position.set(0, 1.2, 6)
-  camera.lookAt(0, 1.5, 0)
+  camera.position.set(0, 0.8, 6)
+  camera.lookAt(0, 1.8, 0)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)
@@ -90,7 +90,7 @@ async function main(): Promise<void> {
   // シーン設定と無限スクロール
   const sceneConfig = createDefaultSceneConfig()
   const chunkSpec = createDefaultChunkSpec()
-  const chunkCount = 3
+  const chunkCount = 6
   const scrollManager = createScrollManager(sceneConfig, chunkSpec, chunkCount)
   const scrollRenderer = createInfiniteScrollRenderer(scene, sceneConfig, chunkSpec, chunkCount)
 
@@ -148,10 +148,10 @@ async function main(): Promise<void> {
   // タイマー ↔ キャラクター連携
   bridgeTimerToCharacter(bus, character, stateMachine, charHandle)
 
-  // 環境音
-  const audio = createAudioAdapter()
-  const audioUI = createAudioControls(audio)
-  document.body.appendChild(audioUI.container)
+  // 環境音（一時的に無効化）
+  // const audio = createAudioAdapter()
+  // const audioUI = createAudioControls(audio)
+  // document.body.appendChild(audioUI.container)
 
   // レンダリングループ
   const clock = new THREE.Clock()

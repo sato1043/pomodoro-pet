@@ -29,12 +29,12 @@ export function createDefaultSceneConfig(): SceneConfig {
 
 export function createDefaultChunkSpec(): ChunkSpec {
   return {
-    width: 40,
-    depth: 20,
-    treeCount: 4,
-    grassCount: 100,
-    rockCount: 2,
-    flowerCount: 7,
+    width: 20,
+    depth: 10,
+    treeCount: 2,
+    grassCount: 50,
+    rockCount: 1,
+    flowerCount: 3,
   }
 }
 
