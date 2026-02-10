@@ -97,7 +97,7 @@ async function main(): Promise<void> {
   // ポモドーロタイマー初期化
   const bus = createEventBus()
   const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
-  const config = isDebugTimer ? createConfig(5000, 3000, 4000, 4) : createDefaultConfig()
+  const config = isDebugTimer ? createConfig(20000, 3000, 4000, 4) : createDefaultConfig()
   const session = createPomodoroSession(config)
 
   // AppMode管理
