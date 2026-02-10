@@ -9,6 +9,7 @@ describe('BehaviorStateMachine', () => {
 
   beforeEach(() => {
     sm = createBehaviorStateMachine()
+    sm.setScrollingAllowed(true) // 既存テストはscrolling許可状態で実行
   })
 
   describe('初期状態', () => {
@@ -88,7 +89,15 @@ describe('BehaviorStateMachine', () => {
       expect(result).toBe('dragged')
     })
 
-    it('drag_endでIDLEに遷移する', () => {
+    it('drag_endでscrollingAllowed=trueならWANDERに遷移する', () => {
+      sm.setScrollingAllowed(true)
+      sm.transition({ type: 'interaction', kind: 'drag_start' })
+      const result = sm.transition({ type: 'interaction', kind: 'drag_end' })
+      expect(result).toBe('wander')
+    })
+
+    it('drag_endでscrollingAllowed=falseならIDLEに遷移する', () => {
+      sm.setScrollingAllowed(false)
       sm.transition({ type: 'interaction', kind: 'drag_start' })
       const result = sm.transition({ type: 'interaction', kind: 'drag_end' })
       expect(result).toBe('idle')
@@ -120,6 +129,73 @@ describe('BehaviorStateMachine', () => {
       sm.start()
       const result = sm.tick(100)
       expect(result.movementDelta).toBeDefined()
+    })
+  })
+
+  describe('scrollingAllowed', () => {
+    it('デフォルトはfalseである', () => {
+      const fresh = createBehaviorStateMachine()
+      expect(fresh.scrollingAllowed).toBe(false)
+    })
+
+    it('falseのとき、IDLEからタイムアウトでWANDERをスキップしSITに遷移する', () => {
+      sm.setScrollingAllowed(false)
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('sit')
+    })
+
+    it('falseのとき、tickでもWANDERをスキップする', () => {
+      sm.setScrollingAllowed(false)
+      sm.start()
+      const result = sm.tick(16000) // idle最大持続時間超過
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('sit')
+    })
+
+    it('trueのとき、IDLEからタイムアウトでWANDERに遷移する', () => {
+      sm.setScrollingAllowed(true)
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('wander')
+    })
+  })
+
+  describe('fixedWanderDirection', () => {
+    it('指定時、wanderのmovementDeltaが固定方向になる', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.setScrollingAllowed(true)
+      fixed.transition({ type: 'timeout' }) // idle -> wander
+      fixed.start()
+      const result = fixed.tick(1000) // 1秒
+      expect(result.movementDelta).toBeDefined()
+      // speed=1.5, dt=1s → moveDist=1.5
+      // x=0*1.5=0, z=1*1.5=1.5
+      expect(result.movementDelta!.x).toBeCloseTo(0, 5)
+      expect(result.movementDelta!.z).toBeCloseTo(1.5, 5)
+      expect(result.movementDelta!.y).toBe(0)
+    })
+
+    it('斜め方向も正しく反映される', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 1, z: 0 } })
+      fixed.setScrollingAllowed(true)
+      fixed.transition({ type: 'timeout' }) // idle -> wander
+      fixed.start()
+      const result = fixed.tick(1000)
+      expect(result.movementDelta!.x).toBeCloseTo(1.5, 5)
+      expect(result.movementDelta!.z).toBeCloseTo(0, 5)
+    })
+
+    it('未指定時、ランダム方向のmovementDeltaが返される', () => {
+      const noOption = createBehaviorStateMachine()
+      noOption.setScrollingAllowed(true)
+      noOption.transition({ type: 'timeout' }) // idle -> wander
+      noOption.start()
+      const result = noOption.tick(1000)
+      expect(result.movementDelta).toBeDefined()
+      // ランダムなので具体値は検証しないが、移動量がゼロでないことを確認
+      const dx = result.movementDelta!.x
+      const dz = result.movementDelta!.z
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      expect(dist).toBeGreaterThan(0)
     })
   })
 })

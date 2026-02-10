@@ -15,9 +15,11 @@ export interface StateTickResult {
 
 export interface BehaviorStateMachine {
   readonly currentState: CharacterStateName
+  readonly scrollingAllowed: boolean
   transition(trigger: StateTrigger): CharacterStateName
   tick(deltaMs: number): StateTickResult
   start(): void
+  setScrollingAllowed(allowed: boolean): void
 }
 
 // タイムアウト時の遷移先テーブル
@@ -35,16 +37,33 @@ function randomRange(min: number, max: number): number {
   return min + Math.random() * (max - min)
 }
 
-export function createBehaviorStateMachine(): BehaviorStateMachine {
+export interface BehaviorStateMachineOptions {
+  readonly fixedWanderDirection?: { x: number; z: number }
+}
+
+export function createBehaviorStateMachine(
+  options?: BehaviorStateMachineOptions
+): BehaviorStateMachine {
   let currentState: CharacterStateName = 'idle'
   let elapsedMs = 0
   let currentDurationMs = randomDuration(currentState)
   let wanderTarget: Position3D | null = null
   let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
+  const fixedDir = options?.fixedWanderDirection ?? null
+  let scrollingAllowed = false
 
   function randomDuration(state: CharacterStateName): number {
     const config = STATE_CONFIGS[state]
     return randomRange(config.minDurationMs, config.maxDurationMs)
+  }
+
+  function resolveTimeoutTarget(from: CharacterStateName): CharacterStateName {
+    let next = TIMEOUT_TRANSITIONS[from]
+    // scrollingAllowed=falseのとき、scrolling状態をスキップ
+    if (!scrollingAllowed && STATE_CONFIGS[next].scrolling) {
+      next = TIMEOUT_TRANSITIONS[next]
+    }
+    return next
   }
 
   function enterState(state: CharacterStateName): void {
@@ -77,12 +96,12 @@ export function createBehaviorStateMachine(): BehaviorStateMachine {
 
   return {
     get currentState() { return currentState },
+    get scrollingAllowed() { return scrollingAllowed },
 
     transition(trigger: StateTrigger): CharacterStateName {
       switch (trigger.type) {
         case 'timeout': {
-          const next = TIMEOUT_TRANSITIONS[currentState]
-          enterState(next)
+          enterState(resolveTimeoutTarget(currentState))
           return currentState
         }
 
@@ -103,7 +122,7 @@ export function createBehaviorStateMachine(): BehaviorStateMachine {
             return currentState
           }
           if (trigger.kind === 'drag_end') {
-            enterState('idle')
+            enterState(scrollingAllowed ? 'wander' : 'idle')
             return currentState
           }
           // hover: 変化なし
@@ -122,8 +141,7 @@ export function createBehaviorStateMachine(): BehaviorStateMachine {
 
       // 最大持続時間チェック
       if (elapsedMs >= currentDurationMs) {
-        const next = TIMEOUT_TRANSITIONS[currentState]
-        enterState(next)
+        enterState(resolveTimeoutTarget(currentState))
         return {
           stateChanged: true,
           newState: currentState
@@ -131,15 +149,29 @@ export function createBehaviorStateMachine(): BehaviorStateMachine {
       }
 
       // wander中は移動量を返す
-      if (currentState === 'wander' && wanderTarget) {
+      if (currentState === 'wander') {
         const speed = 1.5 // units/sec
         const moveDist = speed * (deltaMs / 1000)
-        return {
-          stateChanged: false,
-          movementDelta: {
-            x: wanderDirection.x * moveDist,
-            y: 0,
-            z: wanderDirection.z * moveDist
+
+        if (fixedDir) {
+          return {
+            stateChanged: false,
+            movementDelta: {
+              x: fixedDir.x * moveDist,
+              y: 0,
+              z: fixedDir.z * moveDist
+            }
+          }
+        }
+
+        if (wanderTarget) {
+          return {
+            stateChanged: false,
+            movementDelta: {
+              x: wanderDirection.x * moveDist,
+              y: 0,
+              z: wanderDirection.z * moveDist
+            }
           }
         }
       }
@@ -150,6 +182,10 @@ export function createBehaviorStateMachine(): BehaviorStateMachine {
     start(): void {
       elapsedMs = 0
       currentDurationMs = randomDuration(currentState)
+    },
+
+    setScrollingAllowed(allowed: boolean): void {
+      scrollingAllowed = allowed
     }
   }
 }

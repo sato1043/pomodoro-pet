@@ -80,16 +80,16 @@ export function createTimerOverlay(
     #timer-overlay {
       position: fixed;
       top: 20px;
-      right: 20px;
+      left: 10px;
+      right: 10px;
       background: rgba(0, 0, 0, 0.75);
       color: #fff;
       border-radius: 12px;
-      padding: 20px 28px;
+      padding: 56px 28px;
       font-family: 'Segoe UI', system-ui, sans-serif;
       text-align: center;
       z-index: 1000;
       backdrop-filter: blur(8px);
-      min-width: 200px;
       user-select: none;
     }
     .timer-set-info {

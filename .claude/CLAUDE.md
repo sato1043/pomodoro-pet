@@ -35,23 +35,25 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### ドメイン層 (`src/domain/`)
 
-3つのコンテキスト。外部依存なし。
+4つのコンテキスト。外部依存なし。
 
-- **timer**: `PomodoroSession` エンティティ。tick(deltaMs) でイベント配列を返す純粋ロジック
-- **character**: `BehaviorStateMachine` が7状態（idle/wander/sit/sleep/happy/reaction/dragged）を管理。遷移トリガーは timeout/prompt/interaction の3種
+- **timer**: `PomodoroSession` エンティティ。セット構造（4セット/サイクル）、長時間休憩（15分）、サイクル完了自動停止。tick(deltaMs) でイベント配列を返す純粋ロジック
+- **character**: `BehaviorStateMachine` が7状態（idle/wander/sit/sleep/happy/reaction/dragged）を管理。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでwander方向を固定可能
+- **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
 - **shared**: `EventBus`（Pub/Sub）でタイマーとキャラクター間を疎結合に連携
 
 ### アプリケーション層 (`src/application/`)
 
 - `TimerUseCases` — start/pause/reset/tick をEventBus経由で発行
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
-- `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + 位置・回転反映
+- `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
+- `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
 - `TimerCharacterBridge` — EventBus購読でタイマーイベント → キャラクター行動（work→sit, work完了→happy, break→idle）
 
 ### アダプター層 (`src/adapters/`)
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
-- `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/ドラッグ。ドラッグはy=0平面交差で座標算出、±9範囲clamp
+- `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ。ドラッグはY軸方向にキャラクターを持ち上げる（0〜3にclamp）
 - `ui/` — DOM要素で構築したオーバーレイUI（TimerOverlay, PromptInput, AudioControls）
 
 ### インフラ層 (`src/infrastructure/`)
@@ -59,7 +61,9 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/FBXModelLoader` — FBXLoader ラッパー。`resourcePath` でテクスチャパス解決
 - `three/AnimationController` — AnimationMixer + crossFadeTo（0.3秒ブレンド）
 - `three/PlaceholderCharacter` — プリミティブ形状の人型キャラクター + NumberKeyframeTrack による6種プロシージャルアニメーション
-- `three/EnvironmentBuilder` — 地面/木/草(InstancedMesh×300)/岩/花/霧を生成
+- `three/EnvironmentBuilder` — 旧・単一シーン環境生成（現在は未使用、InfiniteScrollRendererに置換）
+- `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
+- `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
 
 ## Static Assets
@@ -82,14 +86,16 @@ VITE_DEBUG_TIMER=1
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（66件）。Three.js依存のアダプター/インフラ層はテスト対象外。
+テストはドメイン層とアプリケーション層に集中（90件）。Three.js依存のアダプター/インフラ層はテスト対象外。
 
 ```
-tests/domain/timer/PomodoroSession.test.ts    — 29件
-tests/domain/character/BehaviorStateMachine.test.ts — 18件
-tests/domain/shared/EventBus.test.ts          — 4件
-tests/application/character/InterpretPrompt.test.ts — 14件
-tests/setup.test.ts                           — 1件
+tests/domain/timer/PomodoroSession.test.ts           — 29件
+tests/domain/character/BehaviorStateMachine.test.ts   — 21件
+tests/domain/environment/SceneConfig.test.ts          — 10件
+tests/domain/shared/EventBus.test.ts                  — 4件
+tests/application/character/InterpretPrompt.test.ts   — 14件
+tests/application/environment/ScrollUseCase.test.ts   — 11件
+tests/setup.test.ts                                   — 1件
 ```
 
 ## Project Documents

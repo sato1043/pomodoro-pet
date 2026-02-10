@@ -3,8 +3,8 @@ import { join } from 'path'
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
-    width: 1280,
-    height: 720,
+    width: 390,
+    height: 844,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,

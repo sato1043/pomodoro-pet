@@ -10,7 +10,9 @@ import { createBehaviorStateMachine } from './domain/character/services/Behavior
 import { updateBehavior } from './application/character/UpdateBehaviorUseCase'
 import { createPromptInput } from './adapters/ui/PromptInput'
 import { createInteractionAdapter } from './adapters/three/ThreeInteractionAdapter'
-import { buildEnvironment } from './infrastructure/three/EnvironmentBuilder'
+import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/environment/value-objects/SceneConfig'
+import { createScrollManager } from './application/environment/ScrollUseCase'
+import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScrollRenderer'
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
 import { createAudioControls } from './adapters/ui/AudioControls'
 import { bridgeTimerToCharacter } from './application/character/TimerCharacterBridge'
@@ -31,8 +33,8 @@ function createScene(): {
     0.1,
     1000
   )
-  camera.position.set(0, 4, 7)
-  camera.lookAt(0, 0.5, 0)
+  camera.position.set(0, 1.2, 6)
+  camera.lookAt(0, 1.5, 0)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)
@@ -81,8 +83,14 @@ function setupResizeHandler(
 async function main(): Promise<void> {
   const { scene, camera, renderer } = createScene()
   addLights(scene)
-  const env = buildEnvironment(scene)
   setupResizeHandler(camera, renderer)
+
+  // シーン設定と無限スクロール
+  const sceneConfig = createDefaultSceneConfig()
+  const chunkSpec = createDefaultChunkSpec()
+  const chunkCount = 3
+  const scrollManager = createScrollManager(sceneConfig, chunkSpec, chunkCount)
+  const scrollRenderer = createInfiniteScrollRenderer(scene, sceneConfig, chunkSpec, chunkCount)
 
   // ポモドーロタイマー初期化
   const bus = createEventBus()
@@ -97,7 +105,7 @@ async function main(): Promise<void> {
   const fbxConfig: FBXCharacterConfig = {
     modelPath: '/models/ms07_Wildboar.FBX',
     resourcePath: '/models/',
-    scale: 0.03,
+    scale: 0.027,
     diffuseTexturePath: '/models/ms07_Wildboar_1.png',
     animationPaths: {
       idle: '/models/ms07_Idle.FBX',
@@ -109,15 +117,15 @@ async function main(): Promise<void> {
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)
-  const stateMachine = createBehaviorStateMachine()
+  const stateMachine = createBehaviorStateMachine({ fixedWanderDirection: sceneConfig.direction })
   stateMachine.start()
 
   // プロンプト入力UI
   const promptUI = createPromptInput(character, stateMachine, charHandle)
   document.body.appendChild(promptUI.container)
 
-  // インタラクション（ホバー、クリック、ドラッグ）
-  createInteractionAdapter(renderer, camera, character, stateMachine, charHandle, env.ground)
+  // インタラクション（ホバー、クリック、摘まみ上げ）
+  createInteractionAdapter(renderer, camera, character, stateMachine, charHandle)
 
   // タイマー ↔ キャラクター連携
   bridgeTimerToCharacter(bus, character, stateMachine, charHandle)
@@ -138,7 +146,10 @@ async function main(): Promise<void> {
       tickTimer(session, bus, deltaMs)
     }
 
-    updateBehavior(character, stateMachine, charHandle, deltaMs)
+    updateBehavior(
+      character, stateMachine, charHandle, deltaMs,
+      scrollManager, (state) => scrollRenderer.update(state)
+    )
     charHandle.update(delta)
     renderer.render(scene, camera)
   }

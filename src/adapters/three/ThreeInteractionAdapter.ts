@@ -2,19 +2,23 @@ import * as THREE from 'three'
 import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from './ThreeCharacterAdapter'
-import { createPosition } from '../../domain/character/value-objects/Position3D'
 
 export interface InteractionAdapter {
   dispose: () => void
 }
+
+const MAX_LIFT_HEIGHT = 3
+const LIFT_SENSITIVITY = 0.01
+const SWAY_SENSITIVITY = 0.003
+const MAX_SWAY = 0.5
+const SWAY_ROTATION = 0.4 // swayXに対する最大回転量（ラジアン）
 
 export function createInteractionAdapter(
   renderer: THREE.WebGLRenderer,
   camera: THREE.PerspectiveCamera,
   character: Character,
   stateMachine: BehaviorStateMachine,
-  charHandle: ThreeCharacterHandle,
-  groundPlane: THREE.Mesh
+  charHandle: ThreeCharacterHandle
 ): InteractionAdapter {
   const raycaster = new THREE.Raycaster()
   const mouse = new THREE.Vector2()
@@ -22,10 +26,13 @@ export function createInteractionAdapter(
 
   let isDragging = false
   let isHovering = false
-
-  // 地面との交差計算用の平面（y=0）
-  const dragPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0)
-  const intersectPoint = new THREE.Vector3()
+  let isFalling = false
+  let dragStartY = 0
+  let dragStartX = 0
+  let liftHeight = 0
+  let swayX = 0
+  let swayZ = 0
+  let fallAnimId = 0
 
   function updateMouse(event: MouseEvent): void {
     const rect = canvas.getBoundingClientRect()
@@ -39,23 +46,19 @@ export function createInteractionAdapter(
     return hits.length > 0
   }
 
-  function getGroundIntersection(): THREE.Vector3 | null {
-    raycaster.setFromCamera(mouse, camera)
-    const hit = raycaster.ray.intersectPlane(dragPlane, intersectPoint)
-    return hit
-  }
-
   function onMouseMove(event: MouseEvent): void {
     updateMouse(event)
 
     if (isDragging) {
-      const point = getGroundIntersection()
-      if (point) {
-        const clampedX = Math.max(-9, Math.min(9, point.x))
-        const clampedZ = Math.max(-9, Math.min(9, point.z))
-        charHandle.setPosition(clampedX, 0, clampedZ)
-        character.setPosition(createPosition(clampedX, 0, clampedZ))
-      }
+      // マウスY差分から持ち上げ高さを算出（上方向がマイナス）
+      const deltaY = dragStartY - event.clientY
+      liftHeight = Math.max(0, Math.min(MAX_LIFT_HEIGHT, deltaY * LIFT_SENSITIVITY))
+      // マウスX差分で横揺れ
+      const deltaX = (event.clientX - dragStartX) * SWAY_SENSITIVITY
+      swayX = Math.max(-MAX_SWAY, Math.min(MAX_SWAY, deltaX))
+      swayZ = Math.max(-MAX_SWAY, Math.min(MAX_SWAY, deltaX * 0.3))
+      charHandle.setPosition(swayX, liftHeight, swayZ)
+      charHandle.object3D.rotation.y = (swayX / MAX_SWAY) * SWAY_ROTATION
       return
     }
 
@@ -73,10 +76,42 @@ export function createInteractionAdapter(
     if (!hitTestCharacter()) return
 
     isDragging = true
+    if (isFalling) {
+      cancelAnimationFrame(fallAnimId)
+      isFalling = false
+    }
+    dragStartX = event.clientX
+    dragStartY = event.clientY
+    liftHeight = 0
+    swayX = 0
+    swayZ = 0
+    charHandle.object3D.rotation.y = 0
     canvas.style.cursor = 'grabbing'
     stateMachine.transition({ type: 'interaction', kind: 'drag_start' })
     character.setState('dragged')
     charHandle.playState('dragged')
+  }
+
+  function startFallAnimation(): void {
+    isFalling = true
+    const fallStep = (): void => {
+      liftHeight *= 0.9
+      swayX *= 0.9
+      swayZ *= 0.9
+      if (liftHeight < 0.01) {
+        liftHeight = 0
+        swayX = 0
+        swayZ = 0
+        isFalling = false
+        charHandle.setPosition(0, 0, 0)
+        charHandle.object3D.rotation.y = 0
+        return
+      }
+      charHandle.setPosition(swayX, liftHeight, swayZ)
+      charHandle.object3D.rotation.y = (swayX / MAX_SWAY) * SWAY_ROTATION
+      fallAnimId = requestAnimationFrame(fallStep)
+    }
+    fallAnimId = requestAnimationFrame(fallStep)
   }
 
   function onMouseUp(): void {
@@ -84,14 +119,14 @@ export function createInteractionAdapter(
 
     isDragging = false
     canvas.style.cursor = isHovering ? 'pointer' : 'default'
-    stateMachine.transition({ type: 'interaction', kind: 'drag_end' })
-    character.setState('idle')
-    charHandle.playState('idle')
+    const nextState = stateMachine.transition({ type: 'interaction', kind: 'drag_end' })
+    character.setState(nextState)
+    charHandle.playState(nextState)
     stateMachine.start()
+    startFallAnimation()
   }
 
   function onClick(event: MouseEvent): void {
-    // ドラッグ後のmouseupと区別：isDraggingがfalseの場合のみクリック処理
     if (isDragging) return
     updateMouse(event)
 
@@ -110,6 +145,7 @@ export function createInteractionAdapter(
 
   return {
     dispose(): void {
+      cancelAnimationFrame(fallAnimId)
       canvas.removeEventListener('mousemove', onMouseMove)
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('mouseup', onMouseUp)

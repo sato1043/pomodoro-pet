@@ -7,9 +7,9 @@ import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 /**
  * タイマーイベントをキャラクター行動に橋渡しする。
  *
+ * - 作業Phase開始 → キャラクターが歩く (wander → スクロール)
  * - 作業Phase完了 → キャラクターが喜ぶ (happy)
  * - 休憩Phase開始 → キャラクターが自由行動 (idle → 自律遷移)
- * - 作業Phase開始 → キャラクターが集中 (sit)
  */
 export function bridgeTimerToCharacter(
   bus: EventBus,
@@ -17,7 +17,7 @@ export function bridgeTimerToCharacter(
   stateMachine: BehaviorStateMachine,
   charHandle: ThreeCharacterHandle
 ): () => void {
-  function applyAction(action: 'happy' | 'sit' | 'idle'): void {
+  function applyAction(action: 'happy' | 'wander' | 'idle'): void {
     stateMachine.transition({ type: 'prompt', action })
     character.setState(action)
     charHandle.playState(action)
@@ -33,21 +33,30 @@ export function bridgeTimerToCharacter(
   const unsubStarted = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
     if (event.type === 'PhaseStarted') {
       if (event.phase === 'work') {
-        applyAction('sit')
+        stateMachine.setScrollingAllowed(true)
+        applyAction('wander')
       } else {
         // 'break' および 'long-break' は同じ扱い（自由行動）
+        stateMachine.setScrollingAllowed(false)
         applyAction('idle')
       }
     }
   })
 
+  const unsubPaused = bus.subscribe('TimerPaused', () => {
+    stateMachine.setScrollingAllowed(false)
+    applyAction('idle')
+  })
+
   const unsubReset = bus.subscribe('TimerReset', () => {
+    stateMachine.setScrollingAllowed(false)
     applyAction('idle')
   })
 
   return () => {
     unsubCompleted()
     unsubStarted()
+    unsubPaused()
     unsubReset()
   }
 }

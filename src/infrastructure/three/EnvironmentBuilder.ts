@@ -2,34 +2,39 @@ import * as THREE from 'three'
 
 export interface EnvironmentHandle {
   readonly ground: THREE.Mesh
+  readonly group: THREE.Group
   dispose: () => void
 }
 
 export function buildEnvironment(scene: THREE.Scene): EnvironmentHandle {
   const disposables: THREE.BufferGeometry[] = []
   const materials: THREE.Material[] = []
+  const group = new THREE.Group()
 
   // 空のグラデーション
   scene.background = new THREE.Color(0x87ceeb)
   scene.fog = new THREE.Fog(0xc8e6f0, 15, 35)
 
   // 地面
-  const ground = createGround(scene, disposables, materials)
+  const ground = createGround(group, disposables, materials)
 
   // 木を配置
-  placeTrees(scene, disposables, materials)
+  placeTrees(group, disposables, materials)
 
   // 草を配置
-  placeGrass(scene, disposables, materials)
+  placeGrass(group, disposables, materials)
 
   // 岩を配置
-  placeRocks(scene, disposables, materials)
+  placeRocks(group, disposables, materials)
 
   // 花を配置
-  placeFlowers(scene, disposables, materials)
+  placeFlowers(group, disposables, materials)
+
+  scene.add(group)
 
   return {
     ground,
+    group,
     dispose() {
       for (const g of disposables) g.dispose()
       for (const m of materials) m.dispose()
@@ -38,7 +43,7 @@ export function buildEnvironment(scene: THREE.Scene): EnvironmentHandle {
 }
 
 function createGround(
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[]
 ): THREE.Mesh {
@@ -53,7 +58,7 @@ function createGround(
   const ground = new THREE.Mesh(geo, mat)
   ground.rotation.x = -Math.PI / 2
   ground.receiveShadow = true
-  scene.add(ground)
+  parent.add(ground)
 
   return ground
 }
@@ -97,7 +102,7 @@ function createTree(
 }
 
 function placeTrees(
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[]
 ): void {
@@ -115,12 +120,12 @@ function placeTrees(
     tree.scale.setScalar(scale)
     tree.position.set(pos.x, 0, pos.z)
     tree.rotation.y = Math.random() * Math.PI * 2
-    scene.add(tree)
+    parent.add(tree)
   }
 }
 
 function placeGrass(
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[]
 ): void {
@@ -155,11 +160,11 @@ function placeGrass(
   }
 
   mesh.instanceMatrix.needsUpdate = true
-  scene.add(mesh)
+  parent.add(mesh)
 }
 
 function placeRocks(
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[]
 ): void {
@@ -184,12 +189,12 @@ function placeRocks(
     rock.rotation.y = Math.random() * Math.PI * 2
     rock.castShadow = true
     rock.receiveShadow = true
-    scene.add(rock)
+    parent.add(rock)
   }
 }
 
 function placeFlowers(
-  scene: THREE.Scene,
+  parent: THREE.Object3D,
   geometries: THREE.BufferGeometry[],
   materials: THREE.Material[]
 ): void {
@@ -224,6 +229,6 @@ function placeFlowers(
       (Math.random() - 0.5) * 16
     )
     flower.scale.setScalar(0.5 + Math.random() * 0.8)
-    scene.add(flower)
+    parent.add(flower)
   }
 }
