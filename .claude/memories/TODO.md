@@ -2,6 +2,12 @@
 
 ## 優先度: 高
 
+### ~~AppMode（アプリケーションモード）の導入~~ — 完了
+- `free`（ポモドーロしていない）と `pomodoro`（ポモドーロ中）の2モードを管理
+- アプリケーション層に `AppModeManager` を配置
+- CycleCompleted時の自動遷移、UIモード切替、キャラクター連携を実装
+- 詳細: [app-mode-design.md](app-mode-design.md)
+
 ### ~~FBXモデルの導入~~ — 完了
 - ms07_Wildboar（イノシシ）モデル+11アニメーション+6テクスチャを導入済
 - 詳細: [fbx-integration.md](fbx-integration.md)

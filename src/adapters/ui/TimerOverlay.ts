@@ -2,7 +2,9 @@ import type { PomodoroSession } from '../../domain/timer/entities/PomodoroSessio
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import type { EventBus } from '../../domain/shared/EventBus'
-import { startTimer, pauseTimer, resetTimer } from '../../application/timer/TimerUseCases'
+import type { AppModeManager } from '../../application/app-mode/AppModeManager'
+import type { AppModeEvent } from '../../application/app-mode/AppMode'
+import { pauseTimer } from '../../application/timer/TimerUseCases'
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
@@ -56,22 +58,28 @@ export interface TimerOverlayElements {
 export function createTimerOverlay(
   session: PomodoroSession,
   bus: EventBus,
-  config: TimerConfig
+  config: TimerConfig,
+  appModeManager: AppModeManager
 ): TimerOverlayElements {
   const container = document.createElement('div')
   container.id = 'timer-overlay'
   container.innerHTML = `
-    <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
-    <div class="timer-phase-time">
-      <span class="timer-phase" id="timer-phase">WORK</span>
-      <span class="timer-display" id="timer-display">25:00</span>
+    <div class="timer-free-mode" id="timer-free-mode">
+      <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
     </div>
-    <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
-    <div class="timer-progress" id="timer-progress">[○○○○]</div>
-    <div class="timer-controls">
-      <button id="btn-start" class="timer-btn">Start</button>
-      <button id="btn-pause" class="timer-btn" disabled>Pause</button>
-      <button id="btn-reset" class="timer-btn">Reset</button>
+    <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
+      <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
+      <div class="timer-phase-time">
+        <span class="timer-phase" id="timer-phase">WORK</span>
+        <span class="timer-display" id="timer-display">25:00</span>
+      </div>
+      <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
+      <div class="timer-progress" id="timer-progress">[○○○○]</div>
+      <div class="timer-controls">
+        <button id="btn-pause" class="timer-btn">Pause</button>
+        <button id="btn-resume" class="timer-btn" style="display:none">Resume</button>
+        <button id="btn-exit-pomodoro" class="timer-btn timer-btn-exit">Exit</button>
+      </div>
     </div>
   `
 
@@ -154,19 +162,55 @@ export function createTimerOverlay(
       opacity: 0.4;
       cursor: default;
     }
+    .timer-btn-primary {
+      background: rgba(76, 175, 80, 0.3);
+      border-color: rgba(76, 175, 80, 0.5);
+      font-size: 16px;
+      padding: 10px 24px;
+    }
+    .timer-btn-primary:hover {
+      background: rgba(76, 175, 80, 0.5);
+    }
+    .timer-btn-exit {
+      background: rgba(244, 67, 54, 0.2);
+      border-color: rgba(244, 67, 54, 0.4);
+    }
+    .timer-btn-exit:hover {
+      background: rgba(244, 67, 54, 0.35);
+    }
   `
   document.head.appendChild(style)
 
+  const freeModeEl = container.querySelector('#timer-free-mode') as HTMLDivElement
+  const pomodoroModeEl = container.querySelector('#timer-pomodoro-mode') as HTMLDivElement
   const setInfoEl = container.querySelector('#timer-set-info') as HTMLDivElement
   const displayEl = container.querySelector('#timer-display') as HTMLSpanElement
   const phaseEl = container.querySelector('#timer-phase') as HTMLSpanElement
   const flowEl = container.querySelector('#timer-flow') as HTMLDivElement
   const progressEl = container.querySelector('#timer-progress') as HTMLDivElement
-  const btnStart = container.querySelector('#btn-start') as HTMLButtonElement
+  const btnEnterPomodoro = container.querySelector('#btn-enter-pomodoro') as HTMLButtonElement
   const btnPause = container.querySelector('#btn-pause') as HTMLButtonElement
-  const btnReset = container.querySelector('#btn-reset') as HTMLButtonElement
+  const btnResume = container.querySelector('#btn-resume') as HTMLButtonElement
+  const btnExitPomodoro = container.querySelector('#btn-exit-pomodoro') as HTMLButtonElement
 
-  function updateDisplay(): void {
+  function publishAppModeEvents(events: AppModeEvent[]): void {
+    for (const event of events) {
+      bus.publish(event.type, event)
+    }
+  }
+
+  function switchToMode(mode: 'free' | 'pomodoro'): void {
+    if (mode === 'free') {
+      freeModeEl.style.display = ''
+      pomodoroModeEl.style.display = 'none'
+    } else {
+      freeModeEl.style.display = 'none'
+      pomodoroModeEl.style.display = ''
+      updateTimerDisplay()
+    }
+  }
+
+  function updateTimerDisplay(): void {
     const phase = session.currentPhase.type
     displayEl.textContent = formatTime(session.remainingMs)
     phaseEl.textContent = phaseLabel(phase)
@@ -174,30 +218,44 @@ export function createTimerOverlay(
     setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
     flowEl.textContent = buildFlowText(phase, session.currentSet, session.totalSets, config)
     progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
-    btnStart.disabled = session.isRunning
-    btnPause.disabled = !session.isRunning
+    btnPause.style.display = session.isRunning ? '' : 'none'
+    btnResume.style.display = session.isRunning ? 'none' : ''
   }
 
-  btnStart.addEventListener('click', () => {
-    startTimer(session, bus)
-    updateDisplay()
+  btnEnterPomodoro.addEventListener('click', () => {
+    const events = appModeManager.enterPomodoro()
+    publishAppModeEvents(events)
   })
 
   btnPause.addEventListener('click', () => {
     pauseTimer(session, bus)
-    updateDisplay()
+    updateTimerDisplay()
   })
 
-  btnReset.addEventListener('click', () => {
-    resetTimer(session, bus)
-    updateDisplay()
+  btnResume.addEventListener('click', () => {
+    // resume は PhaseStarted を再発行するため、main.ts の AppModeChanged 購読経由ではなく直接呼ぶ
+    const events = session.start()
+    for (const event of events) {
+      bus.publish(event.type, event)
+    }
+    updateTimerDisplay()
   })
 
-  const unsubTick = bus.subscribe('TimerTicked', () => updateDisplay())
-  const unsubPhase = bus.subscribe('PhaseStarted', () => updateDisplay())
-  const unsubReset = bus.subscribe('TimerReset', () => updateDisplay())
+  btnExitPomodoro.addEventListener('click', () => {
+    const events = appModeManager.exitPomodoro()
+    publishAppModeEvents(events)
+  })
 
-  updateDisplay()
+  const unsubTick = bus.subscribe('TimerTicked', () => updateTimerDisplay())
+  const unsubPhase = bus.subscribe('PhaseStarted', () => updateTimerDisplay())
+  const unsubReset = bus.subscribe('TimerReset', () => updateTimerDisplay())
+  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
+    if (event.type === 'AppModeChanged') {
+      switchToMode(event.mode)
+    }
+  })
+
+  switchToMode(appModeManager.currentMode)
 
   return {
     container,
@@ -205,6 +263,7 @@ export function createTimerOverlay(
       unsubTick()
       unsubPhase()
       unsubReset()
+      unsubAppMode()
       style.remove()
       container.remove()
     }

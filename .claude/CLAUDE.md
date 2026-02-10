@@ -44,11 +44,12 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### アプリケーション層 (`src/application/`)
 
+- `AppModeManager` — アプリケーションモード管理（free/pomodoro）。CycleCompleted購読で自動遷移。EventBus経由で`AppModeChanged`を発行
 - `TimerUseCases` — start/pause/reset/tick をEventBus経由で発行
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
-- `TimerCharacterBridge` — EventBus購読でタイマーイベント → キャラクター行動（work→sit, work完了→happy, break→idle）
+- `TimerCharacterBridge` — EventBus購読でタイマーイベント+AppModeChanged → キャラクター行動連携
 
 ### アダプター層 (`src/adapters/`)
 
@@ -105,6 +106,8 @@ tests/setup.test.ts                                   — 1件
 - [requirements.md](.claude/memories/requirements.md) — 要件定義と実装状況
 - [architecture.md](.claude/memories/architecture.md) — アーキテクチャとファイルマップ
 - [TODO.md](.claude/memories/TODO.md) — 今後の実装課題（優先度付き）
+- [pomodoro-state-transitions.md](.claude/memories/pomodoro-state-transitions.md) — ポモドーロタイマー状態遷移設計
+- [app-mode-design.md](.claude/memories/app-mode-design.md) — AppMode（free/pomodoro）設計文書
 - [fbx-integration.md](.claude/memories/fbx-integration.md) — FBXモデル導入ノウハウ
 
 ## Key Conventions

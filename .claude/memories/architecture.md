@@ -10,7 +10,15 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ## モジュール間通信
 
-EventBus（Pub/Sub）で疎結合。タイマーとキャラクターはイベント経由で連携。
+EventBus（Pub/Sub）で疎結合。AppMode・タイマー・キャラクターはイベント経由で連携。
+
+### イベントフロー
+
+```
+AppModeManager → AppModeChanged → TimerCharacterBridge, TimerOverlay
+PomodoroSession → TimerEvents → TimerCharacterBridge, TimerOverlay
+CycleCompleted → AppModeManager（自動でfreeに遷移）
+```
 
 ## 4つのドメインコンテキスト
 
@@ -54,11 +62,13 @@ EventBus（Pub/Sub）で疎結合。タイマーとキャラクターはイベ�
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
 ### src/application/ — ユースケース
+- `app-mode/AppMode.ts` — AppMode型定義（free/pomodoro）とAppModeEvent型
+- `app-mode/AppModeManager.ts` — アプリケーションモード管理（enterPomodoro/exitPomodoro）。CycleCompleted購読で自動遷移
 - `timer/TimerUseCases.ts` — start/pause/reset/tick
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
-- `character/TimerCharacterBridge.ts` — タイマーイベント→キャラクター行動連携
+- `character/TimerCharacterBridge.ts` — タイマーイベント→キャラクター行動連携 + AppModeChanged購読
 
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
@@ -81,11 +91,12 @@ EventBus（Pub/Sub）で疎結合。タイマーとキャラクターはイベ�
 - `main.ts` — 全モジュール統合・レンダリングループ
 - `index.html` — HTMLエントリ
 
-### tests/ — 90テスト
+### tests/
 - `domain/timer/PomodoroSession.test.ts` — 29件
 - `domain/character/BehaviorStateMachine.test.ts` — 21件
 - `domain/environment/SceneConfig.test.ts` — 10件
 - `domain/shared/EventBus.test.ts` — 4件
+- `application/app-mode/AppModeManager.test.ts` — AppModeManager テスト
 - `application/character/InterpretPrompt.test.ts` — 14件
 - `application/environment/ScrollUseCase.test.ts` — 11件
 - `setup.test.ts` — 1件

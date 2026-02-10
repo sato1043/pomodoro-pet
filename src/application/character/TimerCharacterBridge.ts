@@ -3,10 +3,12 @@ import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from '../../adapters/three/ThreeCharacterAdapter'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
+import type { AppModeEvent } from '../app-mode/AppMode'
 
 /**
- * タイマーイベントをキャラクター行動に橋渡しする。
+ * タイマーイベントとAppModeイベントをキャラクター行動に橋渡しする。
  *
+ * - AppMode free → キャラクターが自由行動 (idle)
  * - 作業Phase開始 → キャラクターが歩く (wander → スクロール)
  * - 作業Phase完了 → キャラクターが喜ぶ (happy)
  * - 休憩Phase開始 → キャラクターが自由行動 (idle → 自律遷移)
@@ -53,10 +55,18 @@ export function bridgeTimerToCharacter(
     applyAction('idle')
   })
 
+  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
+    if (event.type === 'AppModeChanged' && event.mode === 'free') {
+      stateMachine.setScrollingAllowed(false)
+      applyAction('idle')
+    }
+  })
+
   return () => {
     unsubCompleted()
     unsubStarted()
     unsubPaused()
     unsubReset()
+    unsubAppMode()
   }
 }

@@ -2,8 +2,10 @@ import * as THREE from 'three'
 import { createEventBus } from './domain/shared/EventBus'
 import { createPomodoroSession } from './domain/timer/entities/PomodoroSession'
 import { createDefaultConfig, createConfig } from './domain/timer/value-objects/TimerConfig'
-import { tickTimer } from './application/timer/TimerUseCases'
+import { startTimer, resetTimer, tickTimer } from './application/timer/TimerUseCases'
 import { createTimerOverlay } from './adapters/ui/TimerOverlay'
+import { createAppModeManager } from './application/app-mode/AppModeManager'
+import type { AppModeEvent } from './application/app-mode/AppMode'
 import { createCharacter } from './domain/character/entities/Character'
 import { createThreeCharacter, type ThreeCharacterHandle, type FBXCharacterConfig } from './adapters/three/ThreeCharacterAdapter'
 import { createBehaviorStateMachine } from './domain/character/services/BehaviorStateMachine'
@@ -97,7 +99,23 @@ async function main(): Promise<void> {
   const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
   const config = isDebugTimer ? createConfig(5000, 3000, 4000, 4) : createDefaultConfig()
   const session = createPomodoroSession(config)
-  const timerUI = createTimerOverlay(session, bus, config)
+
+  // AppMode管理
+  const appModeManager = createAppModeManager(bus)
+
+  // AppModeChanged → PomodoroSession連動
+  bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
+    if (event.type === 'AppModeChanged') {
+      if (event.mode === 'pomodoro') {
+        resetTimer(session, bus)
+        startTimer(session, bus)
+      } else {
+        resetTimer(session, bus)
+      }
+    }
+  })
+
+  const timerUI = createTimerOverlay(session, bus, config, appModeManager)
   document.body.appendChild(timerUI.container)
 
   // キャラクター初期化
