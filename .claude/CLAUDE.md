@@ -81,6 +81,9 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 # タイマー短縮モード（work=5s / break=3s / long-break=4s）
 # .env.development に以下を記述して npm run dev で起動
 VITE_DEBUG_TIMER=1
+
+# 開発サーバーのポート変更（デフォルト: 5173）
+VITE_DEV_PORT=3000
 ```
 
 `.env.development` は `.gitignore` に含まれるためコミットされない。
