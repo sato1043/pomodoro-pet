@@ -1,6 +1,9 @@
 import { app, BrowserWindow } from 'electron'
 import { join } from 'path'
 
+// WSL2等でGPUプロセス初期化失敗時にソフトウェアWebGL(SwiftShader)へフォールバック
+app.commandLine.appendSwitch('enable-unsafe-swiftshader')
+
 function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 390,
@@ -16,6 +19,10 @@ function createWindow(): void {
     mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   } else {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
+  }
+
+  if (process.env.VITE_DEV_TOOLS === '1') {
+    mainWindow.webContents.openDevTools()
   }
 }
 

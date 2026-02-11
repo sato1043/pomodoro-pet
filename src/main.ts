@@ -1,11 +1,14 @@
 import * as THREE from 'three'
-import { createEventBus } from './domain/shared/EventBus'
-import { createPomodoroSession } from './domain/timer/entities/PomodoroSession'
-import { createDefaultConfig, createConfig } from './domain/timer/value-objects/TimerConfig'
+import { createEventBus, type EventBus } from './domain/shared/EventBus'
+import { createPomodoroSession, type PomodoroSession } from './domain/timer/entities/PomodoroSession'
+import { createDefaultConfig } from './domain/timer/value-objects/TimerConfig'
 import { startTimer, resetTimer, tickTimer } from './application/timer/TimerUseCases'
-import { createTimerOverlay } from './adapters/ui/TimerOverlay'
+import { createTimerOverlay, type TimerOverlayElements } from './adapters/ui/TimerOverlay'
 import { createAppModeManager } from './application/app-mode/AppModeManager'
 import type { AppModeEvent } from './application/app-mode/AppMode'
+import { createAppSettingsService } from './application/settings/AppSettingsService'
+import type { SettingsEvent } from './application/settings/SettingsEvents'
+import { createSettingsPanel } from './adapters/ui/SettingsPanel'
 import { createCharacter } from './domain/character/entities/Character'
 import { createThreeCharacter, type ThreeCharacterHandle, type FBXCharacterConfig } from './adapters/three/ThreeCharacterAdapter'
 import { createBehaviorStateMachine } from './domain/character/services/BehaviorStateMachine'
@@ -16,7 +19,6 @@ import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/envir
 import { createScrollManager } from './application/environment/ScrollUseCase'
 import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScrollRenderer'
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
-import { createAudioControls } from './adapters/ui/AudioControls'
 import { bridgeTimerToCharacter } from './application/character/TimerCharacterBridge'
 
 function createScene(): {
@@ -82,6 +84,23 @@ function setupResizeHandler(
   })
 }
 
+/** AppModeChanged → PomodoroSession連動の購読を登録し、解除関数を返す */
+function subscribeAppModeToSession(
+  bus: EventBus,
+  session: PomodoroSession
+): () => void {
+  return bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
+    if (event.type === 'AppModeChanged') {
+      if (event.mode === 'pomodoro') {
+        resetTimer(session, bus)
+        startTimer(session, bus)
+      } else {
+        resetTimer(session, bus)
+      }
+    }
+  })
+}
+
 async function main(): Promise<void> {
   const { scene, camera, renderer } = createScene()
   addLights(scene)
@@ -97,26 +116,45 @@ async function main(): Promise<void> {
   // ポモドーロタイマー初期化
   const bus = createEventBus()
   const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
-  const config = isDebugTimer ? createConfig(20000, 3000, 4000, 4) : createDefaultConfig()
-  const session = createPomodoroSession(config)
+  const initialConfig = createDefaultConfig(isDebugTimer)
+
+  let session = createPomodoroSession(initialConfig)
+  let unsubAppMode = subscribeAppModeToSession(bus, session)
 
   // AppMode管理
   const appModeManager = createAppModeManager(bus)
 
-  // AppModeChanged → PomodoroSession連動
-  bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged') {
-      if (event.mode === 'pomodoro') {
-        resetTimer(session, bus)
-        startTimer(session, bus)
-      } else {
-        resetTimer(session, bus)
-      }
-    }
-  })
+  // アプリケーション設定
+  const settingsService = createAppSettingsService(bus, initialConfig)
 
-  const timerUI = createTimerOverlay(session, bus, config, appModeManager)
+  // 環境音
+  const audio = createAudioAdapter()
+
+  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio)
   document.body.appendChild(timerUI.container)
+
+  // 設定パネル（Environment）
+  const settingsPanel = createSettingsPanel(bus)
+  timerUI.container.appendChild(settingsPanel.trigger)
+  document.body.appendChild(settingsPanel.container)
+
+  // SettingsChanged → session再作成
+  bus.subscribe<SettingsEvent>('SettingsChanged', (event) => {
+    // 1. 旧リソース破棄
+    unsubAppMode()
+    timerUI.dispose()
+
+    // 2. 新session作成
+    session = createPomodoroSession(event.config)
+
+    // 3. EventBus購読の再接続
+    unsubAppMode = subscribeAppModeToSession(bus, session)
+
+    // 4. TimerOverlay再作成
+    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio)
+    document.body.appendChild(timerUI.container)
+    timerUI.container.appendChild(settingsPanel.trigger)
+  })
 
   // キャラクター初期化
   const character = createCharacter()
@@ -149,11 +187,6 @@ async function main(): Promise<void> {
 
   // タイマー ↔ キャラクター連携
   bridgeTimerToCharacter(bus, character, stateMachine, charHandle)
-
-  // 環境音（一時的に無効化）
-  // const audio = createAudioAdapter()
-  // const audioUI = createAudioControls(audio)
-  // document.body.appendChild(audioUI.container)
 
   // レンダリングループ
   const clock = new THREE.Clock()

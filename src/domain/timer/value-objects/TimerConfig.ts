@@ -8,13 +8,17 @@ export interface TimerConfig {
 const DEFAULT_WORK_DURATION_MS = 25 * 60 * 1000
 const DEFAULT_BREAK_DURATION_MS = 5 * 60 * 1000
 const DEFAULT_LONG_BREAK_DURATION_MS = 15 * 60 * 1000
-const DEFAULT_SETS_PER_CYCLE = 4
+const DEFAULT_SETS_PER_CYCLE = 2
 
-export function createDefaultConfig(): TimerConfig {
+const DEBUG_WORK_DURATION_MS = 20000
+const DEBUG_BREAK_DURATION_MS = 3000
+const DEBUG_LONG_BREAK_DURATION_MS = 4000
+
+export function createDefaultConfig(debug = false): TimerConfig {
   return {
-    workDurationMs: DEFAULT_WORK_DURATION_MS,
-    breakDurationMs: DEFAULT_BREAK_DURATION_MS,
-    longBreakDurationMs: DEFAULT_LONG_BREAK_DURATION_MS,
+    workDurationMs: debug ? DEBUG_WORK_DURATION_MS : DEFAULT_WORK_DURATION_MS,
+    breakDurationMs: debug ? DEBUG_BREAK_DURATION_MS : DEFAULT_BREAK_DURATION_MS,
+    longBreakDurationMs: debug ? DEBUG_LONG_BREAK_DURATION_MS : DEFAULT_LONG_BREAK_DURATION_MS,
     setsPerCycle: DEFAULT_SETS_PER_CYCLE
   }
 }
