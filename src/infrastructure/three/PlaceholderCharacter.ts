@@ -126,6 +126,20 @@ function createPlaceholderAnimations(): Map<string, THREE.AnimationClip> {
     )
   ]))
 
+  // refuse: 左右に激しく首振り（嫌がる表現）
+  clips.set('refuse', new THREE.AnimationClip('refuse', 0.8, [
+    new THREE.NumberKeyframeTrack(
+      '.position[x]',
+      [0, 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8],
+      [0, 0.12, -0.12, 0.1, -0.1, 0.06, -0.06, 0.02, 0]
+    ),
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.2, 0.4, 0.6, 0.8],
+      [0, 0.04, 0, 0.02, 0]
+    )
+  ]))
+
   // pet: 左右に小さく揺れる（撫でられて嬉しい表現）
   clips.set('pet', new THREE.AnimationClip('pet', 1.2, [
     new THREE.NumberKeyframeTrack(

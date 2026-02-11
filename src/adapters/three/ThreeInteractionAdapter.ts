@@ -108,6 +108,18 @@ export function createInteractionAdapter(
 
     if (!hitTestCharacter()) return
 
+    // ポモドーロ作業中はインタラクションを拒否
+    if (stateMachine.isInteractionLocked()) {
+      if (stateMachine.currentState === 'wander') {
+        stateMachine.transition({ type: 'interaction', kind: 'click' })
+        character.setState('refuse')
+        charHandle.playState('refuse')
+        stateMachine.start()
+      }
+      canvas.style.cursor = 'not-allowed'
+      return
+    }
+
     interactionMode = 'pending'
     gestureRecognizer.reset()
     if (isFalling) {

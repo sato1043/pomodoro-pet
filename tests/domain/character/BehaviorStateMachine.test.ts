@@ -245,4 +245,105 @@ describe('BehaviorStateMachine', () => {
       expect(dist).toBeGreaterThan(0)
     })
   })
+
+  describe('refuse（ポモドーロ作業中のインタラクション拒否）', () => {
+    it('wander+scrollingAllowed中のclickでREFUSEに遷移する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      expect(sm.currentState).toBe('wander')
+      const result = sm.transition({ type: 'interaction', kind: 'click' })
+      expect(result).toBe('refuse')
+    })
+
+    it('wander+scrollingAllowed中のdrag_startでREFUSEに遷移する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      const result = sm.transition({ type: 'interaction', kind: 'drag_start' })
+      expect(result).toBe('refuse')
+    })
+
+    it('wander+scrollingAllowed中のpet_startでREFUSEに遷移する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      const result = sm.transition({ type: 'interaction', kind: 'pet_start' })
+      expect(result).toBe('refuse')
+    })
+
+    it('REFUSEのタイムアウトでWANDERに復帰する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      expect(sm.currentState).toBe('refuse')
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('wander')
+    })
+
+    it('REFUSEはtickでタイムアウトしてWANDERに復帰する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      sm.start()
+      // refuseの最大持続時間は2500ms
+      const result = sm.tick(3000)
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('wander')
+    })
+
+    it('scrollingAllowed=false時はwanderでもREFUSEにならない', () => {
+      sm.setScrollingAllowed(true)
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.setScrollingAllowed(false)
+      const result = sm.transition({ type: 'interaction', kind: 'click' })
+      expect(result).toBe('reaction')
+    })
+
+    it('idle状態ではscrollingAllowed=trueでもREFUSEにならない', () => {
+      // smはidle + scrollingAllowed=true
+      const result = sm.transition({ type: 'interaction', kind: 'click' })
+      expect(result).toBe('reaction')
+    })
+  })
+
+  describe('isInteractionLocked', () => {
+    it('wander+scrollingAllowed=trueでtrueを返す', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      expect(sm.isInteractionLocked()).toBe(true)
+    })
+
+    it('idle状態ではfalseを返す', () => {
+      expect(sm.isInteractionLocked()).toBe(false)
+    })
+
+    it('wander+scrollingAllowed=falseではfalseを返す', () => {
+      sm.setScrollingAllowed(true)
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.setScrollingAllowed(false)
+      expect(sm.isInteractionLocked()).toBe(false)
+    })
+
+    it('refuse+scrollingAllowed=trueでtrueを返す', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      expect(sm.isInteractionLocked()).toBe(true)
+    })
+  })
+
+  describe('refuse中の再インタラクション', () => {
+    it('refuse中のclickで状態が変わらない', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      expect(sm.currentState).toBe('refuse')
+      const result = sm.transition({ type: 'interaction', kind: 'click' })
+      expect(result).toBe('refuse')
+    })
+
+    it('refuse中のdrag_startで状態が変わらない', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      const result = sm.transition({ type: 'interaction', kind: 'drag_start' })
+      expect(result).toBe('refuse')
+    })
+
+    it('refuse中のpet_startで状態が変わらない', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      const result = sm.transition({ type: 'interaction', kind: 'pet_start' })
+      expect(result).toBe('refuse')
+    })
+  })
 })

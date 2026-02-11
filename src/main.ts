@@ -133,6 +133,7 @@ async function main(): Promise<void> {
       happy: '/models/ms07_Jump.FBX',
       wave: '/models/ms07_Attack_01.FBX',
       pet: '/models/ms07_Jump.FBX',
+      refuse: '/models/ms07_Attack_01.FBX',
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)

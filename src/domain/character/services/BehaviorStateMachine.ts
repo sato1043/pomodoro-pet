@@ -21,6 +21,7 @@ export interface StateTickResult {
 export interface BehaviorStateMachine {
   readonly currentState: CharacterStateName
   readonly scrollingAllowed: boolean
+  isInteractionLocked(): boolean
   transition(trigger: StateTrigger): CharacterStateName
   tick(deltaMs: number): StateTickResult
   start(): void
@@ -37,7 +38,8 @@ const TIMEOUT_TRANSITIONS: Record<CharacterStateName, CharacterStateName> = {
   happy: 'idle',
   reaction: 'idle',
   dragged: 'dragged', // draggedはタイムアウトしない
-  pet: 'idle'
+  pet: 'idle',
+  refuse: 'wander'
 }
 
 function randomRange(min: number, max: number): number {
@@ -105,6 +107,10 @@ export function createBehaviorStateMachine(
     get currentState() { return currentState },
     get scrollingAllowed() { return scrollingAllowed },
 
+    isInteractionLocked(): boolean {
+      return (currentState === 'wander' || currentState === 'refuse') && scrollingAllowed
+    },
+
     transition(trigger: StateTrigger): CharacterStateName {
       switch (trigger.type) {
         case 'timeout': {
@@ -120,6 +126,13 @@ export function createBehaviorStateMachine(
         }
 
         case 'interaction': {
+          // ポモドーロ作業中（wander/refuse+scrollingAllowed）は全インタラクションを拒否
+          if ((currentState === 'wander' || currentState === 'refuse') && scrollingAllowed) {
+            if (currentState !== 'refuse') {
+              enterState('refuse')
+            }
+            return currentState
+          }
           if (trigger.kind === 'click') {
             enterState('reaction')
             return currentState
