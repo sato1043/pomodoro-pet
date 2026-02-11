@@ -38,7 +38,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 4つのコンテキスト。外部依存なし。
 
 - **timer**: `PomodoroSession` エンティティ。セット構造（4セット/サイクル）、長時間休憩（15分）、サイクル完了自動停止。tick(deltaMs) でイベント配列を返す純粋ロジック
-- **character**: `BehaviorStateMachine` が7状態（idle/wander/sit/sleep/happy/reaction/dragged）を管理。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでwander方向を固定可能
+- **character**: `BehaviorStateMachine` が8状態（idle/wander/sit/sleep/happy/reaction/dragged/pet）を管理。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでwander方向を固定可能。`GestureRecognizer`でドラッグ/撫でるを判定
 - **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
 - **shared**: `EventBus`（Pub/Sub）でタイマーとキャラクター間を疎結合に連携
 
@@ -54,7 +54,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 ### アダプター層 (`src/adapters/`)
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
-- `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ。ドラッグはY軸方向にキャラクターを持ち上げる（0〜3にclamp）
+- `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定
 - `ui/` — DOM要素で構築したオーバーレイUI（TimerOverlay, PromptInput, AudioControls）
 
 ### インフラ層 (`src/infrastructure/`)
@@ -90,15 +90,17 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（90件）。Three.js依存のアダプター/インフラ層はテスト対象外。
+テストはドメイン層とアプリケーション層に集中（132件）。Three.js依存のアダプター/インフラ層はテスト対象外。
 
 ```
 tests/domain/timer/PomodoroSession.test.ts           — 29件
-tests/domain/character/BehaviorStateMachine.test.ts   — 21件
+tests/domain/character/BehaviorStateMachine.test.ts   — 32件
+tests/domain/character/GestureRecognizer.test.ts      — 17件
 tests/domain/environment/SceneConfig.test.ts          — 10件
 tests/domain/shared/EventBus.test.ts                  — 4件
-tests/application/character/InterpretPrompt.test.ts   — 14件
+tests/application/character/InterpretPrompt.test.ts   — 17件
 tests/application/environment/ScrollUseCase.test.ts   — 11件
+tests/application/app-mode/AppModeManager.test.ts     — 11件
 tests/setup.test.ts                                   — 1件
 ```
 
@@ -112,6 +114,7 @@ tests/setup.test.ts                                   — 1件
 - [pomodoro-state-transitions.md](.claude/memories/pomodoro-state-transitions.md) — ポモドーロタイマー状態遷移設計
 - [app-mode-design.md](.claude/memories/app-mode-design.md) — AppMode（free/pomodoro）設計文書
 - [fbx-integration.md](.claude/memories/fbx-integration.md) — FBXモデル導入ノウハウ
+- [interaction-design.md](.claude/memories/interaction-design.md) — インタラクション設計（ジェスチャー判定・拡張ガイド）
 
 ## Key Conventions
 

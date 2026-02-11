@@ -159,6 +159,53 @@ describe('BehaviorStateMachine', () => {
     })
   })
 
+  describe('pet遷移', () => {
+    it('pet_startでPETに遷移する', () => {
+      const result = sm.transition({ type: 'interaction', kind: 'pet_start' })
+      expect(result).toBe('pet')
+    })
+
+    it('pet_endでIDLEに遷移する', () => {
+      sm.transition({ type: 'interaction', kind: 'pet_start' })
+      const result = sm.transition({ type: 'interaction', kind: 'pet_end' })
+      expect(result).toBe('idle')
+    })
+
+    it('PETはタイムアウトでIDLEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'pet' })
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('idle')
+    })
+
+    it('PETへはプロンプトで遷移できる', () => {
+      const result = sm.transition({ type: 'prompt', action: 'pet' })
+      expect(result).toBe('pet')
+    })
+
+    it('PETはtickでタイムアウトする（draggedと異なる）', () => {
+      sm.transition({ type: 'interaction', kind: 'pet_start' })
+      sm.start()
+      // petの最大持続時間は8000ms
+      const result = sm.tick(9000)
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('idle')
+    })
+  })
+
+  describe('keepAlive', () => {
+    it('keepAlive()で経過時間がリセットされタイムアウトが延長される', () => {
+      sm.transition({ type: 'interaction', kind: 'pet_start' })
+      sm.start()
+      // 7秒経過（最大8秒のため、あと少しでタイムアウト）
+      sm.tick(7000)
+      // keepAliveでリセット
+      sm.keepAlive()
+      // さらに7秒経過してもタイムアウトしない
+      const result = sm.tick(7000)
+      expect(result.stateChanged).toBe(false)
+    })
+  })
+
   describe('fixedWanderDirection', () => {
     it('指定時、wanderのmovementDeltaが固定方向になる', () => {
       const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })

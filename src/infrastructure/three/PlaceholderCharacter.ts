@@ -126,5 +126,19 @@ function createPlaceholderAnimations(): Map<string, THREE.AnimationClip> {
     )
   ]))
 
+  // pet: 左右に小さく揺れる（撫でられて嬉しい表現）
+  clips.set('pet', new THREE.AnimationClip('pet', 1.2, [
+    new THREE.NumberKeyframeTrack(
+      '.position[x]',
+      [0, 0.3, 0.6, 0.9, 1.2],
+      [0, 0.05, 0, -0.05, 0]
+    ),
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.3, 0.6, 0.9, 1.2],
+      [0, 0.02, 0, 0.02, 0]
+    )
+  ]))
+
   return clips
 }

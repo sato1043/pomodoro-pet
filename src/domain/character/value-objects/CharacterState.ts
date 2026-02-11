@@ -6,6 +6,7 @@ export type CharacterStateName =
   | 'happy'
   | 'reaction'
   | 'dragged'
+  | 'pet'
 
 export interface CharacterStateConfig {
   readonly name: CharacterStateName
@@ -23,5 +24,6 @@ export const STATE_CONFIGS: Record<CharacterStateName, CharacterStateConfig> = {
   sleep: { name: 'sleep', animationClip: 'sleep', minDurationMs: 15000, maxDurationMs: 60000, loop: true, scrolling: false },
   happy: { name: 'happy', animationClip: 'happy', minDurationMs: 2000, maxDurationMs: 5000, loop: false, scrolling: false },
   reaction: { name: 'reaction', animationClip: 'wave', minDurationMs: 2000, maxDurationMs: 3000, loop: false, scrolling: false },
-  dragged: { name: 'dragged', animationClip: 'idle', minDurationMs: 0, maxDurationMs: Infinity, loop: true, scrolling: false }
+  dragged: { name: 'dragged', animationClip: 'idle', minDurationMs: 0, maxDurationMs: Infinity, loop: true, scrolling: false },
+  pet: { name: 'pet', animationClip: 'pet', minDurationMs: 3000, maxDurationMs: 8000, loop: true, scrolling: false }
 }

@@ -3,6 +3,12 @@ import { interpretPrompt } from '../../../src/application/character/InterpretPro
 
 describe('InterpretPrompt', () => {
   describe('英語キーワード', () => {
+    it('"pet me" → pet', () => {
+      expect(interpretPrompt('pet me')).toBe('pet')
+    })
+    it('"stroke" → pet', () => {
+      expect(interpretPrompt('stroke')).toBe('pet')
+    })
     it('"walk around" → wander', () => {
       expect(interpretPrompt('walk around')).toBe('wander')
     })
@@ -24,6 +30,9 @@ describe('InterpretPrompt', () => {
   })
 
   describe('日本語キーワード', () => {
+    it('"撫でて" → pet', () => {
+      expect(interpretPrompt('撫でて')).toBe('pet')
+    })
     it('"歩け" → wander', () => {
       expect(interpretPrompt('歩け')).toBe('wander')
     })

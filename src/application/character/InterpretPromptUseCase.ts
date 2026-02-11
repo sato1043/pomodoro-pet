@@ -1,6 +1,7 @@
 import type { CharacterStateName } from '../../domain/character/value-objects/CharacterState'
 
 const ACTION_KEYWORDS: Array<{ action: CharacterStateName; keywords: string[] }> = [
+  { action: 'pet', keywords: ['pet', 'pat', 'stroke', 'rub', '撫', 'なで', 'ナデ'] },
   { action: 'wander', keywords: ['walk', 'move', 'go', '歩', '散歩', '移動'] },
   { action: 'sit', keywords: ['sit', 'rest', '座', '休'] },
   { action: 'sleep', keywords: ['sleep', 'nap', '寝', '眠'] },

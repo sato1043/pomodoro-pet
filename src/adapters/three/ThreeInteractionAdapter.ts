@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
+import { createGestureRecognizer, type GestureRecognizer } from '../../domain/character/services/GestureRecognizer'
 import type { ThreeCharacterHandle } from './ThreeCharacterAdapter'
 
 export interface InteractionAdapter {
@@ -11,7 +12,11 @@ const MAX_LIFT_HEIGHT = 3
 const LIFT_SENSITIVITY = 0.01
 const SWAY_SENSITIVITY = 0.003
 const MAX_SWAY = 0.5
-const SWAY_ROTATION = 0.4 // swayXに対する最大回転量（ラジアン）
+const SWAY_ROTATION = 0.4
+const PET_SWAY_SCALE = 0.3
+const PET_MAX_ROTATION = 0.15
+
+type InteractionMode = 'none' | 'pending' | 'drag' | 'pet'
 
 export function createInteractionAdapter(
   renderer: THREE.WebGLRenderer,
@@ -24,7 +29,7 @@ export function createInteractionAdapter(
   const mouse = new THREE.Vector2()
   const canvas = renderer.domElement
 
-  let isDragging = false
+  let interactionMode: InteractionMode = 'none'
   let isHovering = false
   let isFalling = false
   let dragStartY = 0
@@ -33,6 +38,7 @@ export function createInteractionAdapter(
   let swayX = 0
   let swayZ = 0
   let fallAnimId = 0
+  const gestureRecognizer: GestureRecognizer = createGestureRecognizer()
 
   function updateMouse(event: MouseEvent): void {
     const rect = canvas.getBoundingClientRect()
@@ -49,11 +55,29 @@ export function createInteractionAdapter(
   function onMouseMove(event: MouseEvent): void {
     updateMouse(event)
 
-    if (isDragging) {
-      // マウスY差分から持ち上げ高さを算出（上方向がマイナス）
+    if (interactionMode === 'pending') {
+      const deltaX = event.clientX - dragStartX
+      const deltaY = dragStartY - event.clientY // 上方向が正
+      const result = gestureRecognizer.update(deltaX, deltaY)
+
+      if (result === 'drag') {
+        interactionMode = 'drag'
+        stateMachine.transition({ type: 'interaction', kind: 'drag_start' })
+        character.setState('dragged')
+        charHandle.playState('dragged')
+      } else if (result === 'pet') {
+        interactionMode = 'pet'
+        stateMachine.transition({ type: 'interaction', kind: 'pet_start' })
+        character.setState('pet')
+        charHandle.playState('pet')
+        canvas.style.cursor = 'pointer'
+      }
+      return
+    }
+
+    if (interactionMode === 'drag') {
       const deltaY = dragStartY - event.clientY
       liftHeight = Math.max(0, Math.min(MAX_LIFT_HEIGHT, deltaY * LIFT_SENSITIVITY))
-      // マウスX差分で横揺れ
       const deltaX = (event.clientX - dragStartX) * SWAY_SENSITIVITY
       swayX = Math.max(-MAX_SWAY, Math.min(MAX_SWAY, deltaX))
       swayZ = Math.max(-MAX_SWAY, Math.min(MAX_SWAY, deltaX * 0.3))
@@ -62,6 +86,15 @@ export function createInteractionAdapter(
       return
     }
 
+    if (interactionMode === 'pet') {
+      stateMachine.keepAlive()
+      const deltaX = (event.clientX - dragStartX) * SWAY_SENSITIVITY * PET_SWAY_SCALE
+      const gentleSway = Math.max(-PET_MAX_ROTATION, Math.min(PET_MAX_ROTATION, deltaX))
+      charHandle.object3D.rotation.y = gentleSway
+      return
+    }
+
+    // 通常のホバー判定
     const hovering = hitTestCharacter()
     if (hovering !== isHovering) {
       isHovering = hovering
@@ -75,7 +108,8 @@ export function createInteractionAdapter(
 
     if (!hitTestCharacter()) return
 
-    isDragging = true
+    interactionMode = 'pending'
+    gestureRecognizer.reset()
     if (isFalling) {
       cancelAnimationFrame(fallAnimId)
       isFalling = false
@@ -87,9 +121,6 @@ export function createInteractionAdapter(
     swayZ = 0
     charHandle.object3D.rotation.y = 0
     canvas.style.cursor = 'grabbing'
-    stateMachine.transition({ type: 'interaction', kind: 'drag_start' })
-    character.setState('dragged')
-    charHandle.playState('dragged')
   }
 
   function startFallAnimation(): void {
@@ -115,33 +146,45 @@ export function createInteractionAdapter(
   }
 
   function onMouseUp(): void {
-    if (!isDragging) return
+    if (interactionMode === 'none') return
 
-    isDragging = false
-    canvas.style.cursor = isHovering ? 'pointer' : 'default'
-    const nextState = stateMachine.transition({ type: 'interaction', kind: 'drag_end' })
-    character.setState(nextState)
-    charHandle.playState(nextState)
-    stateMachine.start()
-    startFallAnimation()
-  }
+    if (interactionMode === 'pending') {
+      gestureRecognizer.finalize()
+      interactionMode = 'none'
+      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      stateMachine.transition({ type: 'interaction', kind: 'click' })
+      character.setState('reaction')
+      charHandle.playState('reaction')
+      stateMachine.start()
+      return
+    }
 
-  function onClick(event: MouseEvent): void {
-    if (isDragging) return
-    updateMouse(event)
+    if (interactionMode === 'drag') {
+      interactionMode = 'none'
+      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      const nextState = stateMachine.transition({ type: 'interaction', kind: 'drag_end' })
+      character.setState(nextState)
+      charHandle.playState(nextState)
+      stateMachine.start()
+      startFallAnimation()
+      return
+    }
 
-    if (!hitTestCharacter()) return
-
-    stateMachine.transition({ type: 'interaction', kind: 'click' })
-    character.setState('reaction')
-    charHandle.playState('reaction')
-    stateMachine.start()
+    if (interactionMode === 'pet') {
+      interactionMode = 'none'
+      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      charHandle.object3D.rotation.y = 0
+      const nextState = stateMachine.transition({ type: 'interaction', kind: 'pet_end' })
+      character.setState(nextState)
+      charHandle.playState(nextState)
+      stateMachine.start()
+      return
+    }
   }
 
   canvas.addEventListener('mousemove', onMouseMove)
   canvas.addEventListener('mousedown', onMouseDown)
   window.addEventListener('mouseup', onMouseUp)
-  canvas.addEventListener('click', onClick)
 
   return {
     dispose(): void {
@@ -149,7 +192,6 @@ export function createInteractionAdapter(
       canvas.removeEventListener('mousemove', onMouseMove)
       canvas.removeEventListener('mousedown', onMouseDown)
       window.removeEventListener('mouseup', onMouseUp)
-      canvas.removeEventListener('click', onClick)
       canvas.style.cursor = 'default'
     }
   }

@@ -2,10 +2,15 @@ import type { CharacterStateName } from '../value-objects/CharacterState'
 import { STATE_CONFIGS } from '../value-objects/CharacterState'
 import type { Position3D } from '../value-objects/Position3D'
 
+export type InteractionKind =
+  | 'click' | 'hover'
+  | 'drag_start' | 'drag_end'
+  | 'pet_start' | 'pet_end'
+
 export type StateTrigger =
   | { type: 'timeout' }
   | { type: 'prompt'; action: CharacterStateName }
-  | { type: 'interaction'; kind: 'click' | 'hover' | 'drag_start' | 'drag_end' }
+  | { type: 'interaction'; kind: InteractionKind }
 
 export interface StateTickResult {
   stateChanged: boolean
@@ -19,6 +24,7 @@ export interface BehaviorStateMachine {
   transition(trigger: StateTrigger): CharacterStateName
   tick(deltaMs: number): StateTickResult
   start(): void
+  keepAlive(): void
   setScrollingAllowed(allowed: boolean): void
 }
 
@@ -30,7 +36,8 @@ const TIMEOUT_TRANSITIONS: Record<CharacterStateName, CharacterStateName> = {
   sleep: 'idle',
   happy: 'idle',
   reaction: 'idle',
-  dragged: 'dragged' // draggedはタイムアウトしない
+  dragged: 'dragged', // draggedはタイムアウトしない
+  pet: 'idle'
 }
 
 function randomRange(min: number, max: number): number {
@@ -125,6 +132,14 @@ export function createBehaviorStateMachine(
             enterState(scrollingAllowed ? 'wander' : 'idle')
             return currentState
           }
+          if (trigger.kind === 'pet_start') {
+            enterState('pet')
+            return currentState
+          }
+          if (trigger.kind === 'pet_end') {
+            enterState('idle')
+            return currentState
+          }
           // hover: 変化なし
           return currentState
         }
@@ -182,6 +197,10 @@ export function createBehaviorStateMachine(
     start(): void {
       elapsedMs = 0
       currentDurationMs = randomDuration(currentState)
+    },
+
+    keepAlive(): void {
+      elapsedMs = 0
     },
 
     setScrollingAllowed(allowed: boolean): void {
