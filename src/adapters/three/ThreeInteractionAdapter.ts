@@ -19,7 +19,7 @@ const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
   happy: 'pointer',
   reaction: 'pointer',
   dragged: 'grabbing',
-  pet: 'pointer',
+  pet: 'grab',
   refuse: 'not-allowed'
 }
 
