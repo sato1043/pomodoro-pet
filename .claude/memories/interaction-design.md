@@ -10,6 +10,8 @@
 | 摘まみ上げ | 押しながら上方向に移動 | dragged |
 | 撫でる | 押しながら左右にストローク | pet |
 
+ポモドーロ作業中（wander+scrollingAllowed）は全インタラクションが拒否され、refuse状態に遷移する。
+
 ## 関連ソースファイル
 
 | ファイル | 役割 |
@@ -81,6 +83,53 @@ type InteractionKind =
 
 将来のインタラクション追加時はこの型にリテラルを追加する。
 
+## refuse状態の設計（ポモドーロ作業中のインタラクション拒否）
+
+### 動作フロー
+
+```
+ポモドーロ作業中（wander + scrollingAllowed = true）
+  ↓ ユーザーがキャラクターをクリック/ドラッグ/撫でようとする
+  ↓ isInteractionLocked() → true
+  ├─ wander状態 → refuse に遷移、拒否アニメーション再生
+  └─ refuse状態 → 状態変化なし（再インタラクション無視）
+  ↓ refuse タイムアウト（1.5-2.5秒）
+  → wander に自動復帰
+```
+
+### isInteractionLocked()
+
+`BehaviorStateMachine.isInteractionLocked()` は `(currentState === 'wander' || currentState === 'refuse') && scrollingAllowed` で判定する。refuse中の再インタラクションも拒否することで、reaction→idle への意図しない遷移を防ぐ。
+
+### アニメーション
+
+- FBXモデル: `ms07_Attack_01.FBX`（reaction/waveと同じFBX）を `refuse` 名で登録
+- PlaceholderCharacter: 左右に激しく揺れる首振り専用アニメーション
+
+## ホバーカーソルマッピング
+
+キャラクター上のホバーカーソルは状態別マッピングテーブル（`DEFAULT_HOVER_CURSORS`）で管理する。
+
+| 状態 | デフォルトカーソル |
+|---|---|
+| idle/wander/sit/sleep/happy/reaction/pet | `pointer` |
+| dragged | `grabbing` |
+| refuse | `not-allowed` |
+
+`isInteractionLocked()` が true のとき、マッピングに関わらず `refuse` 状態のカーソル（`not-allowed`）が適用される。
+
+### キャラクター別カスタマイズ
+
+`createInteractionAdapter` の `InteractionConfig.hoverCursors` でキャラクター別にオーバーライドできる。
+
+```typescript
+createInteractionAdapter(renderer, camera, character, stateMachine, charHandle, {
+  hoverCursors: { pet: 'grab' }  // デフォルトの 'pointer' を上書き
+})
+```
+
+デフォルトマッピングとマージされるため、変更したい状態のみ指定すればよい。
+
 ## pet状態の設計
 
 ### dragged vs pet
@@ -124,5 +173,6 @@ clickイベントリスナーは削除し、mouseupのpendingパスがclick処�
 4. `TIMEOUT_TRANSITIONS` にエントリ追加
 5. `BehaviorStateMachine.transition()` の interaction ケースに分岐追加
 6. `ThreeInteractionAdapter` の `InteractionMode` に新モードを追加し、mousemove/mouseupの分岐を追加
-7. PlaceholderCharacter + FBX `animationPaths` にアニメーション追加
-8. テスト追加（GestureRecognizer, BehaviorStateMachine, InterpretPrompt）
+7. `DEFAULT_HOVER_CURSORS` に新状態のカーソルを追加
+8. PlaceholderCharacter + FBX `animationPaths` にアニメーション追加
+9. テスト追加（GestureRecognizer, BehaviorStateMachine, InterpretPrompt）

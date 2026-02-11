@@ -1,11 +1,30 @@
 import * as THREE from 'three'
 import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
+import type { CharacterStateName } from '../../domain/character/value-objects/CharacterState'
 import { createGestureRecognizer, type GestureRecognizer } from '../../domain/character/services/GestureRecognizer'
 import type { ThreeCharacterHandle } from './ThreeCharacterAdapter'
 
 export interface InteractionAdapter {
   dispose: () => void
+}
+
+export type HoverCursors = Partial<Record<CharacterStateName, string>>
+
+const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
+  idle: 'pointer',
+  wander: 'pointer',
+  sit: 'pointer',
+  sleep: 'pointer',
+  happy: 'pointer',
+  reaction: 'pointer',
+  dragged: 'grabbing',
+  pet: 'pointer',
+  refuse: 'not-allowed'
+}
+
+export interface InteractionConfig {
+  readonly hoverCursors?: HoverCursors
 }
 
 const MAX_LIFT_HEIGHT = 3
@@ -23,8 +42,19 @@ export function createInteractionAdapter(
   camera: THREE.PerspectiveCamera,
   character: Character,
   stateMachine: BehaviorStateMachine,
-  charHandle: ThreeCharacterHandle
+  charHandle: ThreeCharacterHandle,
+  config?: InteractionConfig
 ): InteractionAdapter {
+  const hoverCursors: Record<CharacterStateName, string> = {
+    ...DEFAULT_HOVER_CURSORS,
+    ...config?.hoverCursors
+  }
+
+  function resolveHoverCursor(): string {
+    if (stateMachine.isInteractionLocked()) return hoverCursors.refuse
+    return hoverCursors[character.currentState] ?? 'pointer'
+  }
+
   const raycaster = new THREE.Raycaster()
   const mouse = new THREE.Vector2()
   const canvas = renderer.domElement
@@ -70,7 +100,7 @@ export function createInteractionAdapter(
         stateMachine.transition({ type: 'interaction', kind: 'pet_start' })
         character.setState('pet')
         charHandle.playState('pet')
-        canvas.style.cursor = 'pointer'
+        canvas.style.cursor = hoverCursors.pet
       }
       return
     }
@@ -98,7 +128,9 @@ export function createInteractionAdapter(
     const hovering = hitTestCharacter()
     if (hovering !== isHovering) {
       isHovering = hovering
-      canvas.style.cursor = hovering ? 'pointer' : 'default'
+      canvas.style.cursor = hovering ? resolveHoverCursor() : 'default'
+    } else if (isHovering) {
+      canvas.style.cursor = resolveHoverCursor()
     }
   }
 
@@ -116,7 +148,7 @@ export function createInteractionAdapter(
         charHandle.playState('refuse')
         stateMachine.start()
       }
-      canvas.style.cursor = 'not-allowed'
+      canvas.style.cursor = resolveHoverCursor()
       return
     }
 
@@ -163,7 +195,7 @@ export function createInteractionAdapter(
     if (interactionMode === 'pending') {
       gestureRecognizer.finalize()
       interactionMode = 'none'
-      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      canvas.style.cursor = isHovering ? resolveHoverCursor() : 'default'
       stateMachine.transition({ type: 'interaction', kind: 'click' })
       character.setState('reaction')
       charHandle.playState('reaction')
@@ -173,7 +205,7 @@ export function createInteractionAdapter(
 
     if (interactionMode === 'drag') {
       interactionMode = 'none'
-      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      canvas.style.cursor = isHovering ? resolveHoverCursor() : 'default'
       const nextState = stateMachine.transition({ type: 'interaction', kind: 'drag_end' })
       character.setState(nextState)
       charHandle.playState(nextState)
@@ -184,7 +216,7 @@ export function createInteractionAdapter(
 
     if (interactionMode === 'pet') {
       interactionMode = 'none'
-      canvas.style.cursor = isHovering ? 'pointer' : 'default'
+      canvas.style.cursor = isHovering ? resolveHoverCursor() : 'default'
       charHandle.object3D.rotation.y = 0
       const nextState = stateMachine.transition({ type: 'interaction', kind: 'pet_end' })
       character.setState(nextState)
