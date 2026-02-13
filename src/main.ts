@@ -126,12 +126,12 @@ async function main(): Promise<void> {
   const appModeManager = createAppModeManager(bus)
 
   // アプリケーション設定
-  const settingsService = createAppSettingsService(bus, initialConfig)
+  const settingsService = createAppSettingsService(bus, initialConfig, isDebugTimer)
 
   // 環境音
   const audio = createAudioAdapter()
 
-  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio)
+  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio, isDebugTimer)
   document.body.appendChild(timerUI.container)
 
   // 設定パネル（Environment）
@@ -152,7 +152,7 @@ async function main(): Promise<void> {
     unsubAppMode = subscribeAppModeToSession(bus, session)
 
     // 4. TimerOverlay再作成
-    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio)
+    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio, isDebugTimer)
     document.body.appendChild(timerUI.container)
     timerUI.container.appendChild(settingsPanel.trigger)
   })

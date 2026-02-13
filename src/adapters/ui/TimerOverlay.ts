@@ -37,6 +37,14 @@ function phaseMinLabel(phase: CyclePhase): string {
   }
 }
 
+function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
+  switch (type) {
+    case 'work': return { filled: 'rgba(76,175,80,0.85)', unfilled: 'rgba(76,175,80,0.2)' }
+    case 'break': return { filled: 'rgba(66,165,245,0.85)', unfilled: 'rgba(66,165,245,0.2)' }
+    case 'long-break': return { filled: 'rgba(171,71,188,0.85)', unfilled: 'rgba(171,71,188,0.2)' }
+  }
+}
+
 function buildFlowText(
   plan: CyclePhase[],
   phaseType: PhaseType,
@@ -150,6 +158,53 @@ function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
   return views
 }
 
+function buildTimelineBarHTML(
+  w: number, b: number, lb: number, sets: number,
+  activePhase?: { set: number; type: PhaseType }
+): string {
+  const timerConfig = createConfig(w * 60000, b * 60000, lb * 60000, sets)
+  const plan = buildCyclePlan(timerConfig)
+  const setViews = buildSetViews(plan, new Date())
+
+  // B/LBの表示幅を調整して視認性を確保
+  const displayFlex = (phase: CyclePhase): number => {
+    const min = phase.durationMs / 60000
+    if (phase.type === 'work') return min
+    if (phase.type === 'long-break') return b * 2
+    return b * 1.5
+  }
+
+  // activePhaseのplan内インデックスを算出
+  const activeIdx = activePhase
+    ? plan.findIndex(p => p.setNumber === activePhase.set && p.type === activePhase.type)
+    : -1
+
+  // バーセグメント（セット間にセパレータ）
+  const barParts: string[] = []
+  let flatIdx = 0
+  setViews.forEach((sv, si) => {
+    if (si > 0) barParts.push('<span class="tl-set-sep"></span>')
+    sv.phases.forEach(phase => {
+      let extraClass = ''
+      let inlineStyle = `flex:${displayFlex(phase)}`
+      if (activeIdx >= 0) {
+        if (flatIdx === activeIdx) {
+          extraClass = ' tl-seg-active'
+        } else if (flatIdx < activeIdx) {
+          extraClass = ' tl-seg-done'
+          inlineStyle += `;background:${phaseColor(phase.type).filled}`
+        }
+      }
+      barParts.push(
+        `<span class="tl-seg tl-seg-${phase.type}${extraClass}" style="${inlineStyle}">${segLabel(phase.type)}</span>`
+      )
+      flatIdx++
+    })
+  })
+
+  return `<div class="tl-bar">${barParts.join('')}</div>`
+}
+
 function buildTimelineHTML(w: number, b: number, lb: number, sets: number): string {
   const timerConfig = createConfig(w * 60000, b * 60000, lb * 60000, sets)
   const plan = buildCyclePlan(timerConfig)
@@ -163,30 +218,12 @@ function buildTimelineHTML(w: number, b: number, lb: number, sets: number): stri
     `<span class="tl-config-break">${b}</span>) ` +
     `× ${sets} Sets = <span class="tl-config-total">${fmtDuration(totalMin)}</span>`
 
-  // B/LBの表示幅を調整して視認性を確保
-  const displayFlex = (phase: CyclePhase): number => {
-    const min = phase.durationMs / 60000
-    if (phase.type === 'work') return min
-    if (phase.type === 'long-break') return b * 2
-    return b * 1.5
-  }
-
   // セットラベル
   const labels = setViews.map(sv =>
     `<span class="tl-set-label">${sv.label}</span>`
   ).join('')
 
-  // バーセグメント（セット間にセパレータ）
-  const barParts: string[] = []
-  setViews.forEach((sv, si) => {
-    if (si > 0) barParts.push('<span class="tl-set-sep"></span>')
-    sv.phases.forEach(phase => {
-      barParts.push(
-        `<span class="tl-seg tl-seg-${phase.type}" style="flex:${displayFlex(phase)}">${segLabel(phase.type)}</span>`
-      )
-    })
-  })
-  const bar = barParts.join('')
+  const bar = buildTimelineBarHTML(w, b, lb, sets)
 
   // 時刻行（開始 + 各セット終了）
   const timesHTML =
@@ -199,7 +236,7 @@ function buildTimelineHTML(w: number, b: number, lb: number, sets: number): stri
       `<div class="tl-config">${configLine}</div>` +
       `<div class="tl-row">` +
         `<div class="tl-labels">${labels}</div>` +
-        `<div class="tl-bar">${bar}</div>` +
+        bar +
         `<div class="tl-times">${timesHTML}</div>` +
       `</div>` +
     `</div>`
@@ -217,7 +254,8 @@ export function createTimerOverlay(
   config: TimerConfig,
   appModeManager: AppModeManager,
   settingsService: AppSettingsService,
-  audio: AudioAdapter
+  audio: AudioAdapter,
+  debugTimer = false
 ): TimerOverlayElements {
   const svgSpeakerOn = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`
   const svgSpeakerOff = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`
@@ -306,6 +344,7 @@ export function createTimerOverlay(
         <span class="timer-phase" id="timer-phase">WORK</span>
         <span class="timer-display" id="timer-display">25:00</span>
       </div>
+      <div class="timer-pomodoro-timeline" id="timer-pomodoro-timeline"></div>
       <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
       <div class="timer-progress" id="timer-progress">[○○○○]</div>
       <div class="timer-controls">
@@ -486,6 +525,9 @@ export function createTimerOverlay(
     .tl-seg-work { background: rgba(76,175,80,0.6); }
     .tl-seg-break { background: rgba(66,165,245,0.6); }
     .tl-seg-long-break { background: rgba(171,71,188,0.6); }
+    .timer-pomodoro-timeline .tl-seg { opacity: 0.5; }
+    .timer-pomodoro-timeline .tl-seg-active { opacity: 1; }
+    .timer-pomodoro-timeline .tl-seg-done { opacity: 0.85; }
     .tl-set-sep { width: 2px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
     .tl-times { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-variant-numeric: tabular-nums; }
     .tl-time-mid { flex: 1; text-align: center; }
@@ -573,6 +615,7 @@ export function createTimerOverlay(
       background: rgba(76, 175, 80, 0.5);
       border-color: rgba(76, 175, 80, 0.7);
     }
+    .timer-pomodoro-timeline { margin: 8px 0; }
     .timer-set-info {
       font-size: 12px;
       color: #aaa;
@@ -951,6 +994,10 @@ export function createTimerOverlay(
     }
   }
 
+  const pomodoroTimelineEl = container.querySelector('#timer-pomodoro-timeline') as HTMLDivElement
+  let lastActiveSet = -1
+  let lastActiveType: PhaseType | '' = ''
+
   function updateTimerDisplay(): void {
     const phase = session.currentPhase.type
     displayEl.textContent = formatTime(session.remainingMs)
@@ -961,15 +1008,42 @@ export function createTimerOverlay(
     progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
     btnPause.style.display = session.isRunning ? '' : 'none'
     btnResume.style.display = session.isRunning ? 'none' : ''
+
+    // タイムラインバー: フェーズ変更時のみDOM更新
+    const curSet = session.currentSet
+    if (curSet !== lastActiveSet || phase !== lastActiveType) {
+      lastActiveSet = curSet
+      lastActiveType = phase
+      pomodoroTimelineEl.innerHTML = buildTimelineBarHTML(
+        msToMinutes(config.workDurationMs),
+        msToMinutes(config.breakDurationMs),
+        msToMinutes(config.longBreakDurationMs),
+        config.setsPerCycle,
+        { set: curSet, type: phase }
+      )
+    }
+
+    // アクティブセグメントの塗りつぶし進捗を更新
+    const activeSeg = pomodoroTimelineEl.querySelector('.tl-seg-active') as HTMLElement | null
+    if (activeSeg) {
+      const dur = session.currentPhase.durationMs
+      const progress = Math.max(0, Math.min(1, (dur - session.remainingMs) / dur))
+      const pct = (progress * 100).toFixed(1)
+      const c = phaseColor(phase)
+      activeSeg.style.background = `linear-gradient(to right, ${c.filled} ${pct}%, ${c.unfilled} ${pct}%)`
+    }
   }
 
   btnEnterPomodoro.addEventListener('click', () => {
-    settingsService.updateTimerConfig({
-      workMinutes: selectedWork,
-      breakMinutes: selectedBreak,
-      longBreakMinutes: selectedLongBreak,
-      setsPerCycle: selectedSets
-    })
+    // デバッグタイマー時はデバッグ値を維持するため設定更新をスキップ
+    if (!debugTimer) {
+      settingsService.updateTimerConfig({
+        workMinutes: selectedWork,
+        breakMinutes: selectedBreak,
+        longBreakMinutes: selectedLongBreak,
+        setsPerCycle: selectedSets
+      })
+    }
 
     // SettingsChanged → session再作成が同期的に完了した後、pomodoroに遷移
     const events = appModeManager.enterPomodoro()

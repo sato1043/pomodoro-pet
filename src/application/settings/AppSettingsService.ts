@@ -48,7 +48,8 @@ const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMute
 
 export function createAppSettingsService(
   bus: EventBus,
-  initialConfig?: TimerConfig
+  initialConfig?: TimerConfig,
+  debugTimer?: boolean
 ): AppSettingsService {
   let currentConfig: TimerConfig = initialConfig ?? createDefaultConfig()
   let currentSound: SoundConfigInput = { ...DEFAULT_SOUND }
@@ -92,7 +93,8 @@ export function createAppSettingsService(
       }
 
       // タイマー設定の復元（SettingsChanged発行でTimerOverlay再作成。この時点でAudioAdapterは既に更新済み）
-      if (data.timer) {
+      // デバッグタイマー有効時はデバッグ値を優先し、保存済みタイマー設定をスキップ
+      if (data.timer && !debugTimer) {
         const t = data.timer as Record<string, unknown>
         if (
           typeof t.workMinutes === 'number' &&

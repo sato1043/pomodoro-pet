@@ -80,7 +80,7 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 `.env.development` で開発用の設定を行う。`.env.development.example` を参照。
 
 ```bash
-# タイマー短縮モード（work=20s / break=3s / long-break=4s）
+# タイマー短縮モード（work=1min / break=1min / long-break=1min）
 # .env.development に以下を記述して npm run dev で起動
 VITE_DEBUG_TIMER=1
 

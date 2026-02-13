@@ -55,7 +55,7 @@ AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
 - `timer/entities/PomodoroSession.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式）
 - `timer/value-objects/CyclePlan.ts` — フェーズ順列生成（buildCyclePlan, cycleTotalMs）
 - `timer/value-objects/TimerPhase.ts` — work/break/long-breakフェーズ
-- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`createDefaultConfig(debug)`でデバッグモード（20s/3s/4s）を切替
+- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`createDefaultConfig(debug)`でデバッグモード（1min/1min/1min）を切替
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
 - `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（fixedWanderDirection対応）
