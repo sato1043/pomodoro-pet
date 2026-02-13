@@ -332,6 +332,14 @@ export function createTimerOverlay(
       z-index: 1000;
       backdrop-filter: blur(8px);
       user-select: none;
+      pointer-events: none;
+    }
+    .timer-free-mode,
+    .timer-pomodoro-mode,
+    .timer-overlay-title,
+    .timer-settings-toggle,
+    #settings-trigger {
+      pointer-events: auto;
     }
     .timer-overlay-title {
       position: absolute;
@@ -745,6 +753,17 @@ export function createTimerOverlay(
     })
   })
 
+  // 折りたたみ時（Setボタン非表示）はサウンド変更を即時保存
+  function saveSoundIfCollapsed(): void {
+    if (!settingsExpanded) {
+      settingsService.updateSoundConfig({
+        preset: audio.currentPreset,
+        volume: audio.volume,
+        isMuted: audio.isMuted
+      })
+    }
+  }
+
   const muteBtn = container.querySelector('#timer-mute') as HTMLButtonElement
   muteBtn.addEventListener('click', () => {
     if (!audio.isMuted) {
@@ -757,6 +776,7 @@ export function createTimerOverlay(
     }
     updateMuteUI()
     updateVolumeUI()
+    saveSoundIfCollapsed()
   })
 
   const volDown = container.querySelector('#timer-vol-down') as HTMLButtonElement
@@ -765,11 +785,13 @@ export function createTimerOverlay(
   volDown.addEventListener('click', () => {
     audio.setVolume(Math.max(0, audio.volume - 0.1))
     updateVolumeUI()
+    saveSoundIfCollapsed()
   })
 
   volUp.addEventListener('click', () => {
     audio.setVolume(Math.min(1, audio.volume + 0.1))
     updateVolumeUI()
+    saveSoundIfCollapsed()
   })
 
   container.querySelectorAll('.timer-vol-seg').forEach(seg => {
@@ -777,6 +799,7 @@ export function createTimerOverlay(
       const idx = Number((seg as HTMLElement).dataset.seg)
       audio.setVolume((idx + 1) / 10)
       updateVolumeUI()
+      saveSoundIfCollapsed()
     })
   })
 
@@ -787,12 +810,72 @@ export function createTimerOverlay(
   const toggleEl = container.querySelector('#timer-settings-toggle') as HTMLButtonElement
   let settingsExpanded = false
 
+  // 展開時のスナップショット（Setを押さずに閉じたら復元する）
+  let savedWork = selectedWork
+  let savedBreak = selectedBreak
+  let savedLongBreak = selectedLongBreak
+  let savedSets = selectedSets
+  let savedPreset = audio.currentPreset
+  let savedVolume = audio.volume
+  let savedMuted = audio.isMuted
+  let confirmedBySet = false
+
+  function saveSnapshot(): void {
+    savedWork = selectedWork
+    savedBreak = selectedBreak
+    savedLongBreak = selectedLongBreak
+    savedSets = selectedSets
+    savedPreset = audio.currentPreset
+    savedVolume = audio.volume
+    savedMuted = audio.isMuted
+  }
+
+  function restoreSnapshot(): void {
+    selectedWork = savedWork
+    selectedBreak = savedBreak
+    selectedLongBreak = savedLongBreak
+    selectedSets = savedSets
+    // ボタングループのactiveクラスも復元
+    const groups: Array<{ id: string; value: number }> = [
+      { id: 'timer-cfg-work-group', value: selectedWork },
+      { id: 'timer-cfg-break-group', value: selectedBreak },
+      { id: 'timer-cfg-long-break-group', value: selectedLongBreak },
+      { id: 'timer-cfg-sets-group', value: selectedSets },
+    ]
+    for (const { id, value } of groups) {
+      const group = container.querySelector(`#${id}`)
+      if (!group) continue
+      group.querySelectorAll('.timer-cfg-btn').forEach(btn => {
+        const el = btn as HTMLElement
+        el.classList.toggle('active', Number(el.dataset.value) === value)
+      })
+    }
+    // サウンド状態も復元
+    if (audio.currentPreset !== savedPreset) audio.switchPreset(savedPreset)
+    if (audio.isMuted !== savedMuted) audio.toggleMute()
+    audio.setVolume(savedVolume)
+    volumeBeforeMute = savedMuted ? savedVolume : audio.volume
+    updateSoundPresetUI()
+    updateMuteUI()
+    updateVolumeUI()
+  }
+
   function updateSummary(): void {
     summaryEl.innerHTML = buildSummaryHTML()
   }
 
   function toggleSettings(): void {
     settingsExpanded = !settingsExpanded
+
+    if (settingsExpanded) {
+      // 展開時: スナップショットを保存
+      saveSnapshot()
+    } else if (!confirmedBySet) {
+      // Setを押さずに折りたたみ: スナップショットに復元
+      restoreSnapshot()
+    }
+    confirmedBySet = false
+
     settingsEl.style.display = settingsExpanded ? '' : 'none'
     // 折りたたみ時はプリセットボタンのみ非表示、ボリュームインジケーターは残す
     const presetsEl = soundSectionEl.querySelector('.timer-sound-presets') as HTMLElement | null
@@ -816,6 +899,12 @@ export function createTimerOverlay(
       longBreakMinutes: selectedLongBreak,
       setsPerCycle: selectedSets
     })
+    settingsService.updateSoundConfig({
+      preset: audio.currentPreset,
+      volume: audio.volume,
+      isMuted: audio.isMuted
+    })
+    confirmedBySet = true
     toggleSettings()
   })
 
@@ -917,7 +1006,7 @@ export function createTimerOverlay(
 
   // 折りたたみ時は1秒ごとに時計を更新（開発時はコメントアウト）
   const clockInterval = setInterval(() => {
-    // if (!settingsExpanded) updateSummary()
+    if (!settingsExpanded) updateSummary()
   }, 1000)
 
   switchToMode(appModeManager.currentMode)

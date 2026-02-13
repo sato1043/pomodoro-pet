@@ -1,8 +1,36 @@
-import { app, BrowserWindow } from 'electron'
+import { app, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
+import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 
 // WSL2等でGPUプロセス初期化失敗時にソフトウェアWebGL(SwiftShader)へフォールバック
 app.commandLine.appendSwitch('enable-unsafe-swiftshader')
+
+function getSettingsPath(): string {
+  return join(app.getPath('userData'), 'settings.json')
+}
+
+function loadSettings(): Record<string, unknown> | null {
+  try {
+    const data = readFileSync(getSettingsPath(), 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return null
+  }
+}
+
+function saveSettings(settings: Record<string, unknown>): void {
+  const dir = app.getPath('userData')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf-8')
+}
+
+ipcMain.handle('settings:load', () => {
+  return loadSettings()
+})
+
+ipcMain.handle('settings:save', (_event, settings: Record<string, unknown>) => {
+  saveSettings(settings)
+})
 
 function createWindow(): void {
   const mainWindow = new BrowserWindow({

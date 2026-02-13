@@ -21,12 +21,27 @@
 ### ~~タイマー設定カスタマイズUI~~ — 完了
 - TimerOverlayのfreeモードにボタングループで設定（Work [25/50/90], Break [5/10/15], Long Break [15/30/60], Sets [1/2/3/4]）
 - サウンド設定（プリセットボタン＋10段階ボリュームインジケーター＋SVGミュートボタン）もTimerOverlayに統合
-- ☰/×トグルで設定行を折りたたみ、折りたたみ時はサマリー（W/B/L/S）＋ボリュームインジケーターを表示
+- ☰/×トグルで設定行を畳み、タイムラインサマリー（CyclePlanベース横棒グラフ＋AM/PM時刻＋合計時間）に切替
+- デフォルト折りたたみ。展開時はSetボタンで確定（スナップショット/リストア）
+- 折りたたみ時のボリューム/ミュート変更は即時保存
 - SettingsPanelはギアアイコン→モーダルでEnvironment設定（スタブ）のみ
-- `AppSettingsService`が分→ms変換＋バリデーション＋`SettingsChanged`イベント発行
+- `AppSettingsService`が分→ms変換＋バリデーション＋`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `SettingsChanged`購読でsession再作成→TimerOverlay再構築のフロー実装
 - pomodoroモード中はギアアイコン・トグルボタン非表示
 - `createDefaultConfig(debug)`でデバッグ/通常モードを統一管理
+
+### ~~CyclePlan（フェーズ順列の一元管理）~~ — 完了
+- `buildCyclePlan(config)`がTimerConfigからCyclePhase[]を生成する値オブジェクト
+- PomodoroSessionがCyclePlanをインデックス走査する方式に変更
+- Sets=1はBreak、Sets>1の最終セットはLong Break
+- デフォルトSets=1に変更
+- TimerOverlayのタイムラインサマリーもCyclePlanを利用
+
+### ~~設定永続化~~ — 完了
+- タイマー設定＋サウンド設定を`{userData}/settings.json`にJSON永続化
+- Node.js標準API（`fs` + `app.getPath('userData')`）で直接読み書き（electron-storeはESM/CJS衝突のため不採用）
+- Electron IPC（`settings:load`/`settings:save`）→ preload contextBridge → renderer
+- 起動時に`loadFromStorage()`で復元（サウンド→タイマーの順でイベント発行）
 
 ### ポモドーロ中のタイマー表示の視認性向上
 - 現在work/break/long-breakのフェーズ区別が目立たない
@@ -41,6 +56,17 @@
 - 現在はデフォルトのElectronアイコン
 - 256x256以上のPNGを作成し、.icoに変換
 - `package.json` の `build.win.icon` に指定
+
+### メインプロセスのESM化検討
+- 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない
+- Electron v28+はメインプロセスのESMをサポート済み（現在v33）
+- 変更箇所:
+  - `package.json`に`"type": "module"`追加
+  - `electron.vite.config.ts`で`build.rollupOptions.output.format: 'es'`設定
+  - `desktop/main/index.ts`の`__dirname`を`import.meta.url` + `fileURLToPath`に書き換え
+  - `desktop/preload/index.ts`はCJSのまま維持（contextBridgeの制約）
+- メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
+- リスク: preloadとの境界整理、electron-viteのESM出力の安定性
 
 ## 優先度: 中
 

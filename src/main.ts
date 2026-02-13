@@ -19,6 +19,7 @@ import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/envir
 import { createScrollManager } from './application/environment/ScrollUseCase'
 import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScrollRenderer'
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
+import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
 import { bridgeTimerToCharacter } from './application/character/TimerCharacterBridge'
 
 function createScene(): {
@@ -155,6 +156,17 @@ async function main(): Promise<void> {
     document.body.appendChild(timerUI.container)
     timerUI.container.appendChild(settingsPanel.trigger)
   })
+
+  // SoundSettingsLoaded → AudioAdapterに適用
+  bus.subscribe<SettingsEvent>('SoundSettingsLoaded', (event) => {
+    if (event.type !== 'SoundSettingsLoaded') return
+    audio.switchPreset(event.sound.preset as SoundPreset)
+    audio.setVolume(event.sound.volume)
+    if (event.sound.isMuted !== audio.isMuted) audio.toggleMute()
+  })
+
+  // 保存済み設定の復元（購読登録後に実行）
+  await settingsService.loadFromStorage()
 
   // キャラクター初期化
   const character = createCharacter()

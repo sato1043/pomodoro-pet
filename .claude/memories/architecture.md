@@ -18,12 +18,15 @@ EventBus（Pub/Sub）で疎結合。AppMode・タイマー・キャラクター�
 AppModeManager → AppModeChanged → TimerCharacterBridge, TimerOverlay
 PomodoroSession → TimerEvents → TimerCharacterBridge, TimerOverlay
 CycleCompleted → AppModeManager（自動でfreeに遷移）
+AppSettingsService → SettingsChanged → main.ts（session/UI再作成）
+AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
 ```
 
 ## 4つのドメインコンテキスト
 
 ### 1. タイマー
-- `PomodoroSession` — セット構造（デフォルト2セット/サイクル）、長時間休憩（15分）、サイクル完了自動停止
+- `PomodoroSession` — `CyclePlan`をインデックス走査する方式。デフォルト1セット/サイクル。サイクル完了自動停止
+- `CyclePlan` — `buildCyclePlan(config)`がTimerConfigからフェーズ順列（CyclePhase[]）を生成する値オブジェクト。Sets=1はBreak、Sets>1の最終セットはLong Break
 - `TimerPhase` — work / break / long-break の3フェーズ
 - `TimerConfig` — 作業時間、休憩時間、長時間休憩時間、セット数
 - `TimerEvents` — PhaseStarted, PhaseCompleted, SetCompleted, CycleCompleted, TimerTicked, TimerPaused, TimerReset
@@ -45,13 +48,14 @@ CycleCompleted → AppModeManager（自動でfreeに遷移）
 ## ファイルマップ
 
 ### desktop/ — Electronプロセス
-- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御）
-- `preload/index.ts` — contextBridge（platform情報公開）
+- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC）
+- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings公開）
 
 ### src/domain/ — ドメインモデル
-- `timer/entities/PomodoroSession.ts` — タイマー中核ロジック
+- `timer/entities/PomodoroSession.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式）
+- `timer/value-objects/CyclePlan.ts` — フェーズ順列生成（buildCyclePlan, cycleTotalMs）
 - `timer/value-objects/TimerPhase.ts` — work/break/long-breakフェーズ
-- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/2セット）。`createDefaultConfig(debug)`でデバッグモード（20s/3s/4s）を切替
+- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`createDefaultConfig(debug)`でデバッグモード（20s/3s/4s）を切替
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
 - `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（fixedWanderDirection対応）
@@ -64,8 +68,8 @@ CycleCompleted → AppModeManager（自動でfreeに遷移）
 ### src/application/ — ユースケース
 - `app-mode/AppMode.ts` — AppMode型定義（free/pomodoro）とAppModeEvent型
 - `app-mode/AppModeManager.ts` — アプリケーションモード管理（enterPomodoro/exitPomodoro）。CycleCompleted購読で自動遷移
-- `settings/AppSettingsService.ts` — タイマー設定管理。分→ms変換＋バリデーション＋`SettingsChanged`イベント発行
-- `settings/SettingsEvents.ts` — SettingsChangedイベント型定義
+- `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`イベント発行
+- `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoadedイベント型定義
 - `timer/TimerUseCases.ts` — start/pause/reset/tick
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
@@ -75,10 +79,9 @@ CycleCompleted → AppModeManager（自動でfreeに遷移）
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定（プリセット/ボリュームインジケーター/ミュート）を統合。☰/×トグルで折りたたみ、サマリー表示。タイトル「Pomodoro Pet」表示
+- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定（プリセット/ボリュームインジケーター/ミュート）を統合。☰/×トグルで折りたたみ、タイムラインサマリー（CyclePlanベースの色分き横棒グラフ＋AM/PM時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定（スナップショット/リストア）、折りたたみ時のボリューム/ミュート変更は即時保存
 - `ui/PromptInput.ts` — プロンプト入力（下部中央）
 - `ui/SettingsPanel.ts` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
-- `ui/AudioControls.ts` — 環境音コントロール（未使用。サウンド設定はTimerOverlayに統合済み）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -91,11 +94,13 @@ CycleCompleted → AppModeManager（自動でfreeに遷移）
 - `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定復元
+- `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 159件
+### tests/ — 166件
 - `domain/timer/PomodoroSession.test.ts` — 29件
+- `domain/timer/CyclePlan.test.ts` — 7件
 - `domain/character/BehaviorStateMachine.test.ts` — 46件
 - `domain/character/GestureRecognizer.test.ts` — 17件
 - `domain/environment/SceneConfig.test.ts` — 10件
