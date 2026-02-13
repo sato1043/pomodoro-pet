@@ -1,6 +1,9 @@
 import type { PomodoroSession } from '../../domain/timer/entities/PomodoroSession'
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
+import { createConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
+import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/CyclePlan'
+import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { EventBus } from '../../domain/shared/EventBus'
 import type { AppModeManager } from '../../application/app-mode/AppModeManager'
 import type { AppModeEvent } from '../../application/app-mode/AppMode'
@@ -25,26 +28,31 @@ function phaseLabel(type: PhaseType): string {
   }
 }
 
+function phaseMinLabel(phase: CyclePhase): string {
+  const min = Math.round(phase.durationMs / 60000)
+  switch (phase.type) {
+    case 'work': return `${min}min work`
+    case 'break': return `${min}min break`
+    case 'long-break': return `${min}min long break`
+  }
+}
+
 function buildFlowText(
+  plan: CyclePhase[],
   phaseType: PhaseType,
-  currentSet: number,
-  totalSets: number,
-  config: TimerConfig
+  currentSet: number
 ): string {
-  const workMin = Math.round(config.workDurationMs / 60000)
+  // 計画内で現在のフェーズを探す
+  const idx = plan.findIndex(p => p.setNumber === currentSet && p.type === phaseType)
+  if (idx < 0) return ''
 
-  if (phaseType === 'long-break') {
-    const longMin = Math.round(config.longBreakDurationMs / 60000)
-    return `▸ ${longMin}min long break`
+  const current = plan[idx]
+  const next = idx + 1 < plan.length ? plan[idx + 1] : null
+
+  if (current.type !== 'work' || !next) {
+    return `▸ ${phaseMinLabel(current)}`
   }
-
-  if (currentSet >= totalSets && phaseType === 'work') {
-    const longMin = Math.round(config.longBreakDurationMs / 60000)
-    return `▸ ${workMin}min work → ${longMin}min long break`
-  }
-
-  const breakMin = Math.round(config.breakDurationMs / 60000)
-  return `▸ ${workMin}min work → ${breakMin}min break`
+  return `▸ ${phaseMinLabel(current)} → ${phaseMinLabel(next)}`
 }
 
 function buildProgressDots(completedSets: number, totalSets: number): string {
@@ -68,6 +76,134 @@ function buildButtonGroup(name: string, options: number[], selected: number): st
     const active = v === resolved ? ' active' : ''
     return `<button class="timer-cfg-btn${active}" data-cfg="${name}" data-value="${v}">${v}</button>`
   }).join('')
+}
+
+// --- Timeline Summary pure functions ---
+
+interface TimelineSetView {
+  label: string
+  phases: CyclePhase[]
+  endTime: Date
+}
+
+function segLabel(type: PhaseType): string {
+  switch (type) {
+    case 'work': return 'W'
+    case 'break': return 'B'
+    case 'long-break': return 'LB'
+  }
+}
+
+function fmtDuration(min: number): string {
+  const h = Math.floor(min / 60)
+  const m = min % 60
+  if (h > 0 && m > 0) return `${h}h ${m}min`
+  if (h > 0) return `${h}h`
+  return `${m}min`
+}
+
+function fmtDateLine(date: Date): string {
+  const h = date.getHours()
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  const ampm = h < 12 ? 'AM' : 'PM'
+  const h12 = h % 12 || 12
+  return `<div class="tl-clock">${String(h12).padStart(2, '0')}<span class="tl-blink">:</span>${mi}<span class="tl-date-sub">${ampm}</span></div>`
+}
+
+function fmtClock(date: Date): string {
+  const h = date.getHours()
+  const mi = String(date.getMinutes()).padStart(2, '0')
+  const h12 = h % 12 || 12
+  const ampm = h < 12 ? 'AM' : 'PM'
+  return `${h12}:${mi}<span class="tl-ampm">${ampm}</span>`
+}
+
+function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
+  const views: TimelineSetView[] = []
+  let cursor = startTime.getTime()
+  let currentSetNum = 0
+  let currentPhases: CyclePhase[] = []
+
+  for (const phase of plan) {
+    if (phase.setNumber !== currentSetNum) {
+      if (currentPhases.length > 0) {
+        views.push({
+          label: `Set ${currentSetNum}`,
+          phases: currentPhases,
+          endTime: new Date(cursor)
+        })
+      }
+      currentSetNum = phase.setNumber
+      currentPhases = []
+    }
+    currentPhases.push(phase)
+    cursor += phase.durationMs
+  }
+  if (currentPhases.length > 0) {
+    views.push({
+      label: `Set ${currentSetNum}`,
+      phases: currentPhases,
+      endTime: new Date(cursor)
+    })
+  }
+
+  return views
+}
+
+function buildTimelineHTML(w: number, b: number, lb: number, sets: number): string {
+  const timerConfig = createConfig(w * 60000, b * 60000, lb * 60000, sets)
+  const plan = buildCyclePlan(timerConfig)
+  const now = new Date()
+  const setViews = buildSetViews(plan, now)
+  const totalMin = Math.round(cycleTotalMs(plan) / 60000)
+
+  const dateLine = fmtDateLine(now)
+  const configLine =
+    `(<span class="tl-config-work">${w}</span> + ` +
+    `<span class="tl-config-break">${b}</span>) ` +
+    `× ${sets} Sets = <span class="tl-config-total">${fmtDuration(totalMin)}</span>`
+
+  // B/LBの表示幅を調整して視認性を確保
+  const displayFlex = (phase: CyclePhase): number => {
+    const min = phase.durationMs / 60000
+    if (phase.type === 'work') return min
+    if (phase.type === 'long-break') return b * 2
+    return b * 1.5
+  }
+
+  // セットラベル
+  const labels = setViews.map(sv =>
+    `<span class="tl-set-label">${sv.label}</span>`
+  ).join('')
+
+  // バーセグメント（セット間にセパレータ）
+  const barParts: string[] = []
+  setViews.forEach((sv, si) => {
+    if (si > 0) barParts.push('<span class="tl-set-sep"></span>')
+    sv.phases.forEach(phase => {
+      barParts.push(
+        `<span class="tl-seg tl-seg-${phase.type}" style="flex:${displayFlex(phase)}">${segLabel(phase.type)}</span>`
+      )
+    })
+  })
+  const bar = barParts.join('')
+
+  // 時刻行（開始 + 各セット終了）
+  const timesHTML =
+    `<span>${fmtClock(now)}</span>` +
+    setViews.map(sv => `<span>${fmtClock(sv.endTime)}</span>`).join('')
+
+  return (
+    `<div class="tl-container">` +
+      dateLine +
+      `<div class="tl-config">${configLine}</div>` +
+      `<div class="tl-row">` +
+        `<div class="tl-labels">${labels}</div>` +
+        `<div class="tl-bar">${bar}</div>` +
+        `<div class="tl-times">${timesHTML}</div>` +
+      `</div>` +
+    `</div>`
+  )
 }
 
 export interface TimerOverlayElements {
@@ -116,17 +252,17 @@ export function createTimerOverlay(
   const container = document.createElement('div')
   container.id = 'timer-overlay'
   function buildSummaryHTML(): string {
-    return `<div class="timer-summary-row"><span class="timer-summary-btn timer-summary-work">W ${selectedWork}</span><span class="timer-summary-btn timer-summary-break">B ${selectedBreak}</span><span class="timer-summary-btn timer-summary-long-break">L ${selectedLongBreak}</span></div><div class="timer-summary-row"><span class="timer-summary-btn timer-summary-sets">S ${selectedSets}</span></div>`
+    return buildTimelineHTML(selectedWork, selectedBreak, selectedLongBreak, selectedSets)
   }
 
   container.innerHTML = `
     <div class="timer-overlay-title">Pomodoro Pet</div>
     <div class="timer-free-mode" id="timer-free-mode">
-      <button class="timer-settings-toggle" id="timer-settings-toggle">×</button>
-      <div class="timer-settings-summary" id="timer-settings-summary" style="display:none">
+      <button class="timer-settings-toggle" id="timer-settings-toggle">☰</button>
+      <div class="timer-settings-summary" id="timer-settings-summary">
         ${buildSummaryHTML()}
       </div>
-      <div class="timer-settings" id="timer-settings">
+      <div class="timer-settings" id="timer-settings" style="display:none">
         <div class="timer-settings-field">
           <label class="timer-settings-label-work">Work</label>
           <div class="timer-cfg-group" id="timer-cfg-work-group">
@@ -153,7 +289,7 @@ export function createTimerOverlay(
         </div>
       </div>
       <div class="timer-sound-section" id="timer-sound-section">
-        <div class="timer-sound-presets">${buildSoundPresets()}</div>
+        <div class="timer-sound-presets" style="display:none">${buildSoundPresets()}</div>
         <div class="timer-volume-row">
           <button class="timer-mute-btn" id="timer-mute">${audio.isMuted ? svgSpeakerOff : svgSpeakerOn}</button>
           <button class="timer-vol-btn" id="timer-vol-down">◀</button>
@@ -161,7 +297,7 @@ export function createTimerOverlay(
           <button class="timer-vol-btn" id="timer-vol-up">▶</button>
         </div>
       </div>
-      <div class="timer-settings-error" id="timer-settings-error"></div>
+      <button id="btn-confirm-settings" class="timer-btn timer-btn-confirm" style="display:none">Set</button>
       <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
     </div>
     <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
@@ -314,54 +450,37 @@ export function createTimerOverlay(
       transition: color 0.2s;
       padding: 0;
       line-height: 1;
-      transform: translateY(-2px);
+      transform: translateY(0px);
     }
     .timer-settings-toggle:hover {
       color: rgba(255, 255, 255, 0.8);
     }
     .timer-settings-summary {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: center;
-      margin-top: 24px;
-      margin-bottom: 24px;
+      margin-top: 16px;
+      margin-bottom: 16px;
     }
-    .timer-summary-row {
-      display: flex;
-      gap: 6px;
-      width: 100%;
-    }
-    .timer-summary-row .timer-summary-btn {
-      flex: 1;
-    }
-    .timer-summary-btn {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      padding: 6px 0.5em;
-      border-radius: 6px;
-      font-size: 26px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      color: #fff;
-    }
-    .timer-summary-work {
-      background: rgba(76, 175, 80, 0.35);
-      border: 1px solid rgba(76, 175, 80, 0.6);
-    }
-    .timer-summary-break {
-      background: rgba(66, 165, 245, 0.35);
-      border: 1px solid rgba(66, 165, 245, 0.6);
-    }
-    .timer-summary-long-break {
-      background: rgba(171, 71, 188, 0.35);
-      border: 1px solid rgba(171, 71, 188, 0.6);
-    }
-    .timer-summary-sets {
-      background: rgba(255, 255, 255, 0.2);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-    }
+    .tl-container { text-align: center; margin: 16px 0 24px; }
+    .tl-clock { font-size: 80px; color: #fff; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; transform: scaleY(1.2); }
+    .tl-ampm { font-size: 0.8em; color: rgba(255,255,255,0.4); margin-left: 1px; }
+    .tl-date-sub { font-size: 0.6em; color: rgba(255,255,255,0.5); font-weight: 400; }
+    @keyframes tl-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
+    .tl-blink { animation: tl-blink 1s step-end infinite; }
+    .tl-config { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-variant-numeric: tabular-nums; background: rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 12px; }
+    .tl-config-work { color: #4caf50; font-weight: 600; }
+    .tl-config-break { color: #42a5f5; font-weight: 600; }
+    .tl-config-lb { color: #ab47bc; font-weight: 600; }
+    .tl-config-total { color: #fff; font-weight: 700; }
+    .tl-row { margin-bottom: 8px; }
+    .tl-labels { display: flex; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 2px; }
+    .tl-set-label { flex: 1; text-align: center; }
+    .tl-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; gap: 1px; }
+    .tl-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.8); min-width: 0; overflow: hidden; }
+    .tl-seg-work { background: rgba(76,175,80,0.6); }
+    .tl-seg-break { background: rgba(66,165,245,0.6); }
+    .tl-seg-long-break { background: rgba(171,71,188,0.6); }
+    .tl-set-sep { width: 2px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
+    .tl-times { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-variant-numeric: tabular-nums; }
+    .tl-time-mid { flex: 1; text-align: center; }
     .timer-sound-section {
       margin-top: 16px;
       margin-bottom: 24px;
@@ -446,12 +565,6 @@ export function createTimerOverlay(
       background: rgba(76, 175, 80, 0.5);
       border-color: rgba(76, 175, 80, 0.7);
     }
-    .timer-settings-error {
-      color: #f44336;
-      font-size: 12px;
-      min-height: 16px;
-      margin-bottom: 4px;
-    }
     .timer-set-info {
       font-size: 12px;
       color: #aaa;
@@ -514,11 +627,22 @@ export function createTimerOverlay(
       opacity: 0.4;
       cursor: default;
     }
+    .timer-btn-confirm {
+      background: rgba(255, 255, 255, 0.12);
+      border-color: rgba(255, 255, 255, 0.3);
+      font-size: 26px;
+      padding: 14px 24px;
+      width: 100%;
+    }
+    .timer-btn-confirm:hover {
+      background: rgba(255, 255, 255, 0.22);
+    }
     .timer-btn-primary {
       background: rgba(76, 175, 80, 0.3);
       border-color: rgba(76, 175, 80, 0.5);
       font-size: 33px;
       padding: 20px 24px;
+      margin-top: 0;
       width: 100%;
     }
     .timer-btn-primary:hover {
@@ -541,11 +665,11 @@ export function createTimerOverlay(
   const phaseEl = container.querySelector('#timer-phase') as HTMLSpanElement
   const flowEl = container.querySelector('#timer-flow') as HTMLDivElement
   const progressEl = container.querySelector('#timer-progress') as HTMLDivElement
+  const btnConfirmSettings = container.querySelector('#btn-confirm-settings') as HTMLButtonElement
   const btnEnterPomodoro = container.querySelector('#btn-enter-pomodoro') as HTMLButtonElement
   const btnPause = container.querySelector('#btn-pause') as HTMLButtonElement
   const btnResume = container.querySelector('#btn-resume') as HTMLButtonElement
   const btnExitPomodoro = container.querySelector('#btn-exit-pomodoro') as HTMLButtonElement
-  const errorEl = container.querySelector('#timer-settings-error') as HTMLDivElement
 
   // ボタングループのクリックハンドラ
   function handleCfgClick(e: Event): void {
@@ -661,7 +785,7 @@ export function createTimerOverlay(
   const settingsEl = container.querySelector('#timer-settings') as HTMLDivElement
   const summaryEl = container.querySelector('#timer-settings-summary') as HTMLDivElement
   const toggleEl = container.querySelector('#timer-settings-toggle') as HTMLButtonElement
-  let settingsExpanded = true
+  let settingsExpanded = false
 
   function updateSummary(): void {
     summaryEl.innerHTML = buildSummaryHTML()
@@ -673,14 +797,27 @@ export function createTimerOverlay(
     // 折りたたみ時はプリセットボタンのみ非表示、ボリュームインジケーターは残す
     const presetsEl = soundSectionEl.querySelector('.timer-sound-presets') as HTMLElement | null
     if (presetsEl) presetsEl.style.display = settingsExpanded ? '' : 'none'
+    if (!settingsExpanded) updateSummary()
     summaryEl.style.display = settingsExpanded ? 'none' : ''
     toggleEl.textContent = settingsExpanded ? '×' : '☰'
     toggleEl.style.transform = settingsExpanded ? 'translateY(-2px)' : 'translateY(0px)'
+    btnConfirmSettings.style.display = settingsExpanded ? '' : 'none'
+    btnEnterPomodoro.style.display = settingsExpanded ? 'none' : ''
     const gearEl = container.querySelector('#settings-trigger') as HTMLElement | null
     if (gearEl) gearEl.style.display = settingsExpanded ? '' : 'none'
   }
 
   toggleEl.addEventListener('click', toggleSettings)
+
+  btnConfirmSettings.addEventListener('click', () => {
+    settingsService.updateTimerConfig({
+      workMinutes: selectedWork,
+      breakMinutes: selectedBreak,
+      longBreakMinutes: selectedLongBreak,
+      setsPerCycle: selectedSets
+    })
+    toggleSettings()
+  })
 
   function publishAppModeEvents(events: AppModeEvent[]): void {
     for (const event of events) {
@@ -718,7 +855,6 @@ export function createTimerOverlay(
       freeModeEl.style.display = ''
       pomodoroModeEl.style.display = 'none'
       syncButtonSelection()
-      errorEl.textContent = ''
     } else {
       freeModeEl.style.display = 'none'
       pomodoroModeEl.style.display = ''
@@ -732,26 +868,19 @@ export function createTimerOverlay(
     phaseEl.textContent = phaseLabel(phase)
     phaseEl.className = `timer-phase ${phase !== 'work' ? phase : ''}`
     setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
-    flowEl.textContent = buildFlowText(phase, session.currentSet, session.totalSets, config)
+    flowEl.textContent = buildFlowText(buildCyclePlan(config), phase, session.currentSet)
     progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
     btnPause.style.display = session.isRunning ? '' : 'none'
     btnResume.style.display = session.isRunning ? 'none' : ''
   }
 
   btnEnterPomodoro.addEventListener('click', () => {
-    errorEl.textContent = ''
-
-    try {
-      settingsService.updateTimerConfig({
-        workMinutes: selectedWork,
-        breakMinutes: selectedBreak,
-        longBreakMinutes: selectedLongBreak,
-        setsPerCycle: selectedSets
-      })
-    } catch (e: unknown) {
-      errorEl.textContent = e instanceof Error ? e.message : 'Invalid input'
-      return
-    }
+    settingsService.updateTimerConfig({
+      workMinutes: selectedWork,
+      breakMinutes: selectedBreak,
+      longBreakMinutes: selectedLongBreak,
+      setsPerCycle: selectedSets
+    })
 
     // SettingsChanged → session再作成が同期的に完了した後、pomodoroに遷移
     const events = appModeManager.enterPomodoro()
@@ -786,11 +915,17 @@ export function createTimerOverlay(
     }
   })
 
+  // 折りたたみ時は1秒ごとに時計を更新（開発時はコメントアウト）
+  const clockInterval = setInterval(() => {
+    // if (!settingsExpanded) updateSummary()
+  }, 1000)
+
   switchToMode(appModeManager.currentMode)
 
   return {
     container,
     dispose() {
+      clearInterval(clockInterval)
       unsubTick()
       unsubPhase()
       unsubReset()

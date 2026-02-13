@@ -287,13 +287,13 @@ describe('PomodoroSession', () => {
   })
 
   describe('setsPerCycle=1のエッジケース', () => {
-    it('set1のwork完了後すぐにlong-breakになる', () => {
+    it('set1のwork完了後はbreakになる（Long Breakなし）', () => {
       const singleSetConfig = createConfig(3000, 2000, 4000, 1)
       const s = createPomodoroSession(singleSetConfig)
       s.start()
       s.tick(3000)
-      expect(s.currentPhase.type).toBe('long-break')
-      expect(s.currentPhase.durationMs).toBe(4000)
+      expect(s.currentPhase.type).toBe('break')
+      expect(s.currentPhase.durationMs).toBe(2000)
     })
   })
 

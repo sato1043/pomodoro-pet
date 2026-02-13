@@ -37,7 +37,7 @@ function createScene(): {
     0.1,
     1000
   )
-  camera.position.set(0, 0.8, 6)
+  camera.position.set(0, 0.6, 5)
   camera.lookAt(0, 1.8, 0)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
@@ -161,7 +161,7 @@ async function main(): Promise<void> {
   const fbxConfig: FBXCharacterConfig = {
     modelPath: '/models/ms07_Wildboar.FBX',
     resourcePath: '/models/',
-    scale: 0.027,
+    scale: 0.022,
     diffuseTexturePath: '/models/ms07_Wildboar_1.png',
     animationPaths: {
       idle: '/models/ms07_Idle.FBX',
