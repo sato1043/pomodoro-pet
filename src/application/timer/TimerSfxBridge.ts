@@ -7,7 +7,7 @@ import type { EventBus } from '../../domain/shared/EventBus'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 
-const DEFAULT_FANFARE_URL = '/audio/fanfare.mp3'
+const DEFAULT_FANFARE_URL = './audio/fanfare.mp3'
 
 export function bridgeTimerToSfx(
   bus: EventBus,

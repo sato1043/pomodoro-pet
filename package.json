@@ -2,6 +2,7 @@
   "name": "pomodoro-pet",
   "version": "0.1.0",
   "description": "3Dバーチャルペット型ポモドーロタイマー",
+  "author": "sato1043@updater.cc",
   "main": "./out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
@@ -10,7 +11,8 @@
     "package": "electron-vite build && electron-builder --win",
     "package:dir": "electron-vite build && electron-builder --win --dir",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "deploy:local": "rm -rf /mnt/c/temp/pomodoro-pet && mkdir -p /mnt/c/temp/pomodoro-pet && cp -r release/win-unpacked/* /mnt/c/temp/pomodoro-pet/ && cmd.exe /c 'C:\\temp\\pomodoro-pet\\Pomodoro Pet.exe'"
   },
   "build": {
     "appId": "com.pomodoro-pet.app",

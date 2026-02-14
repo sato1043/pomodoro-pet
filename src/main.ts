@@ -176,19 +176,19 @@ async function main(): Promise<void> {
   // キャラクター初期化
   const character = createCharacter()
   const fbxConfig: FBXCharacterConfig = {
-    modelPath: '/models/ms07_Wildboar.FBX',
-    resourcePath: '/models/',
+    modelPath: './models/ms07_Wildboar.FBX',
+    resourcePath: './models/',
     scale: 0.022,
-    diffuseTexturePath: '/models/ms07_Wildboar_1.png',
+    diffuseTexturePath: './models/ms07_Wildboar_1.png',
     animationPaths: {
-      idle: '/models/ms07_Idle.FBX',
-      walk: '/models/ms07_Walk.FBX',
-      sit: '/models/ms07_Stunned.FBX',
-      sleep: '/models/ms07_Die.FBX',
-      happy: '/models/ms07_Jump.FBX',
-      wave: '/models/ms07_Attack_01.FBX',
-      pet: '/models/ms07_Jump.FBX',
-      refuse: '/models/ms07_Attack_01.FBX',
+      idle: './models/ms07_Idle.FBX',
+      walk: './models/ms07_Walk.FBX',
+      sit: './models/ms07_Stunned.FBX',
+      sleep: './models/ms07_Die.FBX',
+      happy: './models/ms07_Jump.FBX',
+      wave: './models/ms07_Attack_01.FBX',
+      pet: './models/ms07_Jump.FBX',
+      refuse: './models/ms07_Attack_01.FBX',
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)

@@ -139,7 +139,19 @@ tests/setup.test.ts                                   — 1件
 ## Known Issues & Tips
 
 - electron-vite@5がvite@6対応。electron-vite@2はvite@5まで
-- WSL2ではelectron-builderのWindows署名にwineが必要。exeまでは生成される
+- WSL2での`npm run package`/`npm run package:dir`はwineが必要。rcedit（exeのバージョン情報埋め込み）とsigntool（コード署名）がwine経由で実行されるため。
+  wineの初期セットアップ:
+  `sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install -y wine wine32:i386`
+  `rm -rf ~/.wine && wineboot --init`
+  wineが正しくセットアップされていれば、証明書なしでも署名スキップされてビルド成功する。
+  | 状態 | 結果 |
+  |---|---|
+  | wineなし | 失敗（rceditが実行できない） |
+  | wineあり・証明書なし | 成功（署名スキップ） |
+  コード署名証明書はDigiCert等の商用認証局から年間数万円で購入が必要。SSL/TLS証明書・商業登記電子証明書・AWS ACM等では代替不可。自分用・社内用なら署名不要。
+  WSL2からWindows側のsigntool.exeを直接呼べるはずだが、electron-builderはWSL2をLinuxとして検出しwine経由のパスに入るため対応していない。`sign`オプションでカスタムスクリプトを書けば可能だが、証明書がなければ不要
+- プロダクションビルドではアセットパスを相対パス（`./models/...`、`./audio/...`）にする必要がある。絶対パス（`/models/...`）だとファイルプロトコルでルートを指してしまい読み込み失敗する
+- `npm run deploy:local`でwin-unpackedを`C:\temp\pomodoro-pet`にコピーしてexeを起動できる。ビルドからの一連の流れ: `npm run package:dir && npm run deploy:local`
 - Ubuntu 24.04では `libasound2` → `libasound2t64` に名称変更されている
 - プロシージャル環境音はWeb Audio APIのノイズ+フィルタ+LFOで実現可能（外部mp3不要）
 - WSL2でGPU初期化失敗時は`app.commandLine.appendSwitch('enable-unsafe-swiftshader')`でソフトウェアWebGLにフォールバック（desktop/main/index.tsに設定済み）
