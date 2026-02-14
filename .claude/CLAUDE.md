@@ -16,9 +16,17 @@ npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe�
 npm run icon         # build/icon.pngからマルチサイズICO生成（要ImageMagick）
 ```
 
-WSL2で `npm run dev` を実行するにはシステムライブラリが必要:
+WSL2で必要なシステムパッケージ:
 ```bash
+# Electron実行に必要（npm run dev）
 sudo apt install -y libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 libgtk-3-0t64 libgbm1 libasound2t64 libxshmfence1 libxdamage1 libxrandr2 libxcomposite1 libxfixes3 libpango-1.0-0 libcairo2 libpulse0
+
+# Windowsパッケージビルドに必要（npm run package / package:dir）
+sudo dpkg --add-architecture i386 && sudo apt-get update && sudo apt-get install -y wine wine32:i386
+rm -rf ~/.wine && wineboot --init
+
+# アイコンICO生成に必要（npm run icon）
+sudo apt install -y imagemagick
 ```
 
 ## Architecture
