@@ -5,6 +5,7 @@ release/
 *.log
 .DS_Store
 Thumbs.db
+*:Zone.Identifier
 .env.development
 .env.production
 .env.local
