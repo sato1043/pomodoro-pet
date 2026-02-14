@@ -21,6 +21,8 @@ import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScr
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
 import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
 import { bridgeTimerToCharacter } from './application/character/TimerCharacterBridge'
+import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
+import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
 
 function createScene(): {
   scene: THREE.Scene
@@ -131,7 +133,10 @@ async function main(): Promise<void> {
   // 環境音
   const audio = createAudioAdapter()
 
-  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio, isDebugTimer)
+  // SFXプレイヤー（ファンファーレ・テストサウンド）
+  const sfxPlayer = createSfxPlayer()
+
+  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio, sfxPlayer, isDebugTimer)
   document.body.appendChild(timerUI.container)
 
   // 設定パネル（Environment）
@@ -152,7 +157,7 @@ async function main(): Promise<void> {
     unsubAppMode = subscribeAppModeToSession(bus, session)
 
     // 4. TimerOverlay再作成
-    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio, isDebugTimer)
+    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio, sfxPlayer, isDebugTimer)
     document.body.appendChild(timerUI.container)
     timerUI.container.appendChild(settingsPanel.trigger)
   })
@@ -199,6 +204,9 @@ async function main(): Promise<void> {
 
   // タイマー ↔ キャラクター連携
   bridgeTimerToCharacter(bus, character, stateMachine, charHandle)
+
+  // タイマーSFX（作業完了ファンファーレ）
+  bridgeTimerToSfx(bus, sfxPlayer)
 
   // レンダリングループ
   const clock = new THREE.Clock()

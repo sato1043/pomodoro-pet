@@ -16,7 +16,7 @@ npm run package:dir  # ビルド + 展開済みディレクトリ出力
 
 WSL2で `npm run dev` を実行するにはシステムライブラリが必要:
 ```bash
-sudo apt install -y libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 libgtk-3-0t64 libgbm1 libasound2t64 libxshmfence1 libxdamage1 libxrandr2 libxcomposite1 libxfixes3 libpango-1.0-0 libcairo2
+sudo apt install -y libnss3 libatk1.0-0t64 libatk-bridge2.0-0t64 libcups2t64 libdrm2 libgtk-3-0t64 libgbm1 libasound2t64 libxshmfence1 libxdamage1 libxrandr2 libxcomposite1 libxfixes3 libpango-1.0-0 libcairo2 libpulse0
 ```
 
 ## Architecture
@@ -52,12 +52,16 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
 - `TimerCharacterBridge` — EventBus購読でタイマーイベント+AppModeChanged → キャラクター行動連携
+- `TimerSfxBridge` — EventBus購読で`PhaseCompleted(work)`時にSfxPlayerでファンファーレMP3を再生
 
 ### アダプター層 (`src/adapters/`)
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `ui/` — DOM要素で構築したオーバーレイUI（TimerOverlay, PromptInput, SettingsPanel）。TimerOverlayのfreeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）とサウンド設定（プリセット/ボリュームインジケーター/ミュート）を統合。折りたたみ機能（☰/×トグル）で設定行を畳み、タイムラインサマリー（色分き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。折りたたみ時のボリューム/ミュート変更は即時保存。SettingsPanelはギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
+- `ui/TimerOverlay` — TimerOverlayのfreeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）を統合。折りたたみ機能（☰/×トグル）で設定行を畳み、タイムラインサマリー（色分き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元
+- `ui/VolumeControl` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。TimerOverlayから利用
+- `ui/PromptInput` — プロンプト入力UI
+- `ui/SettingsPanel` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
 
 ### インフラ層 (`src/infrastructure/`)
 
@@ -68,10 +72,11 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御
 
 ## Static Assets
 
-`assets/` ディレクトリが Vite の `publicDir` として設定されている（`electron.vite.config.ts`）。FBXモデルやテクスチャは `/models/ファイル名` でアクセスできる。
+`assets/` ディレクトリが Vite の `publicDir` として設定されている（`electron.vite.config.ts`）。FBXモデルやテクスチャは `/models/ファイル名`、音声ファイルは `/audio/ファイル名` でアクセスできる。
 
 FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読めない。`ThreeCharacterAdapter` でPNGテクスチャを手動適用し、`mat.color.set(0xffffff)` でFBXLoaderが設定する暗いベースカラーをリセットする必要がある。
 
@@ -95,7 +100,7 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（166件）。Three.js依存のアダプター/インフラ層はテスト対象外。
+テストはドメイン層とアプリケーション層に集中（172件）。Three.js依存のアダプター/インフラ層はテスト対象外。
 
 ```
 tests/domain/timer/PomodoroSession.test.ts           — 29件
@@ -108,6 +113,7 @@ tests/application/character/InterpretPrompt.test.ts   — 17件
 tests/application/environment/ScrollUseCase.test.ts   — 11件
 tests/application/app-mode/AppModeManager.test.ts     — 11件
 tests/application/settings/AppSettingsService.test.ts — 13件
+tests/application/timer/TimerSfxBridge.test.ts        — 6件
 tests/setup.test.ts                                   — 1件
 ```
 
@@ -140,3 +146,5 @@ tests/setup.test.ts                                   — 1件
 - WSL2では絵文字フォントが利用不可な場合がある。インラインSVGで代替する
 - `electron-store` v9+はESM専用で`externalizeDepsPlugin()`のCJS出力と衝突する。設定永続化にはNode.js標準API（`fs` + `app.getPath('userData')`）で直接JSON読み書きする方式を採用
 - 設定ファイル保存先: `{userData}/settings.json`（Windowsなら`%APPDATA%/pomodoro-pet/settings.json`）
+- WSL2で音声を再生するには`libpulse0`が必要。WSLgのPulseServerソケット経由でWindows側に音声出力する
+- WSL2のPulseAudio環境ではWeb Audio APIのAudioNode生成・破棄を繰り返すとストリームリソースがリークし、音声が途切れる。約10分のアイドルで自動復旧する。`pkill -f pulseaudio`で即座にリセット可能。Windowsネイティブ実行では発生しない

@@ -43,6 +43,12 @@
 - Electron IPC（`settings:load`/`settings:save`）→ preload contextBridge → renderer
 - 起動時に`loadFromStorage()`で復元（サウンド→タイマーの順でイベント発行）
 
+### ~~SFX通知音（ファンファーレ・テストサウンド）~~ — 完了
+- `SfxPlayer`（インフラ層）: MP3ワンショット再生。fetch+decodeAudioData+バッファキャッシュ
+- `TimerSfxBridge`（アプリケーション層）: PhaseCompleted(work)でファンファーレ(`/audio/fanfare.mp3`)を再生
+- `VolumeControl`（アダプター層）: TimerOverlayからボリューム関連UIを共通コンポーネント化。ボリューム変更/ミュート解除時にテストサウンド(`/audio/test.mp3`)を再生
+- MP3ファイルは`assets/audio/`に配置（Vite publicDir経由で`/audio/`としてアクセス）
+
 ### ポモドーロ中のタイマー表示の視認性向上
 - 現在work/break/long-breakのフェーズ区別が目立たない
 - フェーズ別の色分け（例: work=赤系、break=緑系、long-break=青系）を検討

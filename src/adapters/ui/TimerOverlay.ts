@@ -9,8 +9,8 @@ import type { AppModeManager } from '../../application/app-mode/AppModeManager'
 import type { AppModeEvent } from '../../application/app-mode/AppMode'
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
-import { SOUND_PRESETS } from '../../infrastructure/audio/ProceduralSounds'
-import type { SoundPreset } from '../../infrastructure/audio/ProceduralSounds'
+import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import { createVolumeControl } from './VolumeControl'
 import { pauseTimer } from '../../application/timer/TimerUseCases'
 
 function formatTime(ms: number): string {
@@ -255,11 +255,9 @@ export function createTimerOverlay(
   appModeManager: AppModeManager,
   settingsService: AppSettingsService,
   audio: AudioAdapter,
+  sfx: SfxPlayer | null = null,
   debugTimer = false
 ): TimerOverlayElements {
-  const svgSpeakerOn = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14"/><path d="M15.54 8.46a5 5 0 0 1 0 7.07"/></svg>`
-  const svgSpeakerOff = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><line x1="23" y1="9" x2="17" y2="15"/><line x1="17" y1="9" x2="23" y2="15"/></svg>`
-  let volumeBeforeMute = audio.volume
 
   // 選択肢の定義
   const workOptions = [25, 50, 90]
@@ -273,19 +271,20 @@ export function createTimerOverlay(
   let selectedLongBreak = resolveSelected(longBreakOptions, msToMinutes(config.longBreakDurationMs))
   let selectedSets = resolveSelected(setsOptions, config.setsPerCycle)
 
-  function buildSoundPresets(): string {
-    return SOUND_PRESETS.map(p => {
-      const active = p.name === audio.currentPreset ? ' active' : ''
-      return `<button class="timer-sound-preset${active}" data-preset="${p.name}">${p.label}</button>`
-    }).join('')
-  }
-
-  function buildVolumeSegments(): string {
-    const volLevel = Math.round(audio.volume * 10)
-    return Array.from({ length: 10 }, (_, i) =>
-      `<span class="timer-vol-seg${i < volLevel ? ' on' : ''}" data-seg="${i}"></span>`
-    ).join('')
-  }
+  // ボリュームコントロール
+  const volumeControl = createVolumeControl({
+    audio,
+    sfx,
+    onSoundChange(): void {
+      if (!settingsExpanded) {
+        settingsService.updateSoundConfig({
+          preset: audio.currentPreset,
+          volume: audio.volume,
+          isMuted: audio.isMuted
+        })
+      }
+    }
+  })
 
   const container = document.createElement('div')
   container.id = 'timer-overlay'
@@ -326,15 +325,7 @@ export function createTimerOverlay(
           </div>
         </div>
       </div>
-      <div class="timer-sound-section" id="timer-sound-section">
-        <div class="timer-sound-presets" style="display:none">${buildSoundPresets()}</div>
-        <div class="timer-volume-row">
-          <button class="timer-mute-btn" id="timer-mute">${audio.isMuted ? svgSpeakerOff : svgSpeakerOn}</button>
-          <button class="timer-vol-btn" id="timer-vol-down">◀</button>
-          ${buildVolumeSegments()}
-          <button class="timer-vol-btn" id="timer-vol-up">▶</button>
-        </div>
-      </div>
+      <div id="timer-sound-slot"></div>
       <button id="btn-confirm-settings" class="timer-btn timer-btn-confirm" style="display:none">Set</button>
       <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
     </div>
@@ -354,6 +345,10 @@ export function createTimerOverlay(
       </div>
     </div>
   `
+
+  // VolumeControlをスロットに挿入
+  const soundSlot = container.querySelector('#timer-sound-slot') as HTMLDivElement
+  soundSlot.replaceWith(volumeControl.container)
 
   const style = document.createElement('style')
   style.textContent = `
@@ -531,90 +526,7 @@ export function createTimerOverlay(
     .tl-set-sep { width: 2px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
     .tl-times { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-variant-numeric: tabular-nums; }
     .tl-time-mid { flex: 1; text-align: center; }
-    .timer-sound-section {
-      margin-top: 16px;
-      margin-bottom: 24px;
-    }
-    .timer-sound-presets {
-      display: flex;
-      gap: 6px;
-      justify-content: center;
-      margin-bottom: 8px;
-    }
-    .timer-sound-preset {
-      background: rgba(255, 255, 255, 0.1);
-      color: #ccc;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      padding: 6px 14px;
-      font-size: 22px;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .timer-sound-preset:hover {
-      background: rgba(255, 255, 255, 0.2);
-    }
-    .timer-sound-preset.active {
-      background: rgba(76, 175, 80, 0.6);
-      border-color: rgba(76, 175, 80, 0.8);
-      color: #fff;
-    }
-    .timer-volume-row {
-      display: flex;
-      align-items: center;
-      gap: 4px;
-    }
-    .timer-mute-btn {
-      background: none;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #fff;
-      border-radius: 4px;
-      width: 48px;
-      height: 34px;
-      cursor: pointer;
-      font-size: 18px;
-      transition: background 0.2s;
-      flex-shrink: 0;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 0;
-    }
-    .timer-mute-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-    }
-    .timer-vol-btn {
-      background: none;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      color: #aaa;
-      border-radius: 4px;
-      width: 36px;
-      height: 34px;
-      cursor: pointer;
-      font-size: 16px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: background 0.15s, color 0.15s;
-      flex-shrink: 0;
-    }
-    .timer-vol-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
-    }
-    .timer-vol-seg {
-      flex: 1;
-      height: 34px;
-      border-radius: 3px;
-      background: rgba(255, 255, 255, 0.1);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-      transition: background 0.15s;
-      cursor: pointer;
-    }
-    .timer-vol-seg.on {
-      background: rgba(76, 175, 80, 0.5);
-      border-color: rgba(76, 175, 80, 0.7);
-    }
+    ${volumeControl.style}
     .timer-pomodoro-timeline { margin: 8px 0; }
     .timer-set-info {
       font-size: 12px;
@@ -752,102 +664,7 @@ export function createTimerOverlay(
 
   freeModeEl.addEventListener('click', handleCfgClick)
 
-  // サウンド操作
-  function updateSoundPresetUI(): void {
-    container.querySelectorAll('.timer-sound-preset').forEach(btn => {
-      const el = btn as HTMLElement
-      el.classList.toggle('active', el.dataset.preset === audio.currentPreset)
-    })
-  }
-
-  function updateMuteUI(): void {
-    const muteBtn = container.querySelector('#timer-mute') as HTMLButtonElement | null
-    if (muteBtn) muteBtn.innerHTML = audio.isMuted ? svgSpeakerOff : svgSpeakerOn
-  }
-
-  function syncMuteWithVolume(): void {
-    if (audio.volume <= 0 && !audio.isMuted) {
-      volumeBeforeMute = 0.1
-      audio.toggleMute()
-      updateMuteUI()
-    } else if (audio.volume > 0 && audio.isMuted) {
-      audio.toggleMute()
-      updateMuteUI()
-    }
-  }
-
-  function updateVolumeUI(): void {
-    const level = Math.round(audio.volume * 10)
-    container.querySelectorAll('.timer-vol-seg').forEach(seg => {
-      const idx = Number((seg as HTMLElement).dataset.seg)
-      seg.classList.toggle('on', idx < level)
-    })
-    syncMuteWithVolume()
-  }
-
-  container.querySelectorAll('.timer-sound-preset').forEach(btn => {
-    btn.addEventListener('click', async () => {
-      await audio.resume()
-      const preset = (btn as HTMLElement).dataset.preset as SoundPreset
-      if (preset) {
-        audio.switchPreset(preset)
-        updateSoundPresetUI()
-      }
-    })
-  })
-
-  // 折りたたみ時（Setボタン非表示）はサウンド変更を即時保存
-  function saveSoundIfCollapsed(): void {
-    if (!settingsExpanded) {
-      settingsService.updateSoundConfig({
-        preset: audio.currentPreset,
-        volume: audio.volume,
-        isMuted: audio.isMuted
-      })
-    }
-  }
-
-  const muteBtn = container.querySelector('#timer-mute') as HTMLButtonElement
-  muteBtn.addEventListener('click', () => {
-    if (!audio.isMuted) {
-      volumeBeforeMute = audio.volume
-      audio.setVolume(0)
-      audio.toggleMute()
-    } else {
-      audio.toggleMute()
-      audio.setVolume(volumeBeforeMute)
-    }
-    updateMuteUI()
-    updateVolumeUI()
-    saveSoundIfCollapsed()
-  })
-
-  const volDown = container.querySelector('#timer-vol-down') as HTMLButtonElement
-  const volUp = container.querySelector('#timer-vol-up') as HTMLButtonElement
-
-  volDown.addEventListener('click', () => {
-    audio.setVolume(Math.max(0, audio.volume - 0.1))
-    updateVolumeUI()
-    saveSoundIfCollapsed()
-  })
-
-  volUp.addEventListener('click', () => {
-    audio.setVolume(Math.min(1, audio.volume + 0.1))
-    updateVolumeUI()
-    saveSoundIfCollapsed()
-  })
-
-  container.querySelectorAll('.timer-vol-seg').forEach(seg => {
-    seg.addEventListener('click', () => {
-      const idx = Number((seg as HTMLElement).dataset.seg)
-      audio.setVolume((idx + 1) / 10)
-      updateVolumeUI()
-      saveSoundIfCollapsed()
-    })
-  })
-
   // 折りたたみトグル
-  const soundSectionEl = container.querySelector('#timer-sound-section') as HTMLDivElement
   const settingsEl = container.querySelector('#timer-settings') as HTMLDivElement
   const summaryEl = container.querySelector('#timer-settings-summary') as HTMLDivElement
   const toggleEl = container.querySelector('#timer-settings-toggle') as HTMLButtonElement
@@ -897,10 +714,7 @@ export function createTimerOverlay(
     if (audio.currentPreset !== savedPreset) audio.switchPreset(savedPreset)
     if (audio.isMuted !== savedMuted) audio.toggleMute()
     audio.setVolume(savedVolume)
-    volumeBeforeMute = savedMuted ? savedVolume : audio.volume
-    updateSoundPresetUI()
-    updateMuteUI()
-    updateVolumeUI()
+    volumeControl.updateAll()
   }
 
   function updateSummary(): void {
@@ -921,8 +735,11 @@ export function createTimerOverlay(
 
     settingsEl.style.display = settingsExpanded ? '' : 'none'
     // 折りたたみ時はプリセットボタンのみ非表示、ボリュームインジケーターは残す
-    const presetsEl = soundSectionEl.querySelector('.timer-sound-presets') as HTMLElement | null
-    if (presetsEl) presetsEl.style.display = settingsExpanded ? '' : 'none'
+    if (settingsExpanded) {
+      volumeControl.showPresets()
+    } else {
+      volumeControl.hidePresets()
+    }
     if (!settingsExpanded) updateSummary()
     summaryEl.style.display = settingsExpanded ? 'none' : ''
     toggleEl.textContent = settingsExpanded ? '×' : '☰'
