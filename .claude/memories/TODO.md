@@ -64,10 +64,11 @@
 - 表示は数秒で自動的にフェードアウト、またはクリックで閉じる
 - freeモードへの自動遷移と連携
 
-### アプリアイコン
-- 現在はデフォルトのElectronアイコン
-- 256x256以上のPNGを作成し、.icoに変換
-- `package.json` の `build.win.icon` に指定
+### ~~アプリアイコン~~ — 完了
+- `build/icon.png`（512x512 RGBA）から`npm run icon`でマルチサイズICO生成（要ImageMagick）
+- サイズ別シャープニング適用（256px:0.5 → 16px:2.0）
+- `package.json`の`build.win.icon`に`build/icon.ico`を設定済み
+- タスクバー（32x32）での視認性に限界あり。改善には小サイズ用の簡略化デザインが必要
 
 ### メインプロセスのESM化検討
 - 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない

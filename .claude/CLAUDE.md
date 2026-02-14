@@ -12,6 +12,8 @@ npm run test:watch   # Vitest ウォッチモード
 npx vitest run tests/domain/timer/PomodoroSession.test.ts  # 単一テスト実行
 npm run package      # ビルド + Windows NSISインストーラー生成（release/ に出力）
 npm run package:dir  # ビルド + 展開済みディレクトリ出力
+npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe起動
+npm run icon         # build/icon.pngからマルチサイズICO生成（要ImageMagick）
 ```
 
 WSL2で `npm run dev` を実行するにはシステムライブラリが必要:
@@ -152,6 +154,9 @@ tests/setup.test.ts                                   — 1件
   WSL2からWindows側のsigntool.exeを直接呼べるはずだが、electron-builderはWSL2をLinuxとして検出しwine経由のパスに入るため対応していない。`sign`オプションでカスタムスクリプトを書けば可能だが、証明書がなければ不要
 - プロダクションビルドではアセットパスを相対パス（`./models/...`、`./audio/...`）にする必要がある。絶対パス（`/models/...`）だとファイルプロトコルでルートを指してしまい読み込み失敗する
 - `npm run deploy:local`でwin-unpackedを`C:\temp\pomodoro-pet`にコピーしてexeを起動できる。ビルドからの一連の流れ: `npm run package:dir && npm run deploy:local`
+- アプリアイコンは`build/icon.png`（512x512 RGBA）を元に`npm run icon`で`build/icon.ico`（6サイズ内包）を生成。ImageMagickが必要（`sudo apt install -y imagemagick`）。
+  小サイズほど強いシャープニング（256px:0.5 → 16px:2.0）を適用しているが、タスクバー（32x32）では細部が潰れる限界がある。
+  根本改善には小サイズ用の簡略化デザイン（太い輪郭線・シンプルなシルエット）を別途作成する必要がある
 - Ubuntu 24.04では `libasound2` → `libasound2t64` に名称変更されている
 - プロシージャル環境音はWeb Audio APIのノイズ+フィルタ+LFOで実現可能（外部mp3不要）
 - WSL2でGPU初期化失敗時は`app.commandLine.appendSwitch('enable-unsafe-swiftshader')`でソフトウェアWebGLにフォールバック（desktop/main/index.tsに設定済み）
