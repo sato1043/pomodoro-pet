@@ -3,16 +3,18 @@ import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from '../../adapters/three/ThreeCharacterAdapter'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
-import type { AppModeEvent } from '../app-mode/AppMode'
+import type { AppSceneEvent } from '../app-scene/AppScene'
+import type { CharacterBehavior } from '../../domain/character/value-objects/BehaviorPreset'
 
 /**
- * タイマーイベントとAppModeイベントをキャラクター行動に橋渡しする。
+ * タイマーイベントとAppSceneイベントをキャラクター行動に橋渡しする。
  *
- * - AppMode free → キャラクターが自由行動 (idle)
- * - AppMode congrats → キャラクターがhappyにロック（踊り続ける）
- * - 作業Phase開始 → キャラクターが前進する (march → スクロール)
- * - 作業Phase完了 → キャラクターが喜ぶ (happy)
- * - 休憩Phase開始 → キャラクターが自由行動 (idle → 自律遷移)
+ * BehaviorPresetを切り替えることで宣言的にキャラクター振る舞いを制御する。
+ * - work → march-cycle（前進サイクル、インタラクション拒否）
+ * - break → rest-cycle（休憩サイクル、happyから開始）
+ * - long-break → joyful-rest（happy繰り返しの休憩サイクル）
+ * - congrats → celebrate（happy固定）
+ * - free/pause/reset → autonomous（自由行動）
  */
 export function bridgeTimerToCharacter(
   bus: EventBus,
@@ -20,65 +22,46 @@ export function bridgeTimerToCharacter(
   stateMachine: BehaviorStateMachine,
   charHandle: ThreeCharacterHandle
 ): () => void {
-  function applyAction(action: 'happy' | 'march' | 'idle'): void {
-    stateMachine.transition({ type: 'prompt', action })
-    character.setState(action)
-    charHandle.playState(action)
-    stateMachine.start()
+  function switchPreset(presetName: CharacterBehavior): void {
+    stateMachine.applyPreset(presetName)
+    character.setState(stateMachine.currentState)
+    charHandle.playState(stateMachine.currentState)
   }
-
-  const unsubCompleted = bus.subscribe<TimerEvent>('PhaseCompleted', (event) => {
-    if (event.type === 'PhaseCompleted' && event.phase === 'work') {
-      applyAction('happy')
-    }
-  })
 
   const unsubStarted = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
     if (event.type === 'PhaseStarted') {
       if (event.phase === 'work') {
-        stateMachine.setScrollingAllowed(true)
-        applyAction('march')
+        switchPreset('march-cycle')
+      } else if (event.phase === 'long-break') {
+        switchPreset('joyful-rest')
+      } else if (event.phase === 'congrats') {
+        switchPreset('celebrate')
       } else {
-        // 'break' および 'long-break' は同じ扱い（自由行動）
-        stateMachine.unlockState()
-        stateMachine.setScrollingAllowed(false)
-        applyAction('idle')
+        switchPreset('rest-cycle')
       }
     }
   })
 
   const unsubPaused = bus.subscribe('TimerPaused', () => {
-    stateMachine.unlockState()
-    stateMachine.setScrollingAllowed(false)
-    applyAction('idle')
+    switchPreset('autonomous')
   })
 
   const unsubReset = bus.subscribe('TimerReset', () => {
-    stateMachine.unlockState()
-    stateMachine.setScrollingAllowed(false)
-    applyAction('idle')
+    switchPreset('autonomous')
   })
 
-  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged') {
-      if (event.mode === 'congrats') {
-        stateMachine.setScrollingAllowed(false)
-        stateMachine.lockState('happy')
-        applyAction('happy')
-      } else if (event.mode === 'free') {
-        stateMachine.unlockState()
-        stateMachine.setScrollingAllowed(false)
-        applyAction('idle')
+  const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
+    if (event.type === 'AppSceneChanged') {
+      if (event.scene === 'free') {
+        switchPreset('autonomous')
       }
     }
   })
 
   return () => {
-    stateMachine.unlockState()
-    unsubCompleted()
     unsubStarted()
     unsubPaused()
     unsubReset()
-    unsubAppMode()
+    unsubScene()
   }
 }

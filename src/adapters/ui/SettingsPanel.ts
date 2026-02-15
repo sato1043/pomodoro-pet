@@ -1,5 +1,5 @@
 import type { EventBus } from '../../domain/shared/EventBus'
-import type { AppModeEvent } from '../../application/app-mode/AppMode'
+import type { AppSceneEvent } from '../../application/app-scene/AppScene'
 
 export interface SettingsPanelElements {
   trigger: HTMLButtonElement
@@ -56,9 +56,9 @@ export function createSettingsPanel(
   trigger.addEventListener('click', open)
 
   // pomodoroモード中はtrigger非表示
-  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged') {
-      trigger.style.display = event.mode === 'pomodoro' ? 'none' : ''
+  const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
+    if (event.type === 'AppSceneChanged') {
+      trigger.style.display = event.scene === 'pomodoro' ? 'none' : ''
     }
   })
 
@@ -162,7 +162,7 @@ export function createSettingsPanel(
     trigger,
     container,
     dispose() {
-      unsubAppMode()
+      unsubScene()
       style.remove()
       trigger.remove()
       container.remove()

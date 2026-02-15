@@ -1,12 +1,13 @@
-import type { PomodoroSession } from '../../domain/timer/entities/PomodoroSession'
+import type { PomodoroStateMachine } from '../../domain/timer/entities/PomodoroStateMachine'
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import { createConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/CyclePlan'
 import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
+import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { EventBus } from '../../domain/shared/EventBus'
-import type { AppModeManager } from '../../application/app-mode/AppModeManager'
-import type { AppModeEvent } from '../../application/app-mode/AppMode'
+import type { AppSceneManager } from '../../application/app-scene/AppSceneManager'
+import type { AppSceneEvent } from '../../application/app-scene/AppScene'
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
@@ -25,6 +26,7 @@ function phaseLabel(type: PhaseType): string {
     case 'work': return 'WORK'
     case 'break': return 'BREAK'
     case 'long-break': return 'LONG BREAK'
+    case 'congrats': return 'CONGRATS'
   }
 }
 
@@ -34,6 +36,7 @@ function phaseMinLabel(phase: CyclePhase): string {
     case 'work': return `${min}min work`
     case 'break': return `${min}min break`
     case 'long-break': return `${min}min long break`
+    case 'congrats': return 'congrats'
   }
 }
 
@@ -42,6 +45,7 @@ function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
     case 'work': return { filled: 'rgba(76,175,80,0.85)', unfilled: 'rgba(76,175,80,0.2)' }
     case 'break': return { filled: 'rgba(66,165,245,0.85)', unfilled: 'rgba(66,165,245,0.2)' }
     case 'long-break': return { filled: 'rgba(171,71,188,0.85)', unfilled: 'rgba(171,71,188,0.2)' }
+    case 'congrats': return { filled: 'rgba(255,213,79,0.85)', unfilled: 'rgba(255,213,79,0.2)' }
   }
 }
 
@@ -99,6 +103,7 @@ function segLabel(type: PhaseType): string {
     case 'work': return 'W'
     case 'break': return 'B'
     case 'long-break': return 'LB'
+    case 'congrats': return 'C'
   }
 }
 
@@ -127,12 +132,13 @@ function fmtClock(date: Date): string {
 }
 
 function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
+  const displayPlan = plan.filter(p => p.type !== 'congrats')
   const views: TimelineSetView[] = []
   let cursor = startTime.getTime()
   let currentSetNum = 0
   let currentPhases: CyclePhase[] = []
 
-  for (const phase of plan) {
+  for (const phase of displayPlan) {
     if (phase.setNumber !== currentSetNum) {
       if (currentPhases.length > 0) {
         views.push({
@@ -210,7 +216,8 @@ function buildTimelineHTML(w: number, b: number, lb: number, sets: number): stri
   const plan = buildCyclePlan(timerConfig)
   const now = new Date()
   const setViews = buildSetViews(plan, now)
-  const totalMin = Math.round(cycleTotalMs(plan) / 60000)
+  const displayPlan = plan.filter(p => p.type !== 'congrats')
+  const totalMin = Math.round(cycleTotalMs(displayPlan) / 60000)
 
   const dateLine = fmtDateLine(now)
   const configLine =
@@ -249,10 +256,10 @@ export interface TimerOverlayElements {
 }
 
 export function createTimerOverlay(
-  session: PomodoroSession,
+  session: PomodoroStateMachine,
   bus: EventBus,
   config: TimerConfig,
-  appModeManager: AppModeManager,
+  sceneManager: AppSceneManager,
   settingsService: AppSettingsService,
   audio: AudioAdapter,
   sfx: SfxPlayer | null = null,
@@ -348,7 +355,7 @@ export function createTimerOverlay(
       <div class="congrats-confetti" id="congrats-confetti"></div>
       <div class="congrats-message">Congratulations!</div>
       <div class="congrats-sub">Pomodoro cycle completed</div>
-      <div class="congrats-hint">Click to continue</div>
+      <div class="congrats-hint"></div>
     </div>
   `
 
@@ -625,8 +632,6 @@ export function createTimerOverlay(
       background: rgba(244, 67, 54, 0.35);
     }
     .timer-congrats-mode {
-      pointer-events: auto;
-      cursor: pointer;
       position: relative;
       overflow: hidden;
       padding: 40px 0;
@@ -830,7 +835,7 @@ export function createTimerOverlay(
     toggleSettings()
   })
 
-  function publishAppModeEvents(events: AppModeEvent[]): void {
+  function publishSceneEvents(events: AppSceneEvent[]): void {
     for (const event of events) {
       bus.publish(event.type, event)
     }
@@ -948,8 +953,8 @@ export function createTimerOverlay(
     }
 
     // SettingsChanged → session再作成が同期的に完了した後、pomodoroに遷移
-    const events = appModeManager.enterPomodoro()
-    publishAppModeEvents(events)
+    const events = sceneManager.enterPomodoro()
+    publishSceneEvents(events)
   })
 
   btnPause.addEventListener('click', () => {
@@ -958,7 +963,7 @@ export function createTimerOverlay(
   })
 
   btnResume.addEventListener('click', () => {
-    // resume は PhaseStarted を再発行するため、main.ts の AppModeChanged 購読経由ではなく直接呼ぶ
+    // resume は PhaseStarted を再発行するため、main.ts の AppSceneChanged 購読経由ではなく直接呼ぶ
     const events = session.start()
     for (const event of events) {
       bus.publish(event.type, event)
@@ -967,21 +972,22 @@ export function createTimerOverlay(
   })
 
   btnExitPomodoro.addEventListener('click', () => {
-    const events = appModeManager.exitPomodoro()
-    publishAppModeEvents(events)
-  })
-
-  congratsModeEl.addEventListener('click', () => {
-    const events = appModeManager.dismissCongrats()
-    publishAppModeEvents(events)
+    const events = sceneManager.exitPomodoro()
+    publishSceneEvents(events)
   })
 
   const unsubTick = bus.subscribe('TimerTicked', () => updateTimerDisplay())
-  const unsubPhase = bus.subscribe('PhaseStarted', () => updateTimerDisplay())
+  const unsubPhase = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
+    if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
+      switchToMode('congrats')
+    } else {
+      updateTimerDisplay()
+    }
+  })
   const unsubReset = bus.subscribe('TimerReset', () => updateTimerDisplay())
-  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged') {
-      switchToMode(event.mode)
+  const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
+    if (event.type === 'AppSceneChanged') {
+      switchToMode(event.scene)
     }
   })
 
@@ -990,7 +996,7 @@ export function createTimerOverlay(
     if (!settingsExpanded) updateSummary()
   }, 1000)
 
-  switchToMode(appModeManager.currentMode)
+  switchToMode(sceneManager.currentScene)
 
   return {
     container,
@@ -999,7 +1005,7 @@ export function createTimerOverlay(
       unsubTick()
       unsubPhase()
       unsubReset()
-      unsubAppMode()
+      unsubScene()
       style.remove()
       container.remove()
     }

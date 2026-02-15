@@ -3,7 +3,6 @@ import { createEventBus, type EventBus } from '../../../src/domain/shared/EventB
 import { bridgeTimerToSfx } from '../../../src/application/timer/TimerSfxBridge'
 import type { SfxPlayer } from '../../../src/infrastructure/audio/SfxPlayer'
 import type { TimerEvent } from '../../../src/domain/timer/events/TimerEvents'
-import type { AppModeEvent } from '../../../src/application/app-mode/AppMode'
 
 function createMockSfxPlayer(): SfxPlayer & { playCalls: string[] } {
   const playCalls: string[] = []
@@ -76,13 +75,13 @@ describe('TimerSfxBridge', () => {
     })
   })
 
-  describe('AppModeChanged(congrats) — サイクル完了ファンファーレ', () => {
+  describe('PhaseStarted(congrats) — サイクル完了ファンファーレ', () => {
     it('デフォルトのファンファーレURLを再生する', () => {
       bridgeTimerToSfx(bus, sfx)
 
-      bus.publish<AppModeEvent>('AppModeChanged', {
-        type: 'AppModeChanged',
-        mode: 'congrats',
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
         timestamp: Date.now()
       })
 
@@ -90,12 +89,12 @@ describe('TimerSfxBridge', () => {
       expect(sfx.playCalls[0]).toBe('./audio/fanfare.mp3')
     })
 
-    it('AppModeChanged(free)では再生しない', () => {
+    it('PhaseStarted(work)ではファンファーレを再生しない', () => {
       bridgeTimerToSfx(bus, sfx)
 
-      bus.publish<AppModeEvent>('AppModeChanged', {
-        type: 'AppModeChanged',
-        mode: 'free',
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
         timestamp: Date.now()
       })
 
@@ -105,9 +104,9 @@ describe('TimerSfxBridge', () => {
     it('カスタムfanfareUrlを指定できる', () => {
       bridgeTimerToSfx(bus, sfx, { fanfareUrl: '/audio/custom-fanfare.mp3' })
 
-      bus.publish<AppModeEvent>('AppModeChanged', {
-        type: 'AppModeChanged',
-        mode: 'congrats',
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
         timestamp: Date.now()
       })
 
@@ -124,9 +123,9 @@ describe('TimerSfxBridge', () => {
         phase: 'work',
         timestamp: Date.now()
       })
-      bus.publish<AppModeEvent>('AppModeChanged', {
-        type: 'AppModeChanged',
-        mode: 'congrats',
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
         timestamp: Date.now()
       })
 
@@ -146,9 +145,9 @@ describe('TimerSfxBridge', () => {
         phase: 'work',
         timestamp: Date.now()
       })
-      bus.publish<AppModeEvent>('AppModeChanged', {
-        type: 'AppModeChanged',
-        mode: 'congrats',
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
         timestamp: Date.now()
       })
 

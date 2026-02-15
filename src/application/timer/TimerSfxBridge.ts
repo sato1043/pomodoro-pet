@@ -1,11 +1,10 @@
 /**
  * タイマーイベントを購読してSFXを再生する橋渡しモジュール。
- * PhaseCompleted(work) でwork完了音、AppModeChanged(congrats) でファンファーレを鳴らす。
+ * PhaseCompleted(work) でwork完了音、PhaseStarted(congrats) でファンファーレを鳴らす。
  */
 
 import type { EventBus } from '../../domain/shared/EventBus'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
-import type { AppModeEvent } from '../app-mode/AppMode'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 
 export interface TimerSfxConfig {
@@ -33,8 +32,8 @@ export function bridgeTimerToSfx(
     }
   })
 
-  const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged' && event.mode === 'congrats') {
+  const unsubCongrats = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
+    if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
       sfx.play(urls.fanfareUrl).catch(() => {
         // 再生失敗時は無視
       })
@@ -43,6 +42,6 @@ export function bridgeTimerToSfx(
 
   return () => {
     unsubPhase()
-    unsubAppMode()
+    unsubCongrats()
   }
 }

@@ -1,11 +1,11 @@
 import * as THREE from 'three'
 import { createEventBus, type EventBus } from './domain/shared/EventBus'
-import { createPomodoroSession, type PomodoroSession } from './domain/timer/entities/PomodoroSession'
+import { createPomodoroStateMachine, type PomodoroStateMachine } from './domain/timer/entities/PomodoroStateMachine'
 import { createDefaultConfig } from './domain/timer/value-objects/TimerConfig'
 import { startTimer, resetTimer, tickTimer } from './application/timer/TimerUseCases'
 import { createTimerOverlay, type TimerOverlayElements } from './adapters/ui/TimerOverlay'
-import { createAppModeManager, type AppModeManager } from './application/app-mode/AppModeManager'
-import type { AppModeEvent } from './application/app-mode/AppMode'
+import { createAppSceneManager, type AppSceneManager } from './application/app-scene/AppSceneManager'
+import type { AppSceneEvent } from './application/app-scene/AppScene'
 import { createAppSettingsService } from './application/settings/AppSettingsService'
 import type { SettingsEvent } from './application/settings/SettingsEvents'
 import { createSettingsPanel } from './adapters/ui/SettingsPanel'
@@ -87,48 +87,24 @@ function setupResizeHandler(
   })
 }
 
-const CONGRATS_DURATION_MS = 5000
-
-/** AppModeChanged → PomodoroSession連動の購読を登録し、解除関数を返す */
-function subscribeAppModeToSession(
+/** AppSceneChanged → PomodoroStateMachine連動の購読を登録し、解除関数を返す */
+function subscribeAppSceneToSession(
   bus: EventBus,
-  session: PomodoroSession,
-  appModeManager: AppModeManager
+  session: PomodoroStateMachine,
+  _sceneManager: AppSceneManager
 ): () => void {
-  let congratsTimer: ReturnType<typeof setTimeout> | null = null
+  const unsub = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
+    if (event.type !== 'AppSceneChanged') return
 
-  function clearCongratsTimer(): void {
-    if (congratsTimer !== null) {
-      clearTimeout(congratsTimer)
-      congratsTimer = null
-    }
-  }
-
-  const unsub = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type !== 'AppModeChanged') return
-
-    clearCongratsTimer()
-
-    if (event.mode === 'pomodoro') {
+    if (event.scene === 'pomodoro') {
       resetTimer(session, bus)
       startTimer(session, bus)
-    } else if (event.mode === 'congrats') {
-      resetTimer(session, bus)
-      congratsTimer = setTimeout(() => {
-        if (appModeManager.currentMode === 'congrats') {
-          const events = appModeManager.dismissCongrats()
-          for (const e of events) bus.publish(e.type, e)
-        }
-      }, CONGRATS_DURATION_MS)
-    } else if (event.mode === 'free') {
+    } else if (event.scene === 'free') {
       resetTimer(session, bus)
     }
   })
 
-  return () => {
-    clearCongratsTimer()
-    unsub()
-  }
+  return () => { unsub() }
 }
 
 async function main(): Promise<void> {
@@ -148,12 +124,12 @@ async function main(): Promise<void> {
   const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
   const initialConfig = createDefaultConfig(isDebugTimer)
 
-  let session = createPomodoroSession(initialConfig)
+  let session = createPomodoroStateMachine(initialConfig)
 
-  // AppMode管理
-  const appModeManager = createAppModeManager(bus)
+  // AppScene管理
+  const sceneManager = createAppSceneManager(bus)
 
-  let unsubAppMode = subscribeAppModeToSession(bus, session, appModeManager)
+  let unsubScene = subscribeAppSceneToSession(bus, session, sceneManager)
 
   // アプリケーション設定
   const settingsService = createAppSettingsService(bus, initialConfig, isDebugTimer)
@@ -164,7 +140,7 @@ async function main(): Promise<void> {
   // SFXプレイヤー（ファンファーレ・テストサウンド）
   const sfxPlayer = createSfxPlayer()
 
-  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, appModeManager, settingsService, audio, sfxPlayer, isDebugTimer)
+  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, sceneManager, settingsService, audio, sfxPlayer, isDebugTimer)
   document.body.appendChild(timerUI.container)
 
   // 設定パネル（Environment）
@@ -175,17 +151,17 @@ async function main(): Promise<void> {
   // SettingsChanged → session再作成
   bus.subscribe<SettingsEvent>('SettingsChanged', (event) => {
     // 1. 旧リソース破棄
-    unsubAppMode()
+    unsubScene()
     timerUI.dispose()
 
     // 2. 新session作成
-    session = createPomodoroSession(event.config)
+    session = createPomodoroStateMachine(event.config)
 
     // 3. EventBus購読の再接続
-    unsubAppMode = subscribeAppModeToSession(bus, session, appModeManager)
+    unsubScene = subscribeAppSceneToSession(bus, session, sceneManager)
 
     // 4. TimerOverlay再作成
-    timerUI = createTimerOverlay(session, bus, event.config, appModeManager, settingsService, audio, sfxPlayer, isDebugTimer)
+    timerUI = createTimerOverlay(session, bus, event.config, sceneManager, settingsService, audio, sfxPlayer, isDebugTimer)
     document.body.appendChild(timerUI.container)
     timerUI.container.appendChild(settingsPanel.trigger)
   })

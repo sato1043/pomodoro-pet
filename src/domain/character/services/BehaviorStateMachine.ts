@@ -1,6 +1,8 @@
 import type { CharacterStateName } from '../value-objects/CharacterState'
 import { STATE_CONFIGS } from '../value-objects/CharacterState'
 import type { Position3D } from '../value-objects/Position3D'
+import type { CharacterBehavior, BehaviorPreset } from '../value-objects/BehaviorPreset'
+import { BEHAVIOR_PRESETS } from '../value-objects/BehaviorPreset'
 
 export type InteractionKind =
   | 'click' | 'hover'
@@ -20,30 +22,14 @@ export interface StateTickResult {
 
 export interface BehaviorStateMachine {
   readonly currentState: CharacterStateName
-  readonly scrollingAllowed: boolean
-  readonly lockedState: CharacterStateName | null
+  readonly currentPreset: CharacterBehavior
   isInteractionLocked(): boolean
+  isScrollingState(): boolean
+  applyPreset(presetName: CharacterBehavior): void
   transition(trigger: StateTrigger): CharacterStateName
   tick(deltaMs: number): StateTickResult
   start(): void
   keepAlive(): void
-  setScrollingAllowed(allowed: boolean): void
-  lockState(state: CharacterStateName): void
-  unlockState(): void
-}
-
-// タイムアウト時の遷移先テーブル
-const TIMEOUT_TRANSITIONS: Record<CharacterStateName, CharacterStateName> = {
-  idle: 'wander',
-  wander: 'sit',
-  march: 'idle', // 一息ついてからまたmarchに復帰（resolveTimeoutTargetで昇格）
-  sit: 'idle',
-  sleep: 'idle',
-  happy: 'idle',
-  reaction: 'idle',
-  dragged: 'dragged', // draggedはタイムアウトしない
-  pet: 'idle',
-  refuse: 'idle'
 }
 
 function randomRange(min: number, max: number): number {
@@ -63,8 +49,7 @@ export function createBehaviorStateMachine(
   let wanderTarget: Position3D | null = null
   let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
   const fixedDir = options?.fixedWanderDirection ?? null
-  let scrollingAllowed = false
-  let lockedState: CharacterStateName | null = null
+  let preset: BehaviorPreset = BEHAVIOR_PRESETS['autonomous']
 
   function randomDuration(state: CharacterStateName): number {
     const config = STATE_CONFIGS[state]
@@ -72,20 +57,10 @@ export function createBehaviorStateMachine(
   }
 
   function resolveTimeoutTarget(from: CharacterStateName): CharacterStateName {
-    // ロック中はロック対象の状態に自己遷移する
-    if (lockedState !== null) {
-      return lockedState
+    if (preset.lockedState !== null) {
+      return preset.lockedState
     }
-    let next = TIMEOUT_TRANSITIONS[from]
-    // scrollingAllowed=trueのとき、wanderをmarchに昇格（work中は歩きではなく前進）
-    if (scrollingAllowed && next === 'wander') {
-      next = 'march'
-    }
-    // scrollingAllowed=falseのとき、scrolling状態をスキップ
-    if (!scrollingAllowed && STATE_CONFIGS[next].scrolling) {
-      next = TIMEOUT_TRANSITIONS[next]
-    }
-    return next
+    return preset.transitions[from] ?? preset.initialState
   }
 
   function enterState(state: CharacterStateName): void {
@@ -118,11 +93,19 @@ export function createBehaviorStateMachine(
 
   return {
     get currentState() { return currentState },
-    get scrollingAllowed() { return scrollingAllowed },
-    get lockedState() { return lockedState },
+    get currentPreset() { return preset.name },
 
     isInteractionLocked(): boolean {
-      return (currentState === 'march' || currentState === 'refuse') && scrollingAllowed
+      return preset.interactionLocked
+    },
+
+    isScrollingState(): boolean {
+      return preset.scrollingStates.has(currentState)
+    },
+
+    applyPreset(presetName: CharacterBehavior): void {
+      preset = BEHAVIOR_PRESETS[presetName]
+      enterState(preset.initialState)
     },
 
     transition(trigger: StateTrigger): CharacterStateName {
@@ -133,20 +116,30 @@ export function createBehaviorStateMachine(
         }
 
         case 'prompt': {
-          // draggedへはプロンプトで遷移できない
           if (trigger.action === 'dragged') return currentState
           enterState(trigger.action)
           return currentState
         }
 
         case 'interaction': {
-          // ポモドーロ作業中（march/refuse+scrollingAllowed）は全インタラクションを拒否
-          if ((currentState === 'march' || currentState === 'refuse') && scrollingAllowed) {
+          // drag_end/pet_endは進行中インタラクションの終了なので常に許可
+          if (trigger.kind === 'drag_end') {
+            enterState(preset.initialState)
+            return currentState
+          }
+          if (trigger.kind === 'pet_end') {
+            enterState('idle')
+            return currentState
+          }
+
+          // インタラクションロック中は拒否
+          if (preset.interactionLocked) {
             if (currentState !== 'refuse') {
               enterState('refuse')
             }
             return currentState
           }
+
           if (trigger.kind === 'click') {
             enterState('reaction')
             return currentState
@@ -155,16 +148,8 @@ export function createBehaviorStateMachine(
             enterState('dragged')
             return currentState
           }
-          if (trigger.kind === 'drag_end') {
-            enterState(scrollingAllowed ? 'march' : 'idle')
-            return currentState
-          }
           if (trigger.kind === 'pet_start') {
             enterState('pet')
-            return currentState
-          }
-          if (trigger.kind === 'pet_end') {
-            enterState('idle')
             return currentState
           }
           // hover: 変化なし
@@ -234,17 +219,5 @@ export function createBehaviorStateMachine(
     keepAlive(): void {
       elapsedMs = 0
     },
-
-    setScrollingAllowed(allowed: boolean): void {
-      scrollingAllowed = allowed
-    },
-
-    lockState(state: CharacterStateName): void {
-      lockedState = state
-    },
-
-    unlockState(): void {
-      lockedState = null
-    }
   }
 }

@@ -1,6 +1,8 @@
 import type { TimerConfig } from './TimerConfig'
 import type { PhaseType } from './TimerPhase'
 
+export const CONGRATS_DURATION_MS = 5000
+
 export interface CyclePhase {
   readonly type: PhaseType
   readonly durationMs: number
@@ -37,6 +39,13 @@ export function buildCyclePlan(config: TimerConfig): CyclePhase[] {
       })
     }
   }
+
+  const lastSetNumber = phases[phases.length - 1].setNumber
+  phases.push({
+    type: 'congrats',
+    durationMs: CONGRATS_DURATION_MS,
+    setNumber: lastSetNumber
+  })
 
   return phases
 }

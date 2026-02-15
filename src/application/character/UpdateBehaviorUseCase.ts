@@ -1,7 +1,6 @@
 import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from '../../adapters/three/ThreeCharacterAdapter'
-import { shouldScroll } from '../../domain/environment/value-objects/SceneConfig'
 import type { ScrollManager, ScrollState } from '../environment/ScrollUseCase'
 
 export function updateBehavior(
@@ -20,7 +19,7 @@ export function updateBehavior(
   }
 
   // スクロール状態を更新してインフラ層に通知
-  const isScrolling = shouldScroll(character.currentState)
+  const isScrolling = stateMachine.isScrollingState()
   const scrollState = scrollManager.tick(deltaMs, isScrolling)
   onScrollUpdate(scrollState)
 }

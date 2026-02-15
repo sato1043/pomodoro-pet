@@ -1,10 +1,18 @@
 import type { TimerConfig } from '../value-objects/TimerConfig'
 import type { TimerPhase } from '../value-objects/TimerPhase'
+import type { PhaseType } from '../value-objects/TimerPhase'
 import type { TimerEvent } from '../events/TimerEvents'
 import { buildCyclePlan } from '../value-objects/CyclePlan'
 import type { CyclePhase } from '../value-objects/CyclePlan'
 
-export interface PomodoroSession {
+export type PomodoroState =
+  | { phase: 'work'; running: boolean }
+  | { phase: 'break'; running: boolean }
+  | { phase: 'long-break'; running: boolean }
+  | { phase: 'congrats' }
+
+export interface PomodoroStateMachine {
+  readonly state: PomodoroState
   readonly currentPhase: TimerPhase
   readonly isRunning: boolean
   readonly elapsedMs: number
@@ -17,9 +25,10 @@ export interface PomodoroSession {
   tick(deltaMs: number): TimerEvent[]
   pause(): TimerEvent[]
   reset(): TimerEvent[]
+  exitManually(): TimerEvent[]
 }
 
-export function createPomodoroSession(config: TimerConfig): PomodoroSession {
+export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMachine {
   const plan = buildCyclePlan(config)
   let phaseIndex = 0
   let isRunning = false
@@ -38,6 +47,12 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
 
   function now(): number {
     return Date.now()
+  }
+
+  function buildState(): PomodoroState {
+    const phase: PhaseType = currentCyclePhase().type
+    if (phase === 'congrats') return { phase: 'congrats' }
+    return { phase, running: isRunning }
   }
 
   function nextPhase(): { phase: TimerPhase; events: TimerEvent[] } {
@@ -83,7 +98,8 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
     return { phase: next, events }
   }
 
-  const session: PomodoroSession = {
+  const session: PomodoroStateMachine = {
+    get state() { return buildState() },
     get currentPhase() { return currentPhaseAsTimerPhase() },
     get isRunning() { return isRunning },
     get elapsedMs() { return elapsedMs },
@@ -118,6 +134,7 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
 
     pause(): TimerEvent[] {
       if (!isRunning) return []
+      if (currentCyclePhase().type === 'congrats') return []
       isRunning = false
       return [{ type: 'TimerPaused', elapsedMs }]
     },
@@ -129,6 +146,12 @@ export function createPomodoroSession(config: TimerConfig): PomodoroSession {
       completedCycles = 0
       completedSetsInCycle = 0
       return [{ type: 'TimerReset' }]
+    },
+
+    exitManually(): TimerEvent[] {
+      if (currentCyclePhase().type === 'congrats') return []
+      if (!isRunning) return []
+      return session.reset()
     }
   }
 

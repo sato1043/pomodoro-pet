@@ -9,7 +9,7 @@ npm run dev          # Electron + Vite HMR 開発サーバー起動
 npm run build        # electron-vite プロダクションビルド（out/ に出力）
 npm test             # Vitest テスト全実行
 npm run test:watch   # Vitest ウォッチモード
-npx vitest run tests/domain/timer/PomodoroSession.test.ts  # 単一テスト実行
+npx vitest run tests/domain/timer/PomodoroStateMachine.test.ts  # 単一テスト実行
 npm run package      # ビルド + Windows NSISインストーラー生成（release/ に出力）
 npm run package:dir  # ビルド + 展開済みディレクトリ出力
 npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe起動
@@ -48,21 +48,21 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 4つのコンテキスト。外部依存なし。
 
-- **timer**: `PomodoroSession` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`createDefaultConfig(debug)`でデバッグ/通常モードを切替
+- **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`createDefaultConfig(debug)`でデバッグ/通常モードを切替
 - **character**: `BehaviorStateMachine` が10状態（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse）を管理。`march`はwork中の目的ある前進（scrolling=true）、`wander`はbreak/free中のふらつき歩き（scrolling=false）。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでmarch方向を固定可能。`GestureRecognizer`でドラッグ/撫でるを判定。`isInteractionLocked()`でポモドーロ作業中のインタラクション拒否を判定。`lockState`/`unlockState`で状態ロック（congrats時happy、work時march）
 - **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
 - **shared**: `EventBus`（Pub/Sub）でタイマーとキャラクター間を疎結合に連携
 
 ### アプリケーション層 (`src/application/`)
 
-- `AppModeManager` — アプリケーションモード管理（free/pomodoro/congrats）。CycleCompleted購読でcongrats遷移、自動タイムアウトまたはクリックでfreeに遷移。EventBus経由で`AppModeChanged`を発行
+- `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings）。CycleCompleted購読でfreeに遷移。EventBus経由で`AppSceneChanged`を発行
 - `AppSettingsService` — タイマー設定＋サウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）
 - `TimerUseCases` — start/pause/reset/tick をEventBus経由で発行
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
-- `TimerCharacterBridge` — EventBus購読でタイマーイベント+AppModeChanged → キャラクター行動連携。work開始でmarch（自律的にidle↔marchサイクル）、congrats時lockState('happy')
-- `TimerSfxBridge` — EventBus購読で`PhaseCompleted(work)`時にwork完了音、`AppModeChanged(congrats)`時にサイクル完了ファンファーレをSfxPlayerで再生。`TimerSfxConfig`でURL個別指定可能
+- `TimerCharacterBridge` — EventBus購読でタイマーイベント+AppSceneChanged → キャラクター行動連携。work開始でmarch（自律的にidle↔marchサイクル）、congrats時celebrate
+- `TimerSfxBridge` — EventBus購読で`PhaseCompleted(work)`時にwork完了音、`PhaseStarted(congrats)`時にサイクル完了ファンファーレをSfxPlayerで再生。`TimerSfxConfig`でURL個別指定可能
 
 ### アダプター層 (`src/adapters/`)
 
@@ -110,18 +110,18 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（208件）。Three.js依存のアダプター/インフラ層はテスト対象外。
+テストはドメイン層とアプリケーション層に集中（217件）。Three.js依存のアダプター/インフラ層はテスト対象外。
 
 ```
-tests/domain/timer/PomodoroSession.test.ts           — 29件
+tests/domain/timer/PomodoroStateMachine.test.ts       — 47件
 tests/domain/timer/CyclePlan.test.ts                  — 7件
-tests/domain/character/BehaviorStateMachine.test.ts   — 66件
+tests/domain/character/BehaviorStateMachine.test.ts   — 67件
 tests/domain/character/GestureRecognizer.test.ts      — 17件
 tests/domain/environment/SceneConfig.test.ts          — 11件
 tests/domain/shared/EventBus.test.ts                  — 4件
 tests/application/character/InterpretPrompt.test.ts   — 17件
 tests/application/environment/ScrollUseCase.test.ts   — 11件
-tests/application/app-mode/AppModeManager.test.ts     — 22件
+tests/application/app-scene/AppSceneManager.test.ts   — 12件
 tests/application/settings/AppSettingsService.test.ts — 13件
 tests/application/timer/TimerSfxBridge.test.ts        — 10件
 tests/setup.test.ts                                   — 1件
@@ -135,7 +135,7 @@ tests/setup.test.ts                                   — 1件
 - [architecture.md](.claude/memories/architecture.md) — アーキテクチャとファイルマップ
 - [TODO.md](.claude/memories/TODO.md) — 今後の実装課題（優先度付き）
 - [pomodoro-state-transitions.md](.claude/memories/pomodoro-state-transitions.md) — ポモドーロタイマー状態遷移設計
-- [app-mode-design.md](.claude/memories/app-mode-design.md) — AppMode（free/pomodoro/congrats）設計文書
+- [app-mode-design.md](.claude/memories/app-mode-design.md) — AppScene（free/pomodoro/settings）設計文書
 - [fbx-integration.md](.claude/memories/fbx-integration.md) — FBXモデル導入ノウハウ
 - [interaction-design.md](.claude/memories/interaction-design.md) — インタラクション設計（ジェスチャー判定・拡張ガイド）
 
