@@ -967,7 +967,8 @@ export function createTimerOverlay(
   const unsubPhase = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
     if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
       switchToMode('congrats')
-    } else {
+    } else if (event.type === 'PhaseStarted') {
+      switchToMode('pomodoro')
       updateTimerDisplay()
     }
   })

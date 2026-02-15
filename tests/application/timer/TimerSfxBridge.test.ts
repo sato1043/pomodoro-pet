@@ -1,17 +1,34 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { createEventBus, type EventBus } from '../../../src/domain/shared/EventBus'
-import { bridgeTimerToSfx } from '../../../src/application/timer/TimerSfxBridge'
+import { bridgeTimerToSfx, type AudioControl } from '../../../src/application/timer/TimerSfxBridge'
 import type { SfxPlayer } from '../../../src/infrastructure/audio/SfxPlayer'
 import type { TimerEvent } from '../../../src/domain/timer/events/TimerEvents'
 
-function createMockSfxPlayer(): SfxPlayer & { playCalls: string[] } {
+function createMockSfxPlayer(): SfxPlayer & { playCalls: string[]; loopCalls: string[] } {
   const playCalls: string[] = []
+  const loopCalls: string[] = []
   return {
     playCalls,
+    loopCalls,
     play: vi.fn(async (url: string) => { playCalls.push(url) }),
+    playLoop: vi.fn(async (url: string) => { loopCalls.push(url) }),
+    stop: vi.fn(),
     setVolume: vi.fn(),
     setMuted: vi.fn(),
     dispose: vi.fn()
+  }
+}
+
+function createMockAudioControl(): AudioControl & { presetHistory: string[] } {
+  let preset = 'rain'
+  const presetHistory: string[] = []
+  return {
+    presetHistory,
+    get currentPreset() { return preset },
+    switchPreset(p: string) {
+      preset = p
+      presetHistory.push(p)
+    }
   }
 }
 
@@ -24,8 +41,8 @@ describe('TimerSfxBridge', () => {
     sfx = createMockSfxPlayer()
   })
 
-  describe('PhaseCompleted(work) — work完了音', () => {
-    it('デフォルトのwork完了音URLを再生する', () => {
+  describe('PhaseCompleted(work) → PhaseStarted(break) — work完了音', () => {
+    it('work→break時にwork完了音を再生する', () => {
       bridgeTimerToSfx(bus, sfx)
 
       bus.publish<TimerEvent>('PhaseCompleted', {
@@ -33,9 +50,31 @@ describe('TimerSfxBridge', () => {
         phase: 'work',
         timestamp: Date.now()
       })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
 
-      expect(sfx.play).toHaveBeenCalledTimes(1)
-      expect(sfx.playCalls[0]).toBe('./audio/work-complete.mp3')
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-complete.mp3', 1.0)
+    })
+
+    it('work→congrats時にはwork完了音を再生しない（ファンファーレのみ）', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/work-complete.mp3', expect.anything())
+      expect(sfx.play).toHaveBeenCalledWith('./audio/fanfare.mp3', 1.0)
     })
 
     it('PhaseCompleted(break)では再生しない', () => {
@@ -70,8 +109,39 @@ describe('TimerSfxBridge', () => {
         phase: 'work',
         timestamp: Date.now()
       })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
 
-      expect(sfx.playCalls[0]).toBe('/audio/custom-work.mp3')
+      expect(sfx.play).toHaveBeenCalledWith('/audio/custom-work.mp3', 1.0)
+    })
+  })
+
+  describe('PhaseStarted(work) — work開始音', () => {
+    it('デフォルトのwork開始音URLを再生する', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-start.mp3', 1.0)
+    })
+
+    it('PhaseStarted(break)ではwork開始音を再生しない', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/work-start.mp3', expect.anything())
     })
   })
 
@@ -85,8 +155,7 @@ describe('TimerSfxBridge', () => {
         timestamp: Date.now()
       })
 
-      expect(sfx.play).toHaveBeenCalledTimes(1)
-      expect(sfx.playCalls[0]).toBe('./audio/fanfare.mp3')
+      expect(sfx.play).toHaveBeenCalledWith('./audio/fanfare.mp3', 1.0)
     })
 
     it('PhaseStarted(work)ではファンファーレを再生しない', () => {
@@ -98,7 +167,7 @@ describe('TimerSfxBridge', () => {
         timestamp: Date.now()
       })
 
-      expect(sfx.play).not.toHaveBeenCalled()
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/fanfare.mp3', expect.anything())
     })
 
     it('カスタムfanfareUrlを指定できる', () => {
@@ -110,12 +179,30 @@ describe('TimerSfxBridge', () => {
         timestamp: Date.now()
       })
 
-      expect(sfx.playCalls[0]).toBe('/audio/custom-fanfare.mp3')
+      expect(sfx.play).toHaveBeenCalledWith('/audio/custom-fanfare.mp3', 1.0)
     })
   })
 
-  describe('work完了音とファンファーレは別のURL', () => {
-    it('それぞれ異なるURLで再生される', () => {
+  describe('work完了音とファンファーレの使い分け', () => {
+    it('work→break: work完了音のみ再生される', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-complete.mp3', 1.0)
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/fanfare.mp3', expect.anything())
+    })
+
+    it('work→congrats: ファンファーレのみ再生される', () => {
       bridgeTimerToSfx(bus, sfx)
 
       bus.publish<TimerEvent>('PhaseCompleted', {
@@ -129,9 +216,8 @@ describe('TimerSfxBridge', () => {
         timestamp: Date.now()
       })
 
-      expect(sfx.play).toHaveBeenCalledTimes(2)
-      expect(sfx.playCalls[0]).toBe('./audio/work-complete.mp3')
-      expect(sfx.playCalls[1]).toBe('./audio/fanfare.mp3')
+      expect(sfx.play).toHaveBeenCalledTimes(1)
+      expect(sfx.play).toHaveBeenCalledWith('./audio/fanfare.mp3', 1.0)
     })
   })
 
@@ -169,6 +255,252 @@ describe('TimerSfxBridge', () => {
           timestamp: Date.now()
         })
       }).not.toThrow()
+    })
+  })
+
+  describe('休憩BGM', () => {
+    let audioCtl: ReturnType<typeof createMockAudioControl>
+
+    beforeEach(() => {
+      audioCtl = createMockAudioControl()
+    })
+
+    it('PhaseStarted(break) → 環境音silence + chillクロスフェードループ再生', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(audioCtl.presetHistory).toContain('silence')
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-chill.mp3', 3000, 1.0)
+    })
+
+    it('PhaseStarted(long-break) → 環境音silence + chillクロスフェードループ再生', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'long-break',
+        timestamp: Date.now()
+      })
+
+      expect(audioCtl.presetHistory).toContain('silence')
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-chill.mp3', 3000, 1.0)
+    })
+
+    it('TriggerFired(break-getset) → getsetにクロスフェード切替', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'break-getset',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.stop).not.toHaveBeenCalled()
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-getset.mp3', 3000, 1.0)
+    })
+
+    it('TriggerFired(long-break-getset) → getsetにクロスフェード切替', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'long-break-getset',
+        phase: 'long-break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.stop).not.toHaveBeenCalled()
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-getset.mp3', 3000, 1.0)
+    })
+
+    it('PhaseCompleted(break) → BGM停止 + 環境音復帰', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      // break開始（環境音が'rain'の状態を保存）
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      // break完了
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.stop).toHaveBeenCalled()
+      // 最後のswitchPreset呼び出しが'rain'（復帰）
+      expect(audioCtl.presetHistory[audioCtl.presetHistory.length - 1]).toBe('rain')
+    })
+
+    it('PhaseCompleted(long-break) → BGM停止 + 環境音復帰', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'long-break',
+        timestamp: Date.now()
+      })
+
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'long-break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.stop).toHaveBeenCalled()
+      expect(audioCtl.presetHistory[audioCtl.presetHistory.length - 1]).toBe('rain')
+    })
+
+    it('TimerReset → BGM停止 + 環境音復帰', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      // break開始
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      // リセット
+      bus.publish<TimerEvent>('TimerReset', { type: 'TimerReset' })
+
+      expect(sfx.stop).toHaveBeenCalled()
+      expect(audioCtl.presetHistory[audioCtl.presetHistory.length - 1]).toBe('rain')
+    })
+
+    it('TimerPaused → BGM停止', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      bus.publish<TimerEvent>('TimerPaused', {
+        type: 'TimerPaused',
+        elapsedMs: 5000
+      })
+
+      expect(sfx.stop).toHaveBeenCalled()
+    })
+
+    it('PhaseStarted(work) → BGMを再生しない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.playLoop).not.toHaveBeenCalled()
+    })
+
+    it('TriggerFired(無関係ID) → 何もしない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'some-other-trigger',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.stop).not.toHaveBeenCalled()
+      expect(sfx.playLoop).not.toHaveBeenCalled()
+    })
+
+    it('audioControl未指定 → エラーなし（後方互換）', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      expect(() => {
+        bus.publish<TimerEvent>('PhaseStarted', {
+          type: 'PhaseStarted',
+          phase: 'break',
+          timestamp: Date.now()
+        })
+      }).not.toThrow()
+    })
+
+    it('カスタムURL指定 → 反映される', () => {
+      bridgeTimerToSfx(bus, sfx, {
+        breakChillUrl: '/audio/custom-chill.mp3',
+        breakGetsetUrl: '/audio/custom-getset.mp3'
+      }, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.playLoop).toHaveBeenCalledWith('/audio/custom-chill.mp3', 3000, 1.0)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'break-getset',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.playLoop).toHaveBeenCalledWith('/audio/custom-getset.mp3', 3000, 1.0)
+    })
+
+    it('カスタムgain指定 → 各再生に反映される', () => {
+      bridgeTimerToSfx(bus, sfx, {
+        workStartGain: 0.6,
+        workCompleteGain: 0.5,
+        fanfareGain: 0.7,
+        breakChillGain: 0.3,
+        breakGetsetGain: 0.4
+      }, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-start.mp3', 0.6)
+
+      // work→break経路でwork-completeのgainを検証
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-complete.mp3', 0.5)
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-chill.mp3', 3000, 0.3)
+
+      // congrats経路でfanfareのgainを検証
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'congrats',
+        timestamp: Date.now()
+      })
+      expect(sfx.play).toHaveBeenCalledWith('./audio/fanfare.mp3', 0.7)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'break-getset',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+      expect(sfx.playLoop).toHaveBeenCalledWith('./audio/break-getset.mp3', 3000, 0.4)
     })
   })
 })

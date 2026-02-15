@@ -22,6 +22,12 @@ import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
 import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
+import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
+
+const BREAK_BGM_TRIGGERS: PhaseTriggerMap = {
+  break: [{ id: 'break-getset', timing: { type: 'remaining', beforeEndMs: 30000 } }],
+  'long-break': [{ id: 'long-break-getset', timing: { type: 'remaining', beforeEndMs: 30000 } }],
+}
 
 function createScene(): {
   scene: THREE.Scene
@@ -103,7 +109,7 @@ async function main(): Promise<void> {
   const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
   const initialConfig = createDefaultConfig(isDebugTimer)
 
-  let session = createPomodoroStateMachine(initialConfig)
+  let session = createPomodoroStateMachine(initialConfig, { phaseTriggers: BREAK_BGM_TRIGGERS })
 
   // AppScene管理（EventBus不要 — Orchestratorが連動を担当）
   const sceneManager = createAppSceneManager()
@@ -166,7 +172,7 @@ async function main(): Promise<void> {
     timerUI.dispose()
 
     // 2. 新session作成
-    session = createPomodoroStateMachine(event.config)
+    session = createPomodoroStateMachine(event.config, { phaseTriggers: BREAK_BGM_TRIGGERS })
 
     // 3. Orchestrator再作成
     orchestrator = createPomodoroOrchestrator({
@@ -197,8 +203,11 @@ async function main(): Promise<void> {
   // インタラクション（ホバー、クリック、摘まみ上げ）
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle)
 
-  // タイマーSFX（作業完了ファンファーレ — EventBusで通知を受ける）
-  bridgeTimerToSfx(bus, sfxPlayer)
+  // タイマーSFX（作業完了ファンファーレ + 休憩BGM — EventBusで通知を受ける）
+  bridgeTimerToSfx(bus, sfxPlayer, {
+    breakChillGain: 0.25,
+    breakGetsetGain: 0.25
+  }, audio)
 
   // レンダリングループ
   const clock = new THREE.Clock()

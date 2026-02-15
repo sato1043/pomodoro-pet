@@ -37,7 +37,7 @@ EventBus（UI/インフラ通知）:
   AppSceneChanged → TimerOverlay, SettingsPanel
   PhaseStarted/PhaseCompleted/TimerTicked/TimerPaused/TimerReset → TimerOverlay
   PhaseCompleted(work)/PhaseStarted(congrats) → TimerSfxBridge
-  TriggerFired → （将来の演出ハンドラ）
+  TriggerFired(break-getset/long-break-getset) → TimerSfxBridge（休憩BGM切替）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
 ```
@@ -49,7 +49,7 @@ EventBus（UI/インフラ通知）:
 - `CyclePlan` — `buildCyclePlan(config)`がTimerConfigからフェーズ順列（CyclePhase[]）を生成する値オブジェクト。最終workの直後にcongrats（5秒）を挿入し、最終休憩（Sets=1はBreak、Sets>1はLong Break）で終了
 - `TimerPhase` — work / break / long-break / congrats の4フェーズ
 - `TimerConfig` — 作業時間、休憩時間、長時間休憩時間、セット数
-- `PhaseTrigger` — PhaseTimeTrigger型定義。`TriggerTiming`（elapsed/remaining）と`PhaseTriggerSpec`（id+timing）。`PhaseTriggerMap`で全フェーズのトリガーを定義
+- `PhaseTrigger` — PhaseTimeTrigger型定義。`TriggerTiming`（elapsed/remaining）と`PhaseTriggerSpec`（id+timing）。`PhaseTriggerMap`で全フェーズのトリガーを定義。break/long-breakの残り30秒でgetsetトリガーを発行（休憩BGM切替に使用）
 - `TimerEvents` — PhaseStarted, PhaseCompleted, SetCompleted, CycleCompleted, TimerTicked, TimerPaused, TimerReset, TriggerFired
 
 ### 2. キャラクター
@@ -98,7 +98,7 @@ EventBus（UI/インフラ通知）:
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
-- `timer/TimerSfxBridge.ts` — PhaseCompleted(work)でwork完了音、PhaseStarted(congrats)でファンファーレ再生（EventBus経由）
+- `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
@@ -118,14 +118,14 @@ EventBus（UI/インフラ通知）:
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
 - `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング
-- `audio/SfxPlayer.ts` — MP3ワンショット再生（fetch+decodeAudioData+バッファキャッシュ）。`MAX_GAIN=0.25`でUI音量値をスケーリング
+- `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定復元
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 244件
+### tests/ — 261件
 - `domain/timer/PomodoroStateMachine.test.ts` — 53件
 - `domain/timer/CyclePlan.test.ts` — 7件
 - `domain/character/BehaviorStateMachine.test.ts` — 70件
@@ -137,5 +137,5 @@ EventBus（UI/インフラ通知）:
 - `application/environment/ScrollUseCase.test.ts` — 11件
 - `application/settings/AppSettingsService.test.ts` — 13件
 - `application/timer/PomodoroOrchestrator.test.ts` — 22件
-- `application/timer/TimerSfxBridge.test.ts` — 10件
+- `application/timer/TimerSfxBridge.test.ts` — 27件
 - `setup.test.ts` — 1件

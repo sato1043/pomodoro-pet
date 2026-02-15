@@ -50,6 +50,16 @@
 - MP3ファイルは`assets/audio/`に配置（Vite publicDir経由で`/audio/`としてアクセス）
 - `work-complete.mp3`は未配置（配置すればwork完了時に再生される）
 
+### ~~休憩BGM再生~~ — 完了
+- break/long-break開始時に環境音を停止し`break-chill.mp3`をループ再生
+- 残り30秒で`break-getset.mp3`にクロスフェード切替（3秒、PhaseTimeTriggerを活用）
+- ループ境界・曲間切替でクロスフェード（per-source GainNodeで個別フェード制御）
+- break/long-break終了時にBGM停止・環境音復帰
+- pause時はBGM停止、resume時はPhaseStarted再発行で自動復帰
+- `SfxPlayer`に`playLoop(url)`/`stop()`を追加（インフラ層）
+- `TimerSfxBridge`に`AudioControl`インターフェース導入で環境音制御を抽象化（アプリケーション層）
+- `main.ts`で`BREAK_BGM_TRIGGERS`（PhaseTriggerMap）をsession作成時に注入
+
 ### ポモドーロ中のタイマー表示の視認性向上
 - 現在work/break/long-breakのフェーズ区別が目立たない
 - フェーズ別の色分け（例: work=赤系、break=緑系、long-break=青系）を検討
@@ -118,6 +128,15 @@
 - Three.jsのVideoTextureで背景に動画を投影
 - または360度パノラマ画像をSkyboxとして使用
 - フリー素材: Pexels, Pixabay等
+
+### チャットUIの改善
+- 現在のPromptInputは単純なテキスト入力＋Sendボタンのみ
+- 会話履歴の表示（キャラクターの応答・行動結果のフィードバック）
+- 吹き出し風UIでキャラクターとの対話感を演出
+- 入力候補・コマンドパレット（スラッシュコマンドやサジェスト）
+- ポモドーロ中のインタラクションロック時に入力不可状態を視覚的に表示
+- キャラクターの状態や感情に応じた応答メッセージの生成
+- モバイル/小画面対応（レスポンシブレイアウト）
 
 ## 優先度: 低
 

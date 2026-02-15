@@ -48,7 +48,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 4つのコンテキスト。外部依存なし。
 
-- **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`PomodoroStateMachineOptions`で`PhaseTimeTrigger`を注入可能（elapsed/remainingタイミングでTriggerFiredイベント発行）。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`createDefaultConfig(debug)`でデバッグ/通常モードを切替
+- **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`PomodoroStateMachineOptions`で`PhaseTimeTrigger`を注入可能（elapsed/remainingタイミングでTriggerFiredイベント発行）。break/long-breakの残り30秒でgetsetトリガーを発行し、TimerSfxBridgeがBGM切替に使用。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`createDefaultConfig(debug)`でデバッグ/通常モードを切替
 - **character**: `BehaviorStateMachine` が10状態（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse）を管理。`march`はwork中の目的ある前進（scrolling=true）、`wander`はbreak/free中のふらつき歩き（scrolling=false）。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでmarch方向を固定可能。`GestureRecognizer`でドラッグ/撫でるを判定。`isInteractionLocked()`でポモドーロ作業中のインタラクション拒否を判定。`lockState`/`unlockState`で状態ロック（congrats時happy、work時march）。`BehaviorPreset.durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）
 - **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
 - **shared**: `EventBus`（Pub/Sub）。UI/インフラ層への通知専用。階層間の状態連動はPomodoroOrchestratorが直接コールバックで管理
@@ -61,7 +61,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
-- `TimerSfxBridge` — EventBus購読で`PhaseCompleted(work)`時にwork完了音、`PhaseStarted(congrats)`時にサイクル完了ファンファーレをSfxPlayerで再生。`TimerSfxConfig`でURL個別指定可能
+- `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能
 
 ### アダプター層 (`src/adapters/`)
 
@@ -81,7 +81,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
-- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング（AudioAdapterも同様）
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング（AudioAdapterも同様）
 
 ## Static Assets
 
@@ -109,23 +109,7 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中（244件）。Three.js依存のアダプター/インフラ層はテスト対象外。
-
-```
-tests/domain/timer/PomodoroStateMachine.test.ts         — 53件
-tests/domain/timer/CyclePlan.test.ts                    — 7件
-tests/domain/character/BehaviorStateMachine.test.ts     — 70件
-tests/domain/character/GestureRecognizer.test.ts        — 17件
-tests/domain/environment/SceneConfig.test.ts            — 11件
-tests/domain/shared/EventBus.test.ts                    — 4件
-tests/application/character/InterpretPrompt.test.ts     — 17件
-tests/application/environment/ScrollUseCase.test.ts     — 11件
-tests/application/app-scene/AppSceneManager.test.ts     — 8件
-tests/application/settings/AppSettingsService.test.ts   — 13件
-tests/application/timer/PomodoroOrchestrator.test.ts    — 22件
-tests/application/timer/TimerSfxBridge.test.ts          — 10件
-tests/setup.test.ts                                     — 1件
-```
+テストはドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。テストファイル一覧と件数は [architecture.md](.claude/memories/architecture.md) を参照。
 
 ## Project Documents
 

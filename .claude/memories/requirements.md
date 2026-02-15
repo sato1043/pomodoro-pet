@@ -140,6 +140,7 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 - Web Audio APIによるプロシージャル生成（外部mp3不要）
 - プリセット: Rain, Forest, Wind, Silence
 - 音量スライダー、ミュートトグル
+- 休憩BGM: break/long-break中は環境音を停止し`break-chill.mp3`をクロスフェードループ再生。残り30秒で`break-getset.mp3`に3秒クロスフェード切替して次のwork開始を予告。break終了時に環境音を復帰
 
 ### 8. カメラ・画面 — 実装済
 
