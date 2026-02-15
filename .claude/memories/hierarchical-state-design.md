@@ -542,28 +542,34 @@ AppSceneManager
 - `PomodoroState`判別共用体型の導入（phase + running）
 - `state`ゲッター、`exitManually()`メソッド追加
 
-### Phase 4: 残タスク — 未実施
+### Phase 4: PhaseTimeTrigger + PomodoroOrchestrator + EventBus役割限定 — 完了
 
-以下が設計文書の未実装項目として残っている:
-
-1. **PhaseTimeTrigger**: フェーズ内の時間トリガー（elapsed/remaining）
-2. **`subscribeAppSceneToSession`の廃止**: PomodoroStateMachine内部で完結させる
-3. **EventBusの役割限定**: UI/インフラへの通知のみに限定、階層間連動はコールバックで直接接続
+実施内容:
+- `PhaseTrigger`: elapsed/remaining型のPhaseTimeTrigger型定義
+- `TimerEvents`: `TriggerFired`イベント追加
+- `PomodoroStateMachine`: `PomodoroStateMachineOptions`でトリガー注入、`tick()`内で判定・発火
+- `PomodoroOrchestrator`: AppScene遷移+タイマー操作+キャラクター行動を一元管理する新モジュール
+- `AppSceneManager`: CycleCompleted購読とdisposeを除去。EventBus不要の純粋な状態ホルダーに簡素化
+- `TimerCharacterBridge`: 廃止。ロジックはPomodoroOrchestratorの直接コールバックに移行
+- `TimerUseCases`: 廃止。PomodoroOrchestratorが同等機能を提供
+- `main.ts`: subscribeAppSceneToSession削除。PomodoroOrchestrator生成に置換
+- EventBus: UI/インフラ通知（TimerOverlay, SettingsPanel, TimerSfxBridge）のみに限定
 
 ## 現行コードとの対応表
 
-| 現行 | 新設計 | 移行Phase |
+| 旧 | 現行 | 移行Phase |
 |---|---|---|
 | `AppMode` (free/pomodoro/congrats) | `AppScene` (free/pomodoro/settings) | Phase 2-3 |
-| `AppModeManager` | `AppSceneManager` | Phase 3 |
-| `PomodoroSession` (isRunning + phaseIndex) | `PomodoroStateMachine` (明示的状態) | Phase 2 |
+| `AppModeManager` | `AppSceneManager`（純粋状態ホルダー） | Phase 3-4 |
+| `PomodoroSession` (isRunning + phaseIndex) | `PomodoroStateMachine` (明示的状態) | Phase 2-3 |
 | `scrollingAllowed` フラグ | `BehaviorPreset.scrollingStates` | Phase 1 |
 | `lockState` / `unlockState` | `BehaviorPreset.lockedState` | Phase 1 |
 | `resolveTimeoutTarget` 昇格ロジック | `BehaviorPreset.transitions` | Phase 1 |
-| `TimerCharacterBridge` (5購読+条件分岐) | フェーズ変更→`applyPreset()` | Phase 1 |
-| `subscribeAppModeToSession` (3分岐) | `PomodoroStateMachine`内部 | Phase 2 |
+| `TimerCharacterBridge` (EventBus購読) | `PomodoroOrchestrator`（直接コールバック） | Phase 1→4 |
+| `TimerUseCases` (start/pause/reset/tick) | `PomodoroOrchestrator` | Phase 4 |
+| `subscribeAppSceneToSession` (EventBus経由) | `PomodoroOrchestrator.startPomodoro/exitPomodoro`（直接呼出し） | Phase 4 |
 | `TIMEOUT_TRANSITIONS` (固定テーブル) | `BehaviorPreset.transitions`(プリセット別) | Phase 1 |
-| なし | `PhaseTimeTrigger` | Phase 2 |
+| なし | `PhaseTimeTrigger`（elapsed/remaining） | Phase 4 |
 
 ## 決定事項
 

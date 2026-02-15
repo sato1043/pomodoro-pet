@@ -503,6 +503,120 @@ describe('PomodoroStateMachine', () => {
     })
   })
 
+  describe('PhaseTimeTrigger', () => {
+    it('elapsed トリガーが指定時間で発火する', () => {
+      const s = createPomodoroStateMachine(testConfig, {
+        phaseTriggers: {
+          work: [{ id: 'work-mid', timing: { type: 'elapsed', afterMs: 1500 } }]
+        }
+      })
+      s.start()
+
+      // 1000ms時点では未発火
+      let events = s.tick(1000)
+      expect(events.find(e => e.type === 'TriggerFired')).toBeUndefined()
+
+      // 1500ms到達で発火
+      events = s.tick(500)
+      const trigger = events.find(e => e.type === 'TriggerFired')
+      expect(trigger).toBeDefined()
+      expect(trigger).toMatchObject({
+        type: 'TriggerFired',
+        triggerId: 'work-mid',
+        phase: 'work'
+      })
+    })
+
+    it('remaining トリガーが残り時間で発火する', () => {
+      const s = createPomodoroStateMachine(testConfig, {
+        phaseTriggers: {
+          work: [{ id: 'work-ending', timing: { type: 'remaining', beforeEndMs: 1000 } }]
+        }
+      })
+      s.start()
+
+      // 残り1500ms（elapsed=1500）では未発火
+      let events = s.tick(1500)
+      expect(events.find(e => e.type === 'TriggerFired')).toBeUndefined()
+
+      // 残り1000ms（elapsed=2000）で発火
+      events = s.tick(500)
+      const trigger = events.find(e => e.type === 'TriggerFired')
+      expect(trigger).toBeDefined()
+      expect(trigger).toMatchObject({
+        type: 'TriggerFired',
+        triggerId: 'work-ending',
+        phase: 'work'
+      })
+    })
+
+    it('同一フェーズ内で重複発火しない', () => {
+      const s = createPomodoroStateMachine(testConfig, {
+        phaseTriggers: {
+          work: [{ id: 'once', timing: { type: 'elapsed', afterMs: 1000 } }]
+        }
+      })
+      s.start()
+
+      s.tick(1500) // 発火
+      const events = s.tick(500) // 2回目のtick
+      expect(events.filter(e => e.type === 'TriggerFired')).toHaveLength(0)
+    })
+
+    it('フェーズ切替でリセットされ再発火可能になる', () => {
+      // work(3s) → break(2s) → work(3s) のサイクルでworkにトリガーを設定
+      const s = createPomodoroStateMachine(testConfig, {
+        phaseTriggers: {
+          work: [{ id: 'work-start', timing: { type: 'elapsed', afterMs: 500 } }]
+        }
+      })
+      s.start()
+
+      // set1 workで発火
+      let events = s.tick(1000)
+      expect(events.filter(e => e.type === 'TriggerFired')).toHaveLength(1)
+
+      // work完了 → break → 次のwork
+      s.tick(2000) // work完了
+      s.tick(2000) // break完了 → set2 work開始
+
+      // set2 workで再度発火
+      events = s.tick(1000)
+      expect(events.filter(e => e.type === 'TriggerFired')).toHaveLength(1)
+      expect(events.find(e => e.type === 'TriggerFired')).toMatchObject({
+        triggerId: 'work-start',
+        phase: 'work'
+      })
+    })
+
+    it('複数トリガーが1 tickで同時発火する', () => {
+      const s = createPomodoroStateMachine(testConfig, {
+        phaseTriggers: {
+          work: [
+            { id: 'trigger-a', timing: { type: 'elapsed', afterMs: 1000 } },
+            { id: 'trigger-b', timing: { type: 'elapsed', afterMs: 1500 } }
+          ]
+        }
+      })
+      s.start()
+
+      // 2000ms tickで両方発火
+      const events = s.tick(2000)
+      const triggers = events.filter(e => e.type === 'TriggerFired')
+      expect(triggers).toHaveLength(2)
+      expect(triggers.map(t => 'triggerId' in t ? t.triggerId : '')).toContain('trigger-a')
+      expect(triggers.map(t => 'triggerId' in t ? t.triggerId : '')).toContain('trigger-b')
+    })
+
+    it('トリガー未指定時は既存動作に影響なし', () => {
+      const s = createPomodoroStateMachine(testConfig)
+      s.start()
+      const events = s.tick(1500)
+      expect(events.filter(e => e.type === 'TriggerFired')).toHaveLength(0)
+      expect(events.find(e => e.type === 'TimerTicked')).toBeDefined()
+    })
+  })
+
   describe('TimerConfig バリデーション', () => {
     it('longBreakDurationMsが0以下ならエラー', () => {
       expect(() => createConfig(3000, 2000, 0, 4)).toThrow()

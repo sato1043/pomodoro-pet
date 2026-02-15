@@ -6,13 +6,12 @@ import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/C
 import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { EventBus } from '../../domain/shared/EventBus'
-import type { AppSceneManager } from '../../application/app-scene/AppSceneManager'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
+import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrchestrator'
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { createVolumeControl } from './VolumeControl'
-import { pauseTimer } from '../../application/timer/TimerUseCases'
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
@@ -259,7 +258,7 @@ export function createTimerOverlay(
   session: PomodoroStateMachine,
   bus: EventBus,
   config: TimerConfig,
-  sceneManager: AppSceneManager,
+  orchestrator: PomodoroOrchestrator,
   settingsService: AppSettingsService,
   audio: AudioAdapter,
   sfx: SfxPlayer | null = null,
@@ -835,12 +834,6 @@ export function createTimerOverlay(
     toggleSettings()
   })
 
-  function publishSceneEvents(events: AppSceneEvent[]): void {
-    for (const event of events) {
-      bus.publish(event.type, event)
-    }
-  }
-
   function syncButtonSelection(): void {
     const cur = settingsService.currentConfig
     selectedWork = resolveSelected(workOptions, msToMinutes(cur.workDurationMs))
@@ -953,27 +946,21 @@ export function createTimerOverlay(
     }
 
     // SettingsChanged → session再作成が同期的に完了した後、pomodoroに遷移
-    const events = sceneManager.enterPomodoro()
-    publishSceneEvents(events)
+    orchestrator.startPomodoro()
   })
 
   btnPause.addEventListener('click', () => {
-    pauseTimer(session, bus)
+    orchestrator.pause()
     updateTimerDisplay()
   })
 
   btnResume.addEventListener('click', () => {
-    // resume は PhaseStarted を再発行するため、main.ts の AppSceneChanged 購読経由ではなく直接呼ぶ
-    const events = session.start()
-    for (const event of events) {
-      bus.publish(event.type, event)
-    }
+    orchestrator.resume()
     updateTimerDisplay()
   })
 
   btnExitPomodoro.addEventListener('click', () => {
-    const events = sceneManager.exitPomodoro()
-    publishSceneEvents(events)
+    orchestrator.exitPomodoro()
   })
 
   const unsubTick = bus.subscribe('TimerTicked', () => updateTimerDisplay())
@@ -987,7 +974,9 @@ export function createTimerOverlay(
   const unsubReset = bus.subscribe('TimerReset', () => updateTimerDisplay())
   const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
     if (event.type === 'AppSceneChanged') {
-      switchToMode(event.scene)
+      if (event.scene === 'free' || event.scene === 'pomodoro') {
+        switchToMode(event.scene)
+      }
     }
   })
 
@@ -996,7 +985,10 @@ export function createTimerOverlay(
     if (!settingsExpanded) updateSummary()
   }, 1000)
 
-  switchToMode(sceneManager.currentScene)
+  const initialScene = orchestrator.sceneManager.currentScene
+  if (initialScene === 'free' || initialScene === 'pomodoro') {
+    switchToMode(initialScene)
+  }
 
   return {
     container,

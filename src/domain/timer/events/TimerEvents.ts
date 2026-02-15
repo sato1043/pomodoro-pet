@@ -8,3 +8,4 @@ export type TimerEvent =
   | { type: 'TimerTicked'; remainingMs: number }
   | { type: 'TimerPaused'; elapsedMs: number }
   | { type: 'TimerReset' }
+  | { type: 'TriggerFired'; triggerId: string; phase: PhaseType; timestamp: number }

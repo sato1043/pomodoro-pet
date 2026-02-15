@@ -1,11 +1,9 @@
 import * as THREE from 'three'
-import { createEventBus, type EventBus } from './domain/shared/EventBus'
-import { createPomodoroStateMachine, type PomodoroStateMachine } from './domain/timer/entities/PomodoroStateMachine'
+import { createEventBus } from './domain/shared/EventBus'
+import { createPomodoroStateMachine } from './domain/timer/entities/PomodoroStateMachine'
 import { createDefaultConfig } from './domain/timer/value-objects/TimerConfig'
-import { startTimer, resetTimer, tickTimer } from './application/timer/TimerUseCases'
 import { createTimerOverlay, type TimerOverlayElements } from './adapters/ui/TimerOverlay'
-import { createAppSceneManager, type AppSceneManager } from './application/app-scene/AppSceneManager'
-import type { AppSceneEvent } from './application/app-scene/AppScene'
+import { createAppSceneManager } from './application/app-scene/AppSceneManager'
 import { createAppSettingsService } from './application/settings/AppSettingsService'
 import type { SettingsEvent } from './application/settings/SettingsEvents'
 import { createSettingsPanel } from './adapters/ui/SettingsPanel'
@@ -20,9 +18,10 @@ import { createScrollManager } from './application/environment/ScrollUseCase'
 import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScrollRenderer'
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
 import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
-import { bridgeTimerToCharacter } from './application/character/TimerCharacterBridge'
 import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
 import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
+import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
+import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 
 function createScene(): {
   scene: THREE.Scene
@@ -87,26 +86,6 @@ function setupResizeHandler(
   })
 }
 
-/** AppSceneChanged → PomodoroStateMachine連動の購読を登録し、解除関数を返す */
-function subscribeAppSceneToSession(
-  bus: EventBus,
-  session: PomodoroStateMachine,
-  _sceneManager: AppSceneManager
-): () => void {
-  const unsub = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
-    if (event.type !== 'AppSceneChanged') return
-
-    if (event.scene === 'pomodoro') {
-      resetTimer(session, bus)
-      startTimer(session, bus)
-    } else if (event.scene === 'free') {
-      resetTimer(session, bus)
-    }
-  })
-
-  return () => { unsub() }
-}
-
 async function main(): Promise<void> {
   const { scene, camera, renderer } = createScene()
   addLights(scene)
@@ -126,10 +105,8 @@ async function main(): Promise<void> {
 
   let session = createPomodoroStateMachine(initialConfig)
 
-  // AppScene管理
-  const sceneManager = createAppSceneManager(bus)
-
-  let unsubScene = subscribeAppSceneToSession(bus, session, sceneManager)
+  // AppScene管理（EventBus不要 — Orchestratorが連動を担当）
+  const sceneManager = createAppSceneManager()
 
   // アプリケーション設定
   const settingsService = createAppSettingsService(bus, initialConfig, isDebugTimer)
@@ -140,44 +117,7 @@ async function main(): Promise<void> {
   // SFXプレイヤー（ファンファーレ・テストサウンド）
   const sfxPlayer = createSfxPlayer()
 
-  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, sceneManager, settingsService, audio, sfxPlayer, isDebugTimer)
-  document.body.appendChild(timerUI.container)
-
-  // 設定パネル（Environment）
-  const settingsPanel = createSettingsPanel(bus)
-  timerUI.container.appendChild(settingsPanel.trigger)
-  document.body.appendChild(settingsPanel.container)
-
-  // SettingsChanged → session再作成
-  bus.subscribe<SettingsEvent>('SettingsChanged', (event) => {
-    // 1. 旧リソース破棄
-    unsubScene()
-    timerUI.dispose()
-
-    // 2. 新session作成
-    session = createPomodoroStateMachine(event.config)
-
-    // 3. EventBus購読の再接続
-    unsubScene = subscribeAppSceneToSession(bus, session, sceneManager)
-
-    // 4. TimerOverlay再作成
-    timerUI = createTimerOverlay(session, bus, event.config, sceneManager, settingsService, audio, sfxPlayer, isDebugTimer)
-    document.body.appendChild(timerUI.container)
-    timerUI.container.appendChild(settingsPanel.trigger)
-  })
-
-  // SoundSettingsLoaded → AudioAdapterに適用
-  bus.subscribe<SettingsEvent>('SoundSettingsLoaded', (event) => {
-    if (event.type !== 'SoundSettingsLoaded') return
-    audio.switchPreset(event.sound.preset as SoundPreset)
-    audio.setVolume(event.sound.volume)
-    if (event.sound.isMuted !== audio.isMuted) audio.toggleMute()
-  })
-
-  // 保存済み設定の復元（購読登録後に実行）
-  await settingsService.loadFromStorage()
-
-  // キャラクター初期化
+  // キャラクター初期化（Orchestratorより先に必要）
   const character = createCharacter()
   const fbxConfig: FBXCharacterConfig = {
     modelPath: './models/ms07_Wildboar.FBX',
@@ -196,20 +136,68 @@ async function main(): Promise<void> {
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)
-  const stateMachine = createBehaviorStateMachine({ fixedWanderDirection: sceneConfig.direction })
-  stateMachine.start()
+  const behaviorSM = createBehaviorStateMachine({ fixedWanderDirection: sceneConfig.direction })
+  behaviorSM.start()
+
+  // キャラクター行動コールバック（Orchestratorが直接呼び出す）
+  function switchPreset(presetName: CharacterBehavior): void {
+    behaviorSM.applyPreset(presetName)
+    character.setState(behaviorSM.currentState)
+    charHandle.playState(behaviorSM.currentState)
+  }
+
+  // PomodoroOrchestrator（AppScene + タイマー + キャラクター行動の一元管理）
+  let orchestrator: PomodoroOrchestrator = createPomodoroOrchestrator({
+    bus, sceneManager, session, onBehaviorChange: switchPreset
+  })
+
+  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, orchestrator, settingsService, audio, sfxPlayer, isDebugTimer)
+  document.body.appendChild(timerUI.container)
+
+  // 設定パネル（Environment）
+  const settingsPanel = createSettingsPanel(bus)
+  timerUI.container.appendChild(settingsPanel.trigger)
+  document.body.appendChild(settingsPanel.container)
+
+  // SettingsChanged → session + orchestrator再作成
+  bus.subscribe<SettingsEvent>('SettingsChanged', (event) => {
+    // 1. 旧リソース破棄
+    orchestrator.dispose()
+    timerUI.dispose()
+
+    // 2. 新session作成
+    session = createPomodoroStateMachine(event.config)
+
+    // 3. Orchestrator再作成
+    orchestrator = createPomodoroOrchestrator({
+      bus, sceneManager, session, onBehaviorChange: switchPreset
+    })
+
+    // 4. TimerOverlay再作成
+    timerUI = createTimerOverlay(session, bus, event.config, orchestrator, settingsService, audio, sfxPlayer, isDebugTimer)
+    document.body.appendChild(timerUI.container)
+    timerUI.container.appendChild(settingsPanel.trigger)
+  })
+
+  // SoundSettingsLoaded → AudioAdapterに適用
+  bus.subscribe<SettingsEvent>('SoundSettingsLoaded', (event) => {
+    if (event.type !== 'SoundSettingsLoaded') return
+    audio.switchPreset(event.sound.preset as SoundPreset)
+    audio.setVolume(event.sound.volume)
+    if (event.sound.isMuted !== audio.isMuted) audio.toggleMute()
+  })
+
+  // 保存済み設定の復元（購読登録後に実行）
+  await settingsService.loadFromStorage()
 
   // プロンプト入力UI
-  const promptUI = createPromptInput(character, stateMachine, charHandle)
+  const promptUI = createPromptInput(character, behaviorSM, charHandle)
   document.body.appendChild(promptUI.container)
 
   // インタラクション（ホバー、クリック、摘まみ上げ）
-  createInteractionAdapter(renderer, camera, character, stateMachine, charHandle)
+  createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle)
 
-  // タイマー ↔ キャラクター連携
-  bridgeTimerToCharacter(bus, character, stateMachine, charHandle)
-
-  // タイマーSFX（作業完了ファンファーレ）
+  // タイマーSFX（作業完了ファンファーレ — EventBusで通知を受ける）
   bridgeTimerToSfx(bus, sfxPlayer)
 
   // レンダリングループ
@@ -219,12 +207,12 @@ async function main(): Promise<void> {
     const delta = clock.getDelta()
     const deltaMs = delta * 1000
 
-    if (session.isRunning) {
-      tickTimer(session, bus, deltaMs)
+    if (orchestrator.isRunning) {
+      orchestrator.tick(deltaMs)
     }
 
     updateBehavior(
-      character, stateMachine, charHandle, deltaMs,
+      character, behaviorSM, charHandle, deltaMs,
       scrollManager, (state) => scrollRenderer.update(state)
     )
     charHandle.update(delta)

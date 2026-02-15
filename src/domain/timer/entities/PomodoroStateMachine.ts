@@ -2,6 +2,7 @@ import type { TimerConfig } from '../value-objects/TimerConfig'
 import type { TimerPhase } from '../value-objects/TimerPhase'
 import type { PhaseType } from '../value-objects/TimerPhase'
 import type { TimerEvent } from '../events/TimerEvents'
+import type { PhaseTriggerMap, PhaseTriggerSpec } from '../value-objects/PhaseTrigger'
 import { buildCyclePlan } from '../value-objects/CyclePlan'
 import type { CyclePhase } from '../value-objects/CyclePlan'
 
@@ -10,6 +11,10 @@ export type PomodoroState =
   | { phase: 'break'; running: boolean }
   | { phase: 'long-break'; running: boolean }
   | { phase: 'congrats' }
+
+export interface PomodoroStateMachineOptions {
+  readonly phaseTriggers?: PhaseTriggerMap
+}
 
 export interface PomodoroStateMachine {
   readonly state: PomodoroState
@@ -28,13 +33,23 @@ export interface PomodoroStateMachine {
   exitManually(): TimerEvent[]
 }
 
-export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMachine {
+interface ActiveTrigger {
+  readonly spec: PhaseTriggerSpec
+  fired: boolean
+}
+
+export function createPomodoroStateMachine(
+  config: TimerConfig,
+  options?: PomodoroStateMachineOptions
+): PomodoroStateMachine {
   const plan = buildCyclePlan(config)
+  const phaseTriggers = options?.phaseTriggers ?? {}
   let phaseIndex = 0
   let isRunning = false
   let elapsedMs = 0
   let completedCycles = 0
   let completedSetsInCycle = 0
+  let activeTriggers: ActiveTrigger[] = []
 
   function currentCyclePhase(): CyclePhase {
     return plan[phaseIndex]
@@ -53,6 +68,37 @@ export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMa
     const phase: PhaseType = currentCyclePhase().type
     if (phase === 'congrats') return { phase: 'congrats' }
     return { phase, running: isRunning }
+  }
+
+  function loadTriggersForPhase(phaseType: PhaseType): void {
+    const specs = phaseTriggers[phaseType]
+    activeTriggers = specs
+      ? specs.map(spec => ({ spec, fired: false }))
+      : []
+  }
+
+  function evaluateTriggers(events: TimerEvent[]): void {
+    const phase = currentCyclePhase()
+    const remaining = phase.durationMs - elapsedMs
+
+    for (const trigger of activeTriggers) {
+      if (trigger.fired) continue
+
+      const shouldFire =
+        trigger.spec.timing.type === 'elapsed'
+          ? elapsedMs >= trigger.spec.timing.afterMs
+          : remaining <= trigger.spec.timing.beforeEndMs
+
+      if (shouldFire) {
+        trigger.fired = true
+        events.push({
+          type: 'TriggerFired',
+          triggerId: trigger.spec.id,
+          phase: phase.type,
+          timestamp: now()
+        })
+      }
+    }
   }
 
   function nextPhase(): { phase: TimerPhase; events: TimerEvent[] } {
@@ -94,6 +140,7 @@ export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMa
     // 次回start()でPhaseStartedが発行される
     if (isRunning) {
       events.push({ type: 'PhaseStarted', phase: next.type, timestamp: now() })
+      loadTriggersForPhase(next.type)
     }
     return { phase: next, events }
   }
@@ -112,6 +159,7 @@ export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMa
     start(): TimerEvent[] {
       if (isRunning) return []
       isRunning = true
+      loadTriggersForPhase(currentCyclePhase().type)
       return [{ type: 'PhaseStarted', phase: currentCyclePhase().type, timestamp: now() }]
     },
 
@@ -126,6 +174,11 @@ export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMa
         const transition = nextPhase()
         events.push(...transition.events)
         elapsedMs = overflow
+      }
+
+      // トリガー判定（フェーズ遷移後の新フェーズに対して）
+      if (isRunning) {
+        evaluateTriggers(events)
       }
 
       events.push({ type: 'TimerTicked', remainingMs: currentCyclePhase().durationMs - elapsedMs })
@@ -145,6 +198,7 @@ export function createPomodoroStateMachine(config: TimerConfig): PomodoroStateMa
       phaseIndex = 0
       completedCycles = 0
       completedSetsInCycle = 0
+      activeTriggers = []
       return [{ type: 'TimerReset' }]
     },
 

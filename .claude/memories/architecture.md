@@ -23,26 +23,34 @@ Layer 4: CharacterState    — idle | wander | march | sit | sleep | happy | ...
 
 ## モジュール間通信
 
-EventBus（Pub/Sub）で疎結合。AppScene・タイマー・キャラクターはイベント経由で連携。
+PomodoroOrchestratorが階層間連動を直接コールバックで管理。EventBusはUI/インフラへの通知のみ。
 
-### イベントフロー
+### 通信パターン
 
 ```
-AppSceneManager → AppSceneChanged → TimerCharacterBridge, TimerOverlay, SettingsPanel
-PomodoroStateMachine → TimerEvents → TimerCharacterBridge, TimerOverlay, TimerSfxBridge
-CycleCompleted → AppSceneManager（自動でfreeに遷移）
-AppSettingsService → SettingsChanged → main.ts（session/UI再作成）
-AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
+直接呼び出し（PomodoroOrchestrator内部）:
+  AppSceneManager.enterPomodoro/exitPomodoro（シーン遷移）
+  PomodoroStateMachine.start/tick/pause/reset（タイマー操作）
+  onBehaviorChange callback（キャラクター行動切替）
+
+EventBus（UI/インフラ通知）:
+  AppSceneChanged → TimerOverlay, SettingsPanel
+  PhaseStarted/PhaseCompleted/TimerTicked/TimerPaused/TimerReset → TimerOverlay
+  PhaseCompleted(work)/PhaseStarted(congrats) → TimerSfxBridge
+  TriggerFired → （将来の演出ハンドラ）
+  SettingsChanged → main.ts（session/Orchestrator/UI再作成）
+  SoundSettingsLoaded → main.ts（AudioAdapter適用）
 ```
 
 ## 4つのドメインコンテキスト
 
 ### 1. タイマー
-- `PomodoroStateMachine` — `CyclePlan`をインデックス走査する方式。`PomodoroState`判別共用体型で状態を表現。`exitManually()`でcongrats中以外の手動終了。デフォルト1セット/サイクル。サイクル完了自動停止
+- `PomodoroStateMachine` — `CyclePlan`をインデックス走査する方式。`PomodoroState`判別共用体型で状態を表現。`exitManually()`でcongrats中以外の手動終了。デフォルト1セット/サイクル。サイクル完了自動停止。`PomodoroStateMachineOptions`でPhaseTimeTriggerを注入可能
 - `CyclePlan` — `buildCyclePlan(config)`がTimerConfigからフェーズ順列（CyclePhase[]）を生成する値オブジェクト。congrats（5秒）を末尾に追加。Sets=1はBreak、Sets>1の最終セットはLong Break
 - `TimerPhase` — work / break / long-break / congrats の4フェーズ
 - `TimerConfig` — 作業時間、休憩時間、長時間休憩時間、セット数
-- `TimerEvents` — PhaseStarted, PhaseCompleted, SetCompleted, CycleCompleted, TimerTicked, TimerPaused, TimerReset
+- `PhaseTrigger` — PhaseTimeTrigger型定義。`TriggerTiming`（elapsed/remaining）と`PhaseTriggerSpec`（id+timing）。`PhaseTriggerMap`で全フェーズのトリガーを定義
+- `TimerEvents` — PhaseStarted, PhaseCompleted, SetCompleted, CycleCompleted, TimerTicked, TimerPaused, TimerReset, TriggerFired
 
 ### 2. キャラクター
 - `Character` — 位置・状態管理
@@ -67,9 +75,10 @@ AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
 - `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings公開）
 
 ### src/domain/ — ドメインモデル
-- `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually）
+- `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応）
 - `timer/value-objects/CyclePlan.ts` — フェーズ順列生成（buildCyclePlan, cycleTotalMs, CONGRATS_DURATION_MS）
 - `timer/value-objects/TimerPhase.ts` — work/break/long-break/congratsフェーズ
+- `timer/value-objects/PhaseTrigger.ts` — PhaseTimeTrigger型定義（TriggerTiming, PhaseTriggerSpec, PhaseTriggerMap）
 - `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`createDefaultConfig(debug)`でデバッグモード（1min/1min/1min）を切替
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
@@ -83,14 +92,13 @@ AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
 
 ### src/application/ — ユースケース
 - `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings）とAppSceneEvent型
-- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro）。CycleCompleted購読で自動遷移
+- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro）。純粋な状態ホルダー（EventBus不要）
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoadedイベント型定義
-- `timer/TimerUseCases.ts` — start/pause/reset/tick
+- `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
-- `character/TimerCharacterBridge.ts` — タイマーイベント+AppSceneChanged→BehaviorPreset切替でキャラクター行動連携
-- `timer/TimerSfxBridge.ts` — PhaseCompleted(work)でwork完了音、PhaseStarted(congrats)でファンファーレ再生
+- `timer/TimerSfxBridge.ts` — PhaseCompleted(work)でwork完了音、PhaseStarted(congrats)でファンファーレ再生（EventBus経由）
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
@@ -117,16 +125,17 @@ AppSettingsService → SoundSettingsLoaded → main.ts（AudioAdapter適用）
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 217件
-- `domain/timer/PomodoroStateMachine.test.ts` — 47件
+### tests/ — 241件
+- `domain/timer/PomodoroStateMachine.test.ts` — 53件
 - `domain/timer/CyclePlan.test.ts` — 7件
 - `domain/character/BehaviorStateMachine.test.ts` — 67件
 - `domain/character/GestureRecognizer.test.ts` — 17件
 - `domain/environment/SceneConfig.test.ts` — 11件
 - `domain/shared/EventBus.test.ts` — 4件
-- `application/app-scene/AppSceneManager.test.ts` — 12件
+- `application/app-scene/AppSceneManager.test.ts` — 8件
 - `application/character/InterpretPrompt.test.ts` — 17件
 - `application/environment/ScrollUseCase.test.ts` — 11件
 - `application/settings/AppSettingsService.test.ts` — 13件
+- `application/timer/PomodoroOrchestrator.test.ts` — 22件
 - `application/timer/TimerSfxBridge.test.ts` — 10件
 - `setup.test.ts` — 1件

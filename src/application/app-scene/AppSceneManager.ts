@@ -1,32 +1,19 @@
 import type { AppScene, AppSceneEvent } from './AppScene'
-import type { EventBus } from '../../domain/shared/EventBus'
 
 export interface AppSceneManager {
   readonly currentScene: AppScene
   enterPomodoro(): AppSceneEvent[]
   exitPomodoro(): AppSceneEvent[]
-  dispose(): void
 }
 
-export function createAppSceneManager(bus: EventBus): AppSceneManager {
+export function createAppSceneManager(): AppSceneManager {
   let currentScene: AppScene = 'free'
 
   function now(): number {
     return Date.now()
   }
 
-  function publishEvents(events: AppSceneEvent[]): void {
-    for (const event of events) {
-      bus.publish(event.type, event)
-    }
-  }
-
-  const unsubCycleCompleted = bus.subscribe('CycleCompleted', () => {
-    const events = manager.exitPomodoro()
-    publishEvents(events)
-  })
-
-  const manager: AppSceneManager = {
+  return {
     get currentScene() { return currentScene },
 
     enterPomodoro(): AppSceneEvent[] {
@@ -39,12 +26,6 @@ export function createAppSceneManager(bus: EventBus): AppSceneManager {
       if (currentScene !== 'pomodoro') return []
       currentScene = 'free'
       return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
-    },
-
-    dispose(): void {
-      unsubCycleCompleted()
     }
   }
-
-  return manager
 }
