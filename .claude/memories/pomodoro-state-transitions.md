@@ -5,16 +5,27 @@
 ポモドーロタイマーはAppModeが`pomodoro`の時のみ有効である。
 
 ```
-AppMode: free ──enterPomodoro()──→ pomodoro ──exitPomodoro()/CycleCompleted──→ free
-                                      │
-                                      ↓
-                              PomodoroSession が有効
-                              work → break → work → ... → long-break → CycleCompleted
+              enterPomodoro()
+   free ─────────────────────→ pomodoro
+    ↑                               │
+    │ exitPomodoro()                 │ CycleCompleted (自動)
+    │ (手動離脱)                     │
+    │         ┌─────────────────────┘
+    │         ↓
+    │      congrats
+    │         │ dismissCongrats()
+    │         │ (5秒タイムアウト or クリック)
+    └─────────┘
+
+                                 pomodoro 内部:
+                                 work → break → work → ... → long-break → CycleCompleted
 ```
 
 - AppMode `free` → PomodoroSessionの状態は無関係。タイマーUIは非表示
 - AppMode `pomodoro` → PomodoroSessionが動作中。タイマーUIが表示される
-- `CycleCompleted` 発生時、AppModeManagerが自動的に `free` に遷移する
+- AppMode `congrats` → サイクル完了の祝福演出中。タイマーは停止済み
+- `CycleCompleted` 発生時、AppModeManagerが自動的に `congrats` に遷移する
+- `congrats` は5秒で自動dismiss、またはクリックで `free` に遷移する
 
 詳細: [app-mode-design.md](app-mode-design.md)
 
@@ -156,19 +167,27 @@ EventBus経由でタイマーイベントとAppModeイベントを購読し、�
 
 | 購読イベント | 条件 | キャラクター動作 |
 |---|---|---|
-| `AppModeChanged` | mode === 'free' | `scrollingAllowed=false` + idle |
-| `PhaseStarted` | phase === 'work' | `scrollingAllowed=true` + wander |
-| `PhaseStarted` | phase === 'break' or 'long-break' | `scrollingAllowed=false` + idle |
+| `AppModeChanged` | mode === 'free' | `unlockState()` + `scrollingAllowed=false` + idle |
+| `AppModeChanged` | mode === 'congrats' | `scrollingAllowed=false` + `lockState('happy')` + happy |
+| `PhaseStarted` | phase === 'work' | `scrollingAllowed=true` + march（以後idle↔marchサイクル） |
+| `PhaseStarted` | phase === 'break' or 'long-break' | `unlockState()` + `scrollingAllowed=false` + idle |
 | `PhaseCompleted` | phase === 'work' | happy |
-| `TimerPaused` | — | `scrollingAllowed=false` + idle |
-| `TimerReset` | — | `scrollingAllowed=false` + idle |
+| `TimerPaused` | — | `unlockState()` + `scrollingAllowed=false` + idle |
+| `TimerReset` | — | `unlockState()` + `scrollingAllowed=false` + idle |
+
+### marchとwanderの使い分け
+
+- `march`（前進）: work中にキャラクターが目的を持って歩く状態。`scrolling: true`で背景がスクロールする。タイムアウトでidleに遷移し一息つき、idleタイムアウトでmarchに復帰する（`resolveTimeoutTarget`でwander→march昇格）。結果として`march → idle → march → idle → ...`のサイクルで「頑張って歩いている」振る舞いになる
+- `wander`（うろつき）: break/free中にキャラクターがふらふら歩く状態。`scrolling: false`で背景は静止する。自律遷移で`idle → wander → sit → idle`のサイクルに含まれる
 
 ### scrollingAllowedの意味
 
-`BehaviorStateMachine`の`scrollingAllowed`フラグは、自律遷移でwander（歩行=スクロール状態）へ遷移してよいかを制御する。
+`BehaviorStateMachine`の`scrollingAllowed`フラグは、scrolling状態（`march`）への自律遷移を許可するかを制御する。
 
-- `true`: idle→timeout→wander に遷移できる。背景がスクロールする
-- `false`: idle→timeout→**sit**（wanderをスキップ）。背景は静止する
+- `true`: marchへのプロンプト遷移が有効。TimerCharacterBridgeがwork開始時にセットする
+- `false`: marchへの自律遷移が抑制される。break/free時にセットする
+
+`wander`は`scrolling: false`のため、scrollingAllowedの影響を受けない。常に自律遷移で到達可能である
 
 ## 実装上の注意点
 

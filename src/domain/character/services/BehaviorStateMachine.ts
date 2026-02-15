@@ -21,25 +21,29 @@ export interface StateTickResult {
 export interface BehaviorStateMachine {
   readonly currentState: CharacterStateName
   readonly scrollingAllowed: boolean
+  readonly lockedState: CharacterStateName | null
   isInteractionLocked(): boolean
   transition(trigger: StateTrigger): CharacterStateName
   tick(deltaMs: number): StateTickResult
   start(): void
   keepAlive(): void
   setScrollingAllowed(allowed: boolean): void
+  lockState(state: CharacterStateName): void
+  unlockState(): void
 }
 
 // タイムアウト時の遷移先テーブル
 const TIMEOUT_TRANSITIONS: Record<CharacterStateName, CharacterStateName> = {
   idle: 'wander',
   wander: 'sit',
+  march: 'idle', // 一息ついてからまたmarchに復帰（resolveTimeoutTargetで昇格）
   sit: 'idle',
   sleep: 'idle',
   happy: 'idle',
   reaction: 'idle',
   dragged: 'dragged', // draggedはタイムアウトしない
   pet: 'idle',
-  refuse: 'wander'
+  refuse: 'idle'
 }
 
 function randomRange(min: number, max: number): number {
@@ -60,6 +64,7 @@ export function createBehaviorStateMachine(
   let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
   const fixedDir = options?.fixedWanderDirection ?? null
   let scrollingAllowed = false
+  let lockedState: CharacterStateName | null = null
 
   function randomDuration(state: CharacterStateName): number {
     const config = STATE_CONFIGS[state]
@@ -67,7 +72,15 @@ export function createBehaviorStateMachine(
   }
 
   function resolveTimeoutTarget(from: CharacterStateName): CharacterStateName {
+    // ロック中はロック対象の状態に自己遷移する
+    if (lockedState !== null) {
+      return lockedState
+    }
     let next = TIMEOUT_TRANSITIONS[from]
+    // scrollingAllowed=trueのとき、wanderをmarchに昇格（work中は歩きではなく前進）
+    if (scrollingAllowed && next === 'wander') {
+      next = 'march'
+    }
     // scrollingAllowed=falseのとき、scrolling状態をスキップ
     if (!scrollingAllowed && STATE_CONFIGS[next].scrolling) {
       next = TIMEOUT_TRANSITIONS[next]
@@ -106,9 +119,10 @@ export function createBehaviorStateMachine(
   return {
     get currentState() { return currentState },
     get scrollingAllowed() { return scrollingAllowed },
+    get lockedState() { return lockedState },
 
     isInteractionLocked(): boolean {
-      return (currentState === 'wander' || currentState === 'refuse') && scrollingAllowed
+      return (currentState === 'march' || currentState === 'refuse') && scrollingAllowed
     },
 
     transition(trigger: StateTrigger): CharacterStateName {
@@ -126,8 +140,8 @@ export function createBehaviorStateMachine(
         }
 
         case 'interaction': {
-          // ポモドーロ作業中（wander/refuse+scrollingAllowed）は全インタラクションを拒否
-          if ((currentState === 'wander' || currentState === 'refuse') && scrollingAllowed) {
+          // ポモドーロ作業中（march/refuse+scrollingAllowed）は全インタラクションを拒否
+          if ((currentState === 'march' || currentState === 'refuse') && scrollingAllowed) {
             if (currentState !== 'refuse') {
               enterState('refuse')
             }
@@ -142,7 +156,7 @@ export function createBehaviorStateMachine(
             return currentState
           }
           if (trigger.kind === 'drag_end') {
-            enterState(scrollingAllowed ? 'wander' : 'idle')
+            enterState(scrollingAllowed ? 'march' : 'idle')
             return currentState
           }
           if (trigger.kind === 'pet_start') {
@@ -176,11 +190,10 @@ export function createBehaviorStateMachine(
         }
       }
 
-      // wander中は移動量を返す
-      if (currentState === 'wander') {
+      // march中はfixedDir方向に前進する
+      if (currentState === 'march') {
         const speed = 1.5 // units/sec
         const moveDist = speed * (deltaMs / 1000)
-
         if (fixedDir) {
           return {
             stateChanged: false,
@@ -191,7 +204,13 @@ export function createBehaviorStateMachine(
             }
           }
         }
+        return { stateChanged: false }
+      }
 
+      // wander中はランダム方向にうろつく
+      if (currentState === 'wander') {
+        const speed = 1.5 // units/sec
+        const moveDist = speed * (deltaMs / 1000)
         if (wanderTarget) {
           return {
             stateChanged: false,
@@ -218,6 +237,14 @@ export function createBehaviorStateMachine(
 
     setScrollingAllowed(allowed: boolean): void {
       scrollingAllowed = allowed
+    },
+
+    lockState(state: CharacterStateName): void {
+      lockedState = state
+    },
+
+    unlockState(): void {
+      lockedState = null
     }
   }
 }

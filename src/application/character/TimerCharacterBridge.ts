@@ -9,7 +9,8 @@ import type { AppModeEvent } from '../app-mode/AppMode'
  * タイマーイベントとAppModeイベントをキャラクター行動に橋渡しする。
  *
  * - AppMode free → キャラクターが自由行動 (idle)
- * - 作業Phase開始 → キャラクターが歩く (wander → スクロール)
+ * - AppMode congrats → キャラクターがhappyにロック（踊り続ける）
+ * - 作業Phase開始 → キャラクターが前進する (march → スクロール)
  * - 作業Phase完了 → キャラクターが喜ぶ (happy)
  * - 休憩Phase開始 → キャラクターが自由行動 (idle → 自律遷移)
  */
@@ -19,7 +20,7 @@ export function bridgeTimerToCharacter(
   stateMachine: BehaviorStateMachine,
   charHandle: ThreeCharacterHandle
 ): () => void {
-  function applyAction(action: 'happy' | 'wander' | 'idle'): void {
+  function applyAction(action: 'happy' | 'march' | 'idle'): void {
     stateMachine.transition({ type: 'prompt', action })
     character.setState(action)
     charHandle.playState(action)
@@ -36,9 +37,10 @@ export function bridgeTimerToCharacter(
     if (event.type === 'PhaseStarted') {
       if (event.phase === 'work') {
         stateMachine.setScrollingAllowed(true)
-        applyAction('wander')
+        applyAction('march')
       } else {
         // 'break' および 'long-break' は同じ扱い（自由行動）
+        stateMachine.unlockState()
         stateMachine.setScrollingAllowed(false)
         applyAction('idle')
       }
@@ -46,23 +48,33 @@ export function bridgeTimerToCharacter(
   })
 
   const unsubPaused = bus.subscribe('TimerPaused', () => {
+    stateMachine.unlockState()
     stateMachine.setScrollingAllowed(false)
     applyAction('idle')
   })
 
   const unsubReset = bus.subscribe('TimerReset', () => {
+    stateMachine.unlockState()
     stateMachine.setScrollingAllowed(false)
     applyAction('idle')
   })
 
   const unsubAppMode = bus.subscribe<AppModeEvent>('AppModeChanged', (event) => {
-    if (event.type === 'AppModeChanged' && event.mode === 'free') {
-      stateMachine.setScrollingAllowed(false)
-      applyAction('idle')
+    if (event.type === 'AppModeChanged') {
+      if (event.mode === 'congrats') {
+        stateMachine.setScrollingAllowed(false)
+        stateMachine.lockState('happy')
+        applyAction('happy')
+      } else if (event.mode === 'free') {
+        stateMachine.unlockState()
+        stateMachine.setScrollingAllowed(false)
+        applyAction('idle')
+      }
     }
   })
 
   return () => {
+    stateMachine.unlockState()
     unsubCompleted()
     unsubStarted()
     unsubPaused()

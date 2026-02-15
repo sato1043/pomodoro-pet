@@ -19,23 +19,58 @@ describe('BehaviorStateMachine', () => {
   })
 
   describe('タイムアウト遷移', () => {
-    it('IDLEからタイムアウトでWANDERに遷移する', () => {
+    it('IDLEからタイムアウトでMARCHに遷移する（scrollingAllowed=true）', () => {
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('march')
+      expect(sm.currentState).toBe('march')
+    })
+
+    it('IDLEからタイムアウトでWANDERに遷移する（scrollingAllowed=false）', () => {
+      sm.setScrollingAllowed(false)
       const result = sm.transition({ type: 'timeout' })
       expect(result).toBe('wander')
       expect(sm.currentState).toBe('wander')
     })
 
     it('WANDERからタイムアウトでSITに遷移する', () => {
+      sm.setScrollingAllowed(false)
       sm.transition({ type: 'timeout' }) // idle -> wander
       const result = sm.transition({ type: 'timeout' })
       expect(result).toBe('sit')
     })
 
     it('SITからタイムアウトでIDLEに遷移する', () => {
+      sm.setScrollingAllowed(false)
       sm.transition({ type: 'timeout' }) // idle -> wander
       sm.transition({ type: 'timeout' }) // wander -> sit
       const result = sm.transition({ type: 'timeout' })
       expect(result).toBe('idle')
+    })
+
+    it('MARCHからタイムアウトでIDLEに遷移する（一息つく）', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('idle')
+    })
+
+    it('scrollingAllowed=true時、IDLEからタイムアウトでMARCHに遷移する（wanderが昇格）', () => {
+      sm.setScrollingAllowed(true)
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('march')
+    })
+
+    it('march→idle→marchサイクルがscrollingAllowed=trueで動作する', () => {
+      sm.setScrollingAllowed(true)
+      sm.transition({ type: 'prompt', action: 'march' })
+      // march → idle
+      const r1 = sm.transition({ type: 'timeout' })
+      expect(r1).toBe('idle')
+      // idle → march（wander昇格）
+      const r2 = sm.transition({ type: 'timeout' })
+      expect(r2).toBe('march')
+      // march → idle（繰り返し）
+      const r3 = sm.transition({ type: 'timeout' })
+      expect(r3).toBe('idle')
     })
 
     it('HAPPYからタイムアウトでIDLEに遷移する', () => {
@@ -55,6 +90,13 @@ describe('BehaviorStateMachine', () => {
       const result = sm.transition({ type: 'timeout' })
       expect(result).toBe('idle')
     })
+
+    it('REFUSEからタイムアウトでIDLEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('idle')
+    })
   })
 
   describe('プロンプト遷移', () => {
@@ -63,8 +105,13 @@ describe('BehaviorStateMachine', () => {
     })
 
     it('WANDERからプロンプトで遷移できる', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'prompt', action: 'wander' })
       expect(sm.transition({ type: 'prompt', action: 'sit' })).toBe('sit')
+    })
+
+    it('MARCHからプロンプトで遷移できる', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      expect(sm.transition({ type: 'prompt', action: 'idle' })).toBe('idle')
     })
 
     it('SITからプロンプトで遷移できる', () => {
@@ -89,11 +136,11 @@ describe('BehaviorStateMachine', () => {
       expect(result).toBe('dragged')
     })
 
-    it('drag_endでscrollingAllowed=trueならWANDERに遷移する', () => {
+    it('drag_endでscrollingAllowed=trueならMARCHに遷移する', () => {
       sm.setScrollingAllowed(true)
       sm.transition({ type: 'interaction', kind: 'drag_start' })
       const result = sm.transition({ type: 'interaction', kind: 'drag_end' })
-      expect(result).toBe('wander')
+      expect(result).toBe('march')
     })
 
     it('drag_endでscrollingAllowed=falseならIDLEに遷移する', () => {
@@ -118,17 +165,35 @@ describe('BehaviorStateMachine', () => {
 
     it('最大持続時間を超えると自動遷移が発生する', () => {
       sm.start()
-      // idleの最大持続時間は15000ms
+      // idleの最大持続時間は15000ms。scrollingAllowed=trueなのでwanderがmarchに昇格
       const result = sm.tick(16000)
       expect(result.stateChanged).toBe(true)
-      expect(result.newState).toBe('wander')
+      expect(result.newState).toBe('march')
     })
 
     it('WANDERのtickでmovementDeltaが返される', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'prompt', action: 'wander' })
       sm.start()
       const result = sm.tick(100)
       expect(result.movementDelta).toBeDefined()
+    })
+
+    it('MARCHのtickでfixedDir方向のmovementDeltaが返される', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.transition({ type: 'prompt', action: 'march' })
+      fixed.start()
+      const result = fixed.tick(1000)
+      expect(result.movementDelta).toBeDefined()
+      expect(result.movementDelta!.x).toBeCloseTo(0, 5)
+      expect(result.movementDelta!.z).toBeCloseTo(1.5, 5)
+    })
+
+    it('MARCHでfixedDir未指定時はmovementDeltaが返されない', () => {
+      const noOption = createBehaviorStateMachine()
+      noOption.transition({ type: 'prompt', action: 'march' })
+      noOption.start()
+      const result = noOption.tick(1000)
+      expect(result.movementDelta).toBeUndefined()
     })
   })
 
@@ -138,24 +203,24 @@ describe('BehaviorStateMachine', () => {
       expect(fresh.scrollingAllowed).toBe(false)
     })
 
-    it('falseのとき、IDLEからタイムアウトでWANDERをスキップしSITに遷移する', () => {
+    it('wanderはscrolling=falseのため、scrollingAllowed=falseでもスキップされない', () => {
       sm.setScrollingAllowed(false)
       const result = sm.transition({ type: 'timeout' })
-      expect(result).toBe('sit')
+      expect(result).toBe('wander')
     })
 
-    it('falseのとき、tickでもWANDERをスキップする', () => {
+    it('tickでもwanderはスキップされない', () => {
       sm.setScrollingAllowed(false)
       sm.start()
       const result = sm.tick(16000) // idle最大持続時間超過
       expect(result.stateChanged).toBe(true)
-      expect(result.newState).toBe('sit')
+      expect(result.newState).toBe('wander')
     })
 
-    it('trueのとき、IDLEからタイムアウトでWANDERに遷移する', () => {
+    it('trueのとき、IDLEからタイムアウトでMARCHに遷移する（wander昇格）', () => {
       sm.setScrollingAllowed(true)
       const result = sm.transition({ type: 'timeout' })
-      expect(result).toBe('wander')
+      expect(result).toBe('march')
     })
   })
 
@@ -196,21 +261,21 @@ describe('BehaviorStateMachine', () => {
     it('keepAlive()で経過時間がリセットされタイムアウトが延長される', () => {
       sm.transition({ type: 'interaction', kind: 'pet_start' })
       sm.start()
-      // 7秒経過（最大8秒のため、あと少しでタイムアウト）
-      sm.tick(7000)
-      // keepAliveでリセット
+      // petの最小持続時間は3000ms。2.5秒経過（まだタイムアウトしない）
+      sm.tick(2500)
+      // keepAliveでリセット（elapsed=0に戻る）
       sm.keepAlive()
-      // さらに7秒経過してもタイムアウトしない
-      const result = sm.tick(7000)
+      // さらに2.5秒経過。keepAliveなしなら合計5秒で最小超過の可能性あるが、
+      // リセット後なので2.5秒 < 最小3秒でタイムアウトしない
+      const result = sm.tick(2500)
       expect(result.stateChanged).toBe(false)
     })
   })
 
-  describe('fixedWanderDirection', () => {
-    it('指定時、wanderのmovementDeltaが固定方向になる', () => {
+  describe('fixedWanderDirection（march用）', () => {
+    it('指定時、marchのmovementDeltaが固定方向になる', () => {
       const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
-      fixed.setScrollingAllowed(true)
-      fixed.transition({ type: 'timeout' }) // idle -> wander
+      fixed.transition({ type: 'prompt', action: 'march' })
       fixed.start()
       const result = fixed.tick(1000) // 1秒
       expect(result.movementDelta).toBeDefined()
@@ -223,22 +288,32 @@ describe('BehaviorStateMachine', () => {
 
     it('斜め方向も正しく反映される', () => {
       const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 1, z: 0 } })
-      fixed.setScrollingAllowed(true)
-      fixed.transition({ type: 'timeout' }) // idle -> wander
+      fixed.transition({ type: 'prompt', action: 'march' })
       fixed.start()
       const result = fixed.tick(1000)
       expect(result.movementDelta!.x).toBeCloseTo(1.5, 5)
       expect(result.movementDelta!.z).toBeCloseTo(0, 5)
     })
 
-    it('未指定時、ランダム方向のmovementDeltaが返される', () => {
+    it('wanderはfixedWanderDirectionを無視してランダム方向のmovementDeltaを返す', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.transition({ type: 'prompt', action: 'wander' })
+      fixed.start()
+      const result = fixed.tick(1000)
+      expect(result.movementDelta).toBeDefined()
+      // ランダムなので具体値は検証しないが、移動量がゼロでないことを確認
+      const dx = result.movementDelta!.x
+      const dz = result.movementDelta!.z
+      const dist = Math.sqrt(dx * dx + dz * dz)
+      expect(dist).toBeGreaterThan(0)
+    })
+
+    it('未指定時、wanderはランダム方向のmovementDeltaを返す', () => {
       const noOption = createBehaviorStateMachine()
-      noOption.setScrollingAllowed(true)
-      noOption.transition({ type: 'timeout' }) // idle -> wander
+      noOption.transition({ type: 'prompt', action: 'wander' })
       noOption.start()
       const result = noOption.tick(1000)
       expect(result.movementDelta).toBeDefined()
-      // ランダムなので具体値は検証しないが、移動量がゼロでないことを確認
       const dx = result.movementDelta!.x
       const dz = result.movementDelta!.z
       const dist = Math.sqrt(dx * dx + dz * dz)
@@ -247,47 +322,62 @@ describe('BehaviorStateMachine', () => {
   })
 
   describe('refuse（ポモドーロ作業中のインタラクション拒否）', () => {
-    it('wander+scrollingAllowed中のclickでREFUSEに遷移する', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      expect(sm.currentState).toBe('wander')
+    it('march+scrollingAllowed中のclickでREFUSEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      expect(sm.currentState).toBe('march')
       const result = sm.transition({ type: 'interaction', kind: 'click' })
       expect(result).toBe('refuse')
     })
 
-    it('wander+scrollingAllowed中のdrag_startでREFUSEに遷移する', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
+    it('march+scrollingAllowed中のdrag_startでREFUSEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
       const result = sm.transition({ type: 'interaction', kind: 'drag_start' })
       expect(result).toBe('refuse')
     })
 
-    it('wander+scrollingAllowed中のpet_startでREFUSEに遷移する', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
+    it('march+scrollingAllowed中のpet_startでREFUSEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
       const result = sm.transition({ type: 'interaction', kind: 'pet_start' })
       expect(result).toBe('refuse')
     })
 
-    it('REFUSEのタイムアウトでWANDERに復帰する', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+    it('REFUSEのタイムアウトでIDLEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       expect(sm.currentState).toBe('refuse')
       const result = sm.transition({ type: 'timeout' })
-      expect(result).toBe('wander')
+      expect(result).toBe('idle')
     })
 
-    it('REFUSEはtickでタイムアウトしてWANDERに復帰する', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+    it('REFUSEはtickでタイムアウトしてIDLEに遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       sm.start()
       // refuseの最大持続時間は2500ms
       const result = sm.tick(3000)
       expect(result.stateChanged).toBe(true)
-      expect(result.newState).toBe('wander')
+      expect(result.newState).toBe('idle')
     })
 
-    it('scrollingAllowed=false時はwanderでもREFUSEにならない', () => {
-      sm.setScrollingAllowed(true)
-      sm.transition({ type: 'timeout' }) // idle -> wander
+    it('lockState中はREFUSEのタイムアウトでロック対象に遷移する', () => {
+      sm.lockState('march')
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
+      expect(sm.currentState).toBe('refuse')
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('march')
+    })
+
+    it('scrollingAllowed=false時はmarchでもREFUSEにならない', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
       sm.setScrollingAllowed(false)
+      const result = sm.transition({ type: 'interaction', kind: 'click' })
+      expect(result).toBe('reaction')
+    })
+
+    it('wander状態ではscrollingAllowed=trueでもREFUSEにならない', () => {
+      sm.transition({ type: 'prompt', action: 'wander' })
+      expect(sm.currentState).toBe('wander')
       const result = sm.transition({ type: 'interaction', kind: 'click' })
       expect(result).toBe('reaction')
     })
@@ -300,50 +390,114 @@ describe('BehaviorStateMachine', () => {
   })
 
   describe('isInteractionLocked', () => {
-    it('wander+scrollingAllowed=trueでtrueを返す', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
+    it('march+scrollingAllowed=trueでtrueを返す', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
       expect(sm.isInteractionLocked()).toBe(true)
+    })
+
+    it('wander+scrollingAllowed=trueでfalseを返す', () => {
+      sm.transition({ type: 'prompt', action: 'wander' })
+      expect(sm.isInteractionLocked()).toBe(false)
     })
 
     it('idle状態ではfalseを返す', () => {
       expect(sm.isInteractionLocked()).toBe(false)
     })
 
-    it('wander+scrollingAllowed=falseではfalseを返す', () => {
-      sm.setScrollingAllowed(true)
-      sm.transition({ type: 'timeout' }) // idle -> wander
+    it('march+scrollingAllowed=falseではfalseを返す', () => {
+      sm.transition({ type: 'prompt', action: 'march' })
       sm.setScrollingAllowed(false)
       expect(sm.isInteractionLocked()).toBe(false)
     })
 
     it('refuse+scrollingAllowed=trueでtrueを返す', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       expect(sm.isInteractionLocked()).toBe(true)
     })
   })
 
   describe('refuse中の再インタラクション', () => {
     it('refuse中のclickで状態が変わらない', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       expect(sm.currentState).toBe('refuse')
       const result = sm.transition({ type: 'interaction', kind: 'click' })
       expect(result).toBe('refuse')
     })
 
     it('refuse中のdrag_startで状態が変わらない', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       const result = sm.transition({ type: 'interaction', kind: 'drag_start' })
       expect(result).toBe('refuse')
     })
 
     it('refuse中のpet_startで状態が変わらない', () => {
-      sm.transition({ type: 'timeout' }) // idle -> wander
-      sm.transition({ type: 'interaction', kind: 'click' }) // wander -> refuse
+      sm.transition({ type: 'prompt', action: 'march' })
+      sm.transition({ type: 'interaction', kind: 'click' }) // march -> refuse
       const result = sm.transition({ type: 'interaction', kind: 'pet_start' })
       expect(result).toBe('refuse')
+    })
+  })
+
+  describe('lockState / unlockState', () => {
+    it('初期状態ではlockedStateがnullである', () => {
+      expect(sm.lockedState).toBeNull()
+    })
+
+    it('lockStateでロック対象の状態を設定できる', () => {
+      sm.lockState('happy')
+      expect(sm.lockedState).toBe('happy')
+    })
+
+    it('unlockStateでロックを解除できる', () => {
+      sm.lockState('happy')
+      sm.unlockState()
+      expect(sm.lockedState).toBeNull()
+    })
+
+    it('ロック中はタイムアウト遷移先がロック対象の状態になる', () => {
+      sm.transition({ type: 'prompt', action: 'happy' })
+      sm.lockState('happy')
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('happy')
+      expect(sm.currentState).toBe('happy')
+    })
+
+    it('ロック中はどの状態からもロック対象に遷移する', () => {
+      sm.lockState('happy')
+      // idle → timeout → happy (ロック先)
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('happy')
+    })
+
+    it('ロック中にtickでタイムアウトするとロック対象に自己遷移する', () => {
+      sm.transition({ type: 'prompt', action: 'happy' })
+      sm.lockState('happy')
+      sm.start()
+      // happyのmaxDurationMsは5000ms。超過させる
+      const result = sm.tick(6000)
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('happy')
+      expect(sm.currentState).toBe('happy')
+    })
+
+    it('ロック解除後は通常のタイムアウト遷移に戻る', () => {
+      sm.transition({ type: 'prompt', action: 'happy' })
+      sm.lockState('happy')
+      sm.unlockState()
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('idle') // happy → idle（通常遷移）
+    })
+
+    it('プロンプト遷移はロック中でも動作する', () => {
+      sm.lockState('happy')
+      sm.transition({ type: 'prompt', action: 'idle' })
+      expect(sm.currentState).toBe('idle')
+      // ただしタイムアウト時はロック先に戻る
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('happy')
     })
   })
 })

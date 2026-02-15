@@ -39,6 +39,14 @@ describe('AppModeManager', () => {
       expect(events).toHaveLength(0)
       expect(manager.currentMode).toBe('pomodoro')
     })
+
+    it('congratsの時は空配列を返す', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      const events = manager.enterPomodoro()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('congrats')
+    })
   })
 
   describe('exitPomodoro', () => {
@@ -62,10 +70,81 @@ describe('AppModeManager', () => {
       expect(events).toHaveLength(0)
       expect(manager.currentMode).toBe('free')
     })
+
+    it('congratsの時は空配列を返す', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      const events = manager.exitPomodoro()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('congrats')
+    })
+  })
+
+  describe('completeCycle', () => {
+    it('congratsに遷移する', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      expect(manager.currentMode).toBe('congrats')
+    })
+
+    it('AppModeChanged(congrats)イベントを返す', () => {
+      manager.enterPomodoro()
+      const events = manager.completeCycle()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppModeChanged', mode: 'congrats' })
+      )
+    })
+
+    it('freeの時は空配列を返す', () => {
+      const events = manager.completeCycle()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('free')
+    })
+
+    it('既にcongratsの時は空配列を返す', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      const events = manager.completeCycle()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('congrats')
+    })
+  })
+
+  describe('dismissCongrats', () => {
+    it('freeに遷移する', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      manager.dismissCongrats()
+      expect(manager.currentMode).toBe('free')
+    })
+
+    it('AppModeChanged(free)イベントを返す', () => {
+      manager.enterPomodoro()
+      manager.completeCycle()
+      const events = manager.dismissCongrats()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppModeChanged', mode: 'free' })
+      )
+    })
+
+    it('freeの時は空配列を返す', () => {
+      const events = manager.dismissCongrats()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('free')
+    })
+
+    it('pomodoroの時は空配列を返す', () => {
+      manager.enterPomodoro()
+      const events = manager.dismissCongrats()
+      expect(events).toHaveLength(0)
+      expect(manager.currentMode).toBe('pomodoro')
+    })
   })
 
   describe('CycleCompleted自動遷移', () => {
-    it('CycleCompletedイベントで自動的にfreeに遷移する', () => {
+    it('CycleCompletedイベントで自動的にcongratsに遷移する', () => {
       manager.enterPomodoro()
       expect(manager.currentMode).toBe('pomodoro')
 
@@ -75,10 +154,10 @@ describe('AppModeManager', () => {
         timestamp: Date.now()
       })
 
-      expect(manager.currentMode).toBe('free')
+      expect(manager.currentMode).toBe('congrats')
     })
 
-    it('CycleCompleted時にAppModeChanged(free)がEventBusに発行される', () => {
+    it('CycleCompleted時にAppModeChanged(congrats)がEventBusに発行される', () => {
       manager.enterPomodoro()
 
       const received: AppModeEvent[] = []
@@ -94,7 +173,7 @@ describe('AppModeManager', () => {
 
       expect(received).toHaveLength(1)
       expect(received[0]).toEqual(
-        expect.objectContaining({ type: 'AppModeChanged', mode: 'free' })
+        expect.objectContaining({ type: 'AppModeChanged', mode: 'congrats' })
       )
     })
 
@@ -112,6 +191,21 @@ describe('AppModeManager', () => {
 
       expect(manager.currentMode).toBe('free')
       expect(received).toHaveLength(0)
+    })
+  })
+
+  describe('状態遷移の全サイクル', () => {
+    it('free → pomodoro → congrats → free の全遷移が正常に動作する', () => {
+      expect(manager.currentMode).toBe('free')
+
+      manager.enterPomodoro()
+      expect(manager.currentMode).toBe('pomodoro')
+
+      manager.completeCycle()
+      expect(manager.currentMode).toBe('congrats')
+
+      manager.dismissCongrats()
+      expect(manager.currentMode).toBe('free')
     })
   })
 

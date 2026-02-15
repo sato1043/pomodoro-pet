@@ -5,6 +5,8 @@ export interface AppModeManager {
   readonly currentMode: AppMode
   enterPomodoro(): AppModeEvent[]
   exitPomodoro(): AppModeEvent[]
+  completeCycle(): AppModeEvent[]
+  dismissCongrats(): AppModeEvent[]
   dispose(): void
 }
 
@@ -22,7 +24,7 @@ export function createAppModeManager(bus: EventBus): AppModeManager {
   }
 
   const unsubCycleCompleted = bus.subscribe('CycleCompleted', () => {
-    const events = manager.exitPomodoro()
+    const events = manager.completeCycle()
     publishEvents(events)
   })
 
@@ -30,13 +32,25 @@ export function createAppModeManager(bus: EventBus): AppModeManager {
     get currentMode() { return currentMode },
 
     enterPomodoro(): AppModeEvent[] {
-      if (currentMode === 'pomodoro') return []
+      if (currentMode !== 'free') return []
       currentMode = 'pomodoro'
       return [{ type: 'AppModeChanged', mode: 'pomodoro', timestamp: now() }]
     },
 
     exitPomodoro(): AppModeEvent[] {
-      if (currentMode === 'free') return []
+      if (currentMode !== 'pomodoro') return []
+      currentMode = 'free'
+      return [{ type: 'AppModeChanged', mode: 'free', timestamp: now() }]
+    },
+
+    completeCycle(): AppModeEvent[] {
+      if (currentMode !== 'pomodoro') return []
+      currentMode = 'congrats'
+      return [{ type: 'AppModeChanged', mode: 'congrats', timestamp: now() }]
+    },
+
+    dismissCongrats(): AppModeEvent[] {
+      if (currentMode !== 'congrats') return []
       currentMode = 'free'
       return [{ type: 'AppModeChanged', mode: 'free', timestamp: now() }]
     },

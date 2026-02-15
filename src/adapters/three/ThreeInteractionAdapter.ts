@@ -14,6 +14,7 @@ export type HoverCursors = Partial<Record<CharacterStateName, string>>
 const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
   idle: 'pointer',
   wander: 'pointer',
+  march: 'pointer',
   sit: 'pointer',
   sleep: 'pointer',
   happy: 'pointer',
@@ -142,7 +143,7 @@ export function createInteractionAdapter(
 
     // ポモドーロ作業中はインタラクションを拒否
     if (stateMachine.isInteractionLocked()) {
-      if (stateMachine.currentState === 'wander') {
+      if (stateMachine.currentState === 'march') {
         stateMachine.transition({ type: 'interaction', kind: 'click' })
         character.setState('refuse')
         charHandle.playState('refuse')

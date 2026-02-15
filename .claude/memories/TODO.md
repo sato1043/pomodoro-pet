@@ -45,9 +45,10 @@
 
 ### ~~SFX通知音（ファンファーレ・テストサウンド）~~ — 完了
 - `SfxPlayer`（インフラ層）: MP3ワンショット再生。fetch+decodeAudioData+バッファキャッシュ
-- `TimerSfxBridge`（アプリケーション層）: PhaseCompleted(work)でファンファーレ(`/audio/fanfare.mp3`)を再生
+- `TimerSfxBridge`（アプリケーション層）: PhaseCompleted(work)でwork完了音、AppModeChanged(congrats)でファンファーレを再生。`TimerSfxConfig`で各URLを個別指定可能
 - `VolumeControl`（アダプター層）: TimerOverlayからボリューム関連UIを共通コンポーネント化。ボリューム変更/ミュート解除時にテストサウンド(`/audio/test.mp3`)を再生
 - MP3ファイルは`assets/audio/`に配置（Vite publicDir経由で`/audio/`としてアクセス）
+- `work-complete.mp3`は未配置（配置すればwork完了時に再生される）
 
 ### ポモドーロ中のタイマー表示の視認性向上
 - 現在work/break/long-breakのフェーズ区別が目立たない
@@ -58,11 +59,13 @@
 - デジタル表示（残り時間数値）とアナログ表示の併記を検討
 - フォントサイズ、コントラスト、配置の最適化も検討
 
-### ポモドーロ完了時のコングラチュレーション表示
-- 全セット完了（CycleCompleted）時に達成感のある演出を表示
-- 例: 祝福メッセージ、キャラクターのhappyアニメーション連動、紙吹雪エフェクト等
-- 表示は数秒で自動的にフェードアウト、またはクリックで閉じる
-- freeモードへの自動遷移と連携
+### ~~ポモドーロ完了時のコングラチュレーション表示~~ — 完了
+- AppModeに`congrats`シーンを追加（free → pomodoro → congrats → free）
+- CycleCompleted時にcongratsシーンへ自動遷移、祝福メッセージ＋紙吹雪エフェクト表示
+- 5秒で自動dismiss、またはクリックで閉じてfreeモードに遷移
+- キャラクターhappyアニメーション連動、サイクル完了ファンファーレ再生
+- work完了音とサイクル完了ファンファーレのURL分離（`work-complete.mp3`は未配置、配置すれば有効化）
+- 詳細: [app-mode-design.md](app-mode-design.md)
 
 ### ~~アプリアイコン~~ — 完了
 - `build/icon.png`（512x512 RGBA）から`npm run icon`でマルチサイズICO生成（要ImageMagick）

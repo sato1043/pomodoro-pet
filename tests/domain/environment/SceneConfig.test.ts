@@ -19,8 +19,12 @@ describe('SceneConfig', () => {
   })
 
   describe('shouldScroll', () => {
-    it('wander状態ではtrueを返す', () => {
-      expect(shouldScroll('wander')).toBe(true)
+    it('march状態ではtrueを返す', () => {
+      expect(shouldScroll('march')).toBe(true)
+    })
+
+    it('wander状態ではfalseを返す', () => {
+      expect(shouldScroll('wander')).toBe(false)
     })
 
     it.each([
