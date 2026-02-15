@@ -11,6 +11,8 @@ export interface AudioAdapter {
   dispose(): void
 }
 
+const MAX_GAIN = 0.25
+
 export function createAudioAdapter(): AudioAdapter {
   let ctx: AudioContext | null = null
   let masterGain: GainNode | null = null
@@ -23,7 +25,7 @@ export function createAudioAdapter(): AudioAdapter {
     if (!ctx) {
       ctx = new AudioContext()
       masterGain = ctx.createGain()
-      masterGain.gain.value = volume
+      masterGain.gain.value = volume * MAX_GAIN
       masterGain.connect(ctx.destination)
     }
     return { ctx, masterGain: masterGain! }
@@ -61,7 +63,7 @@ export function createAudioAdapter(): AudioAdapter {
     setVolume(v: number): void {
       volume = Math.max(0, Math.min(1, v))
       if (masterGain && !isMuted) {
-        masterGain.gain.setTargetAtTime(volume, ctx!.currentTime, 0.1)
+        masterGain.gain.setTargetAtTime(volume * MAX_GAIN, ctx!.currentTime, 0.1)
       }
     },
 
@@ -69,7 +71,7 @@ export function createAudioAdapter(): AudioAdapter {
       isMuted = !isMuted
       if (masterGain) {
         masterGain.gain.setTargetAtTime(
-          isMuted ? 0 : volume,
+          isMuted ? 0 : volume * MAX_GAIN,
           ctx!.currentTime,
           0.1
         )

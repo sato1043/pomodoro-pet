@@ -43,15 +43,19 @@ export interface BehaviorStateMachineOptions {
 export function createBehaviorStateMachine(
   options?: BehaviorStateMachineOptions
 ): BehaviorStateMachine {
+  let preset: BehaviorPreset = BEHAVIOR_PRESETS['autonomous']
   let currentState: CharacterStateName = 'idle'
   let elapsedMs = 0
   let currentDurationMs = randomDuration(currentState)
   let wanderTarget: Position3D | null = null
   let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
   const fixedDir = options?.fixedWanderDirection ?? null
-  let preset: BehaviorPreset = BEHAVIOR_PRESETS['autonomous']
 
   function randomDuration(state: CharacterStateName): number {
+    const override = preset.durationOverrides?.[state]
+    if (override) {
+      return randomRange(override.minMs, override.maxMs)
+    }
     const config = STATE_CONFIGS[state]
     return randomRange(config.minDurationMs, config.maxDurationMs)
   }

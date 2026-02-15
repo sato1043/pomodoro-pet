@@ -249,6 +249,28 @@ describe('BehaviorStateMachine', () => {
       const result = noOption.tick(1000)
       expect(result.movementDelta).toBeUndefined()
     })
+
+    it('marchのdurationOverrideにより15秒ではタイムアウトしない', () => {
+      sm.start()
+      const result = sm.tick(15000)
+      expect(result.stateChanged).toBe(false)
+      expect(sm.currentState).toBe('march')
+    })
+
+    it('marchのdurationOverrideにより60秒超過でタイムアウトする', () => {
+      sm.start()
+      const result = sm.tick(61000)
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('idle')
+    })
+
+    it('idleのdurationOverrideにより5秒超過でタイムアウトする', () => {
+      sm.transition({ type: 'timeout' }) // march -> idle
+      sm.start()
+      const result = sm.tick(6000)
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('march')
+    })
   })
 
   describe('rest-cycle プリセット', () => {

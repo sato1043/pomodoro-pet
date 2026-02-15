@@ -55,7 +55,7 @@ EventBus（UI/インフラ通知）:
 ### 2. キャラクター
 - `Character` — 位置・状態管理
 - `BehaviorStateMachine` — 10状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替
-- `BehaviorPreset` — 5種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate）
+- `BehaviorPreset` — 5種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）
 - `CharacterState` — 状態設定（アニメーション名、持続時間範囲、ループ有無）
 - `GestureRecognizer` — ドラッグ/撫でるジェスチャー判定
 
@@ -117,18 +117,18 @@ EventBus（UI/インフラ通知）:
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkSpecベース、中央帯回避配置、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
-- `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理
-- `audio/SfxPlayer.ts` — MP3ワンショット再生（fetch+decodeAudioData+バッファキャッシュ）
+- `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング
+- `audio/SfxPlayer.ts` — MP3ワンショット再生（fetch+decodeAudioData+バッファキャッシュ）。`MAX_GAIN=0.25`でUI音量値をスケーリング
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定復元
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 241件
+### tests/ — 244件
 - `domain/timer/PomodoroStateMachine.test.ts` — 53件
 - `domain/timer/CyclePlan.test.ts` — 7件
-- `domain/character/BehaviorStateMachine.test.ts` — 67件
+- `domain/character/BehaviorStateMachine.test.ts` — 70件
 - `domain/character/GestureRecognizer.test.ts` — 17件
 - `domain/environment/SceneConfig.test.ts` — 11件
 - `domain/shared/EventBus.test.ts` — 4件

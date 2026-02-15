@@ -177,6 +177,8 @@ interface BehaviorPreset {
   readonly interactionLocked: boolean
   /** 状態ロック（nullなら無効） */
   readonly lockedState: CharacterStateName | null
+  /** プリセット別の状態持続時間オーバーライド（未指定時はCharacterStateのデフォルト値） */
+  readonly durationOverrides?: Partial<Record<CharacterStateName, { minMs: number; maxMs: number }>>
 }
 ```
 
@@ -199,6 +201,10 @@ const BEHAVIOR_PRESETS: Record<CharacterBehavior, BehaviorPreset> = {
     scrollingStates: new Set(['march']),
     interactionLocked: true,
     lockedState: null,
+    durationOverrides: {
+      march: { minMs: 30000, maxMs: 60000 },  // 30〜60秒歩行
+      idle: { minMs: 3000, maxMs: 5000 },      // 3〜5秒休憩
+    },
   },
   'rest-cycle': {
     name: 'rest-cycle',

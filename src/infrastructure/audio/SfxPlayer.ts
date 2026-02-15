@@ -11,6 +11,8 @@ export interface SfxPlayer {
   dispose(): void
 }
 
+const MAX_GAIN = 0.25
+
 export function createSfxPlayer(): SfxPlayer {
   let ctx: AudioContext | null = null
   let gainNode: GainNode | null = null
@@ -22,7 +24,7 @@ export function createSfxPlayer(): SfxPlayer {
     if (!ctx) {
       ctx = new AudioContext()
       gainNode = ctx.createGain()
-      gainNode.gain.value = muted ? 0 : volume
+      gainNode.gain.value = muted ? 0 : volume * MAX_GAIN
       gainNode.connect(ctx.destination)
     }
     return { ctx, gainNode: gainNode! }
@@ -55,14 +57,14 @@ export function createSfxPlayer(): SfxPlayer {
     setVolume(v: number): void {
       volume = Math.max(0, Math.min(1, v))
       if (gainNode && ctx && !muted) {
-        gainNode.gain.setTargetAtTime(volume, ctx.currentTime, 0.05)
+        gainNode.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.05)
       }
     },
 
     setMuted(m: boolean): void {
       muted = m
       if (gainNode && ctx) {
-        gainNode.gain.setTargetAtTime(muted ? 0 : volume, ctx.currentTime, 0.05)
+        gainNode.gain.setTargetAtTime(muted ? 0 : volume * MAX_GAIN, ctx.currentTime, 0.05)
       }
     },
 

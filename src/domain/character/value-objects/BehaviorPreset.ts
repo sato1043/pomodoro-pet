@@ -7,6 +7,11 @@ export type CharacterBehavior =
   | 'joyful-rest'
   | 'celebrate'
 
+export interface DurationOverride {
+  readonly minMs: number
+  readonly maxMs: number
+}
+
 export interface BehaviorPreset {
   readonly name: CharacterBehavior
   readonly transitions: Partial<Record<CharacterStateName, CharacterStateName>>
@@ -14,6 +19,7 @@ export interface BehaviorPreset {
   readonly scrollingStates: ReadonlySet<CharacterStateName>
   readonly interactionLocked: boolean
   readonly lockedState: CharacterStateName | null
+  readonly durationOverrides?: Partial<Record<CharacterStateName, DurationOverride>>
 }
 
 // autonomous: free時の自律行動（idle→wander→sit→idleサイクル）
@@ -36,6 +42,7 @@ const AUTONOMOUS: BehaviorPreset = {
 }
 
 // march-cycle: ポモドーロwork中（march→idle→marchサイクル）
+// march 30〜60秒歩行、idle 3〜5秒休憩
 const MARCH_CYCLE: BehaviorPreset = {
   name: 'march-cycle',
   transitions: {
@@ -53,6 +60,10 @@ const MARCH_CYCLE: BehaviorPreset = {
   scrollingStates: new Set<CharacterStateName>(['march']),
   interactionLocked: true,
   lockedState: null,
+  durationOverrides: {
+    march: { minMs: 30000, maxMs: 60000 },
+    idle: { minMs: 3000, maxMs: 5000 },
+  },
 }
 
 // rest-cycle: ポモドーロbreak中（happy→sit→idle→sitサイクル、happyは初回のみ）
