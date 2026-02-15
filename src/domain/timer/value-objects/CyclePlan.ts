@@ -25,12 +25,26 @@ export function buildCyclePlan(config: TimerConfig): CyclePhase[] {
     })
 
     const isLastSet = set === config.setsPerCycle
-    if (isLastSet && config.setsPerCycle > 1) {
+    if (isLastSet) {
+      // 最終セット: work → congrats → 最終休憩
       phases.push({
-        type: 'long-break',
-        durationMs: config.longBreakDurationMs,
+        type: 'congrats',
+        durationMs: CONGRATS_DURATION_MS,
         setNumber: set
       })
+      if (config.setsPerCycle > 1) {
+        phases.push({
+          type: 'long-break',
+          durationMs: config.longBreakDurationMs,
+          setNumber: set
+        })
+      } else {
+        phases.push({
+          type: 'break',
+          durationMs: config.breakDurationMs,
+          setNumber: set
+        })
+      }
     } else {
       phases.push({
         type: 'break',
@@ -39,13 +53,6 @@ export function buildCyclePlan(config: TimerConfig): CyclePhase[] {
       })
     }
   }
-
-  const lastSetNumber = phases[phases.length - 1].setNumber
-  phases.push({
-    type: 'congrats',
-    durationMs: CONGRATS_DURATION_MS,
-    setNumber: lastSetNumber
-  })
 
   return phases
 }

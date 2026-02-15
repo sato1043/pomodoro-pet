@@ -107,18 +107,18 @@ type PomodoroPhase = 'work' | 'break' | 'long-break' | 'congrats'
 #### 遷移
 
 ```
-work → break → work → break → ... → work → long-break → congrats → (pomodoroを終了)
-                                                              │
-           pause/resume（work/break/long-break中のみ）         │ 5秒自動
-           手動離脱（work/break/long-break中のみ）              ↓
-                                                       free に遷移
+work → break → work → break → ... → work → congrats → long-break → (pomodoroを終了)
+                                                                          │
+           pause/resume（work/break/long-break中のみ）                     │ 自動
+           手動離脱（work/break/long-break中のみ）                          ↓
+                                                                    free に遷移
 ```
 
-- `work → break`: workフェーズ時間到達
+- `work → break`: workフェーズ時間到達（非最終セット）
 - `break → work`: breakフェーズ時間到達
-- `work → long-break`: 最終セットのworkフェーズ時間到達
-- `long-break → congrats`: long-breakフェーズ時間到達（= CycleCompleted）
-- `congrats → (free)`: 5秒で自動的に親状態（pomodoro）を終了し、freeに遷移
+- `work → congrats`: 最終セットのworkフェーズ時間到達
+- `congrats → long-break`（Sets>1）/ `congrats → break`（Sets=1）: congrats 5秒完了
+- `long-break/break → (free)`: 最終休憩完了でCycleCompleted、自動的にfreeに遷移
 
 #### congrats の制約
 
@@ -396,12 +396,14 @@ interface PomodoroStateMachine {
 
 #### congratsの扱い
 
-congratsはCyclePlanに5秒固定のフェーズとして追加する。tick()で時間が到達したらpomodoroを自動終了する。
+congratsはCyclePlanに5秒固定のフェーズとして、最終workの直後（最終休憩の前）に追加する。最終休憩完了でpomodoroを自動終了する。
 
 ```typescript
-// CyclePlanの末尾にcongrats追加
+// 最終workの直後にcongrats挿入
 // 例: Sets=4の場合
-// [work, break, work, break, work, break, work, long-break, congrats]
+// [work, break, work, break, work, break, work, congrats, long-break]
+// 例: Sets=1の場合
+// [work, congrats, break]
 ```
 
 PhaseType型にcongratsを追加する:
@@ -413,7 +415,7 @@ congratsフェーズは:
 - durationMs: 5000（固定）
 - pause()が無効
 - exitManually()が無効
-- tick()で5秒到達時にpomodoro終了シグナルを発行
+- 完了後に最終休憩（long-break or break）に遷移
 
 #### pauseの扱い
 
@@ -443,15 +445,18 @@ export function buildCyclePlan(config: TimerConfig): CyclePhase[] {
     phases.push({ type: 'work', durationMs: config.workDurationMs, setNumber: set })
 
     const isLastSet = set === config.setsPerCycle
-    if (isLastSet && config.setsPerCycle > 1) {
-      phases.push({ type: 'long-break', durationMs: config.longBreakDurationMs, setNumber: set })
+    if (isLastSet) {
+      // 最終セット: work → congrats → 最終休憩
+      phases.push({ type: 'congrats', durationMs: 5000, setNumber: set })
+      if (config.setsPerCycle > 1) {
+        phases.push({ type: 'long-break', durationMs: config.longBreakDurationMs, setNumber: set })
+      } else {
+        phases.push({ type: 'break', durationMs: config.breakDurationMs, setNumber: set })
+      }
     } else {
       phases.push({ type: 'break', durationMs: config.breakDurationMs, setNumber: set })
     }
   }
-
-  // サイクル末尾にcongrats追加
-  phases.push({ type: 'congrats', durationMs: 5000, setNumber: config.setsPerCycle })
 
   return phases
 }

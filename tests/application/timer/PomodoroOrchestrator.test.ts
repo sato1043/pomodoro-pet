@@ -223,10 +223,10 @@ describe('PomodoroOrchestrator', () => {
       orch.startPomodoro()
       behaviorChanges = []
 
-      // work(3s) → break(2s) → congrats(5s) → CycleCompleted → auto exit
-      orch.tick(3000) // work完了
-      orch.tick(2000) // break完了 → congrats
-      orch.tick(CONGRATS_DURATION_MS) // congrats完了 → CycleCompleted
+      // work(3s) → congrats(5s) → break(2s) → CycleCompleted → auto exit
+      orch.tick(3000) // work完了 → congrats
+      orch.tick(CONGRATS_DURATION_MS) // congrats完了 → break
+      orch.tick(2000) // break完了 → CycleCompleted
 
       expect(sceneManager.currentScene).toBe('free')
       expect(s.isRunning).toBe(false)
@@ -249,8 +249,8 @@ describe('PomodoroOrchestrator', () => {
       bus.subscribe<AppSceneEvent>('AppSceneChanged', (e) => received.push(e))
 
       orch.tick(3000)
-      orch.tick(2000)
       orch.tick(CONGRATS_DURATION_MS)
+      orch.tick(2000)
 
       const freeEvents = received.filter(e => e.scene === 'free')
       expect(freeEvents).toHaveLength(1)

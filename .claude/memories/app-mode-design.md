@@ -68,9 +68,9 @@ EventBusのトピック `'AppSceneChanged'` で発行される。
  │      │                                                      │
  │      │ (最終セット)                                         │
  │      ↓                                                      │
- │   ┌────────────┐    ┌──────────┐                            │
- │   │ long-break │───→│ congrats │──→ AppScene=free に遷移    │
- │   └────────────┘    └──────────┘    （5秒自動完了）          │
+ │   ┌──────────┐    ┌────────────┐                            │
+ │   │ congrats │───→│ long-break │──→ AppScene=free に遷移    │
+ │   └──────────┘    └────────────┘    （最終休憩完了後）       │
  │                                                             │
  │   ※ work/break/long-break中はpause/resume可能               │
  │   ※ congrats中はpause/resume/exitManually不可                │
@@ -83,7 +83,7 @@ EventBusのトピック `'AppSceneChanged'` で発行される。
 |---|---|---|
 | `free → pomodoro` | `enterPomodoro()` | ユーザーがStart Pomodoroボタンを押す |
 | `pomodoro → free` | `exitPomodoro()` | ユーザーがExitボタンで手動離脱 |
-| `pomodoro → free` | `CycleCompleted`イベント | congrats自動完了後、EventBus経由で自動遷移 |
+| `pomodoro → free` | `CycleCompleted`イベント | 最終休憩完了後、PomodoroOrchestrator経由で自動遷移 |
 
 ### ガード条件
 
@@ -141,7 +141,7 @@ AppSceneManager                PomodoroStateMachine
 
 - AppSceneManagerはPomodoroStateMachineを知らない
 - PomodoroStateMachineはAppSceneManagerを知らない
-- 連携はEventBus + main.tsでの組み立てで実現する
+- 連携はPomodoroOrchestratorの直接コールバックで実現する
 - これにより両者は独立してテスト可能である
 - congratsはpomodoro内部フェーズのためAppSceneManagerは関知しない
 
@@ -150,17 +150,20 @@ AppSceneManager                PomodoroStateMachine
 ### サイクル完了時
 
 ```
-PomodoroStateMachine: long-break完了 → PhaseStarted(congrats)
-  ├→ TimerCharacterBridge: celebrate プリセット（happy固定）
-  ├→ TimerOverlay: switchToMode('congrats') — 祝福UI表示
-  └→ TimerSfxBridge: サイクル完了ファンファーレ再生
+PomodoroStateMachine: 最終work完了 → PhaseStarted(congrats)
+  ├→ PomodoroOrchestrator: celebrate プリセット（直接コールバック）
+  ├→ TimerOverlay: switchToMode('congrats') — 祝福UI表示（EventBus経由）
+  └→ TimerSfxBridge: サイクル完了ファンファーレ再生（EventBus経由）
 
-PomodoroStateMachine: congrats完了（5秒後）
+PomodoroStateMachine: congrats完了（5秒後） → PhaseStarted(long-break/break)
+  → PomodoroOrchestrator: joyful-rest/rest-cycle プリセット（直接コールバック）
+
+PomodoroStateMachine: 最終休憩完了
   → CycleCompleted 発行
-  → AppSceneManager: exitPomodoro() → AppSceneChanged(free)
-    ├→ main.ts: resetTimer()
-    ├→ TimerOverlay: switchToMode('free')
-    └→ TimerCharacterBridge: autonomous プリセット
+  → PomodoroOrchestrator: doExitPomodoro()
+    ├→ AppSceneManager.exitPomodoro() → AppSceneChanged(free)（EventBus経由）
+    ├→ session.reset()
+    └→ onBehaviorChange(autonomous)（直接コールバック）
 ```
 
 ### 手動離脱時

@@ -8,9 +8,10 @@ describe('PomodoroStateMachine', () => {
   let session: PomodoroStateMachine
 
   // テスト用に短い設定: 作業3秒、休憩2秒、長時間休憩4秒、4セット
+  // CyclePlan: [work,break, work,break, work,break, work,congrats,long-break]
   const testConfig = createConfig(3000, 2000, 4000, 4)
 
-  // セットを1つ消化するヘルパー（work + break）
+  // セットを1つ消化するヘルパー（work + break）— 非最終セット用
   function consumeOneSet(s: PomodoroStateMachine): void {
     s.tick(3000) // work完了 → break開始
     s.tick(2000) // break完了 → 次set work開始
@@ -119,8 +120,7 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session) // set1
       consumeOneSet(session) // set2
       consumeOneSet(session) // set3
-      session.tick(3000)     // set4 work完了 → long-break開始
-      session.tick(4000)     // long-break完了 → congrats開始
+      session.tick(3000)     // set4 work完了 → congrats開始
       expect(session.currentPhase.type).toBe('congrats')
       expect(session.isRunning).toBe(true)
       const events = session.pause()
@@ -162,8 +162,7 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
+      session.tick(3000) // set4 work完了 → congrats
       expect(session.currentPhase.type).toBe('congrats')
       const events = session.reset()
       expect(session.currentPhase.type).toBe('work')
@@ -183,14 +182,14 @@ describe('PomodoroStateMachine', () => {
       expect(session.completedCycles).toBe(0)
     })
 
-    it('4セット+long-break+congrats完了で1サイクル完了になる', () => {
+    it('4セット work → congrats → long-break完了で1サイクル完了になる', () => {
       session.start()
       consumeOneSet(session) // set1
       consumeOneSet(session) // set2
       consumeOneSet(session) // set3
-      session.tick(3000)     // set4 work完了 → long-break開始
-      session.tick(4000)     // long-break完了 → congrats開始
-      session.tick(CONGRATS_DURATION_MS) // congrats完了
+      session.tick(3000)     // set4 work完了 → congrats開始
+      session.tick(CONGRATS_DURATION_MS) // congrats完了 → long-break開始
+      session.tick(4000)     // long-break完了
       expect(session.completedCycles).toBe(1)
     })
 
@@ -201,8 +200,8 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       session.tick(3000)
-      session.tick(4000)
-      session.tick(CONGRATS_DURATION_MS) // congrats完了
+      session.tick(CONGRATS_DURATION_MS)
+      session.tick(4000) // long-break完了
       // 1サイクル完了で自動停止するため再開
       session.start()
       // 2サイクル目
@@ -210,8 +209,8 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       session.tick(3000)
-      session.tick(4000)
-      session.tick(CONGRATS_DURATION_MS) // congrats完了
+      session.tick(CONGRATS_DURATION_MS)
+      session.tick(4000) // long-break完了
       expect(session.completedCycles).toBe(2)
     })
   })
@@ -263,26 +262,45 @@ describe('PomodoroStateMachine', () => {
     })
   })
 
-  describe('long-break', () => {
-    it('set4のwork完了後はlong-breakになる', () => {
+  describe('最終セット: work → congrats → long-break', () => {
+    it('set4のwork完了後はcongratsになる', () => {
       session.start()
       consumeOneSet(session) // set1
       consumeOneSet(session) // set2
       consumeOneSet(session) // set3
       const events = session.tick(3000) // set4 work完了
-      expect(session.currentPhase.type).toBe('long-break')
-      expect(session.currentPhase.durationMs).toBe(4000)
+      expect(session.currentPhase.type).toBe('congrats')
+      expect(session.currentPhase.durationMs).toBe(CONGRATS_DURATION_MS)
       expect(events).toContainEqual(
-        expect.objectContaining({ type: 'PhaseStarted', phase: 'long-break' })
+        expect.objectContaining({ type: 'PhaseStarted', phase: 'congrats' })
       )
     })
 
-    it('long-break完了後にcongratsフェーズに遷移する', () => {
+    it('congrats完了後にlong-breakフェーズに遷移する', () => {
       session.start()
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000) // set4 work完了
+      session.tick(3000) // set4 work完了 → congrats
+      const events = session.tick(CONGRATS_DURATION_MS) // congrats完了
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'PhaseCompleted', phase: 'congrats' })
+      )
+      expect(events).toContainEqual(
+        expect.objectContaining({ type: 'PhaseStarted', phase: 'long-break' })
+      )
+      expect(session.currentPhase.type).toBe('long-break')
+      expect(session.currentPhase.durationMs).toBe(4000)
+      expect(session.isRunning).toBe(true)
+    })
+
+    it('long-break完了後にCycleCompletedとSetCompletedが発火する', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000) // set4 work完了 → congrats
+      session.tick(CONGRATS_DURATION_MS) // congrats完了 → long-break
       const events = session.tick(4000) // long-break完了
       expect(events).toContainEqual(
         expect.objectContaining({ type: 'PhaseCompleted', phase: 'long-break' })
@@ -291,10 +309,33 @@ describe('PomodoroStateMachine', () => {
         expect.objectContaining({ type: 'SetCompleted', setNumber: 4, totalSets: 4 })
       )
       expect(events).toContainEqual(
-        expect.objectContaining({ type: 'PhaseStarted', phase: 'congrats' })
+        expect.objectContaining({ type: 'CycleCompleted', cycleNumber: 1 })
       )
-      expect(session.currentPhase.type).toBe('congrats')
-      expect(session.isRunning).toBe(true)
+    })
+
+    it('long-break完了後にisRunning=falseになる', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000)
+      session.tick(CONGRATS_DURATION_MS)
+      session.tick(4000) // long-break完了
+      expect(session.isRunning).toBe(false)
+    })
+
+    it('long-break完了後にset1のworkに戻る', () => {
+      session.start()
+      consumeOneSet(session)
+      consumeOneSet(session)
+      consumeOneSet(session)
+      session.tick(3000)
+      session.tick(CONGRATS_DURATION_MS)
+      session.tick(4000) // long-break完了
+      expect(session.currentSet).toBe(1)
+      expect(session.completedSets).toBe(0)
+      expect(session.completedCycles).toBe(1)
+      expect(session.currentPhase.type).toBe('work')
     })
   })
 
@@ -304,52 +345,10 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
+      session.tick(3000) // set4 work完了 → congrats
       expect(session.currentPhase.type).toBe('congrats')
       expect(session.currentPhase.durationMs).toBe(CONGRATS_DURATION_MS)
       expect(session.remainingMs).toBe(CONGRATS_DURATION_MS)
-    })
-
-    it('congrats完了後にCycleCompletedが発火する', () => {
-      session.start()
-      consumeOneSet(session)
-      consumeOneSet(session)
-      consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
-      const events = session.tick(CONGRATS_DURATION_MS) // congrats完了
-      expect(events).toContainEqual(
-        expect.objectContaining({ type: 'PhaseCompleted', phase: 'congrats' })
-      )
-      expect(events).toContainEqual(
-        expect.objectContaining({ type: 'CycleCompleted', cycleNumber: 1 })
-      )
-    })
-
-    it('congrats完了後にisRunning=falseになる', () => {
-      session.start()
-      consumeOneSet(session)
-      consumeOneSet(session)
-      consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
-      session.tick(CONGRATS_DURATION_MS) // congrats完了
-      expect(session.isRunning).toBe(false)
-    })
-
-    it('congrats完了後にset1のworkに戻る', () => {
-      session.start()
-      consumeOneSet(session)
-      consumeOneSet(session)
-      consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
-      session.tick(CONGRATS_DURATION_MS) // congrats完了
-      expect(session.currentSet).toBe(1)
-      expect(session.completedSets).toBe(0)
-      expect(session.completedCycles).toBe(1)
-      expect(session.currentPhase.type).toBe('work')
     })
 
     it('congratsでSetCompletedは発火しない', () => {
@@ -357,9 +356,8 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
-      const events = session.tick(CONGRATS_DURATION_MS)
+      session.tick(3000) // set4 work完了 → congrats
+      const events = session.tick(CONGRATS_DURATION_MS) // congrats完了
       const setCompletedEvents = events.filter(e => e.type === 'SetCompleted')
       expect(setCompletedEvents).toHaveLength(0)
     })
@@ -379,34 +377,35 @@ describe('PomodoroStateMachine', () => {
   })
 
   describe('setsPerCycle=1のエッジケース', () => {
-    it('set1のwork完了後はbreakになる（Long Breakなし）', () => {
+    // CyclePlan: [work, congrats, break]
+    it('set1のwork完了後はcongratsになる', () => {
       const singleSetConfig = createConfig(3000, 2000, 4000, 1)
       const s = createPomodoroStateMachine(singleSetConfig)
       s.start()
-      s.tick(3000)
-      expect(s.currentPhase.type).toBe('break')
-      expect(s.currentPhase.durationMs).toBe(2000)
+      s.tick(3000) // work完了 → congrats
+      expect(s.currentPhase.type).toBe('congrats')
+      expect(s.currentPhase.durationMs).toBe(CONGRATS_DURATION_MS)
     })
 
-    it('break完了後にcongratsに遷移する', () => {
+    it('congrats完了後にbreakに遷移する', () => {
       const singleSetConfig = createConfig(3000, 2000, 4000, 1)
       const s = createPomodoroStateMachine(singleSetConfig)
       s.start()
-      s.tick(3000)  // work完了 → break開始
-      const events = s.tick(2000)  // break完了 → congrats開始
-      expect(s.currentPhase.type).toBe('congrats')
+      s.tick(3000) // work完了 → congrats
+      const events = s.tick(CONGRATS_DURATION_MS) // congrats完了 → break
+      expect(s.currentPhase.type).toBe('break')
       expect(events).toContainEqual(
-        expect.objectContaining({ type: 'PhaseStarted', phase: 'congrats' })
+        expect.objectContaining({ type: 'PhaseStarted', phase: 'break' })
       )
     })
 
-    it('congrats完了でサイクル完了する', () => {
+    it('break完了でサイクル完了する', () => {
       const singleSetConfig = createConfig(3000, 2000, 4000, 1)
       const s = createPomodoroStateMachine(singleSetConfig)
       s.start()
-      s.tick(3000)
-      s.tick(2000)
-      const events = s.tick(CONGRATS_DURATION_MS)
+      s.tick(3000)                // work完了 → congrats
+      s.tick(CONGRATS_DURATION_MS) // congrats完了 → break
+      const events = s.tick(2000) // break完了
       expect(events).toContainEqual(
         expect.objectContaining({ type: 'CycleCompleted', cycleNumber: 1 })
       )
@@ -442,7 +441,8 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000) // set4 work完了 → long-break開始
+      session.tick(3000) // set4 work完了 → congrats
+      session.tick(CONGRATS_DURATION_MS) // congrats完了 → long-break
       expect(session.state).toEqual({ phase: 'long-break', running: true })
     })
 
@@ -451,8 +451,7 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
+      session.tick(3000) // set4 work完了 → congrats
       expect(session.state).toEqual({ phase: 'congrats' })
       expect('running' in session.state).toBe(false)
     })
@@ -476,8 +475,7 @@ describe('PomodoroStateMachine', () => {
       consumeOneSet(session)
       consumeOneSet(session)
       consumeOneSet(session)
-      session.tick(3000)
-      session.tick(4000) // → congrats
+      session.tick(3000) // set4 work完了 → congrats
       expect(session.currentPhase.type).toBe('congrats')
       const events = session.exitManually()
       expect(events).toHaveLength(0)
