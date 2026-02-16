@@ -10,18 +10,35 @@ const DEFAULT_BREAK_DURATION_MS = 5 * 60 * 1000
 const DEFAULT_LONG_BREAK_DURATION_MS = 15 * 60 * 1000
 const DEFAULT_SETS_PER_CYCLE = 1
 
-const DEBUG_WORK_DURATION_MS = 1 * 60 * 1000
-const DEBUG_BREAK_DURATION_MS = 1 * 60 * 1000
-const DEBUG_LONG_BREAK_DURATION_MS = 1 * 60 * 1000
-const DEBUG_SETS_PER_CYCLE = 2
-
-export function createDefaultConfig(debug = false): TimerConfig {
+export function createDefaultConfig(): TimerConfig {
   return {
-    workDurationMs: debug ? DEBUG_WORK_DURATION_MS : DEFAULT_WORK_DURATION_MS,
-    breakDurationMs: debug ? DEBUG_BREAK_DURATION_MS : DEFAULT_BREAK_DURATION_MS,
-    longBreakDurationMs: debug ? DEBUG_LONG_BREAK_DURATION_MS : DEFAULT_LONG_BREAK_DURATION_MS,
-    setsPerCycle: debug ? DEBUG_SETS_PER_CYCLE : DEFAULT_SETS_PER_CYCLE
+    workDurationMs: DEFAULT_WORK_DURATION_MS,
+    breakDurationMs: DEFAULT_BREAK_DURATION_MS,
+    longBreakDurationMs: DEFAULT_LONG_BREAK_DURATION_MS,
+    setsPerCycle: DEFAULT_SETS_PER_CYCLE
   }
+}
+
+/**
+ * VITE_DEBUG_TIMER の値をパースしてTimerConfigを返す。
+ * 書式: "work/break/long-break/sets"（秒数）。省略部分は前の値を引き継ぐ。setsデフォルト=2。
+ * 無効な値の場合はnullを返す。
+ */
+export function parseDebugTimer(spec: string): TimerConfig | null {
+  if (!spec) return null
+  const parts = spec.split('/').map(Number)
+  if (parts.length === 0 || parts.length > 4) return null
+  if (parts.some(v => isNaN(v) || v <= 0)) return null
+  const workSec = parts[0]
+  const breakSec = parts[1] ?? workSec
+  const longBreakSec = parts[2] ?? breakSec
+  const sets = parts[3] ?? 2
+  return createConfig(
+    workSec * 1000,
+    breakSec * 1000,
+    longBreakSec * 1000,
+    sets
+  )
 }
 
 export function createConfig(

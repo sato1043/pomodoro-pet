@@ -48,7 +48,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 4つのコンテキスト。外部依存なし。
 
-- **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`PomodoroStateMachineOptions`で`PhaseTimeTrigger`を注入可能（elapsed/remainingタイミングでTriggerFiredイベント発行）。break/long-breakの残り30秒でgetsetトリガーを発行し、TimerSfxBridgeがBGM切替に使用。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`createDefaultConfig(debug)`でデバッグ/通常モードを切替
+- **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`PomodoroStateMachineOptions`で`PhaseTimeTrigger`を注入可能（elapsed/remainingタイミングでTriggerFiredイベント発行）。break/long-breakの残り30秒でgetsetトリガーを発行し、TimerSfxBridgeがBGM切替に使用。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定をパース
 - **character**: `BehaviorStateMachine` が10状態（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse）を管理。`march`はwork中の目的ある前進（scrolling=true）、`wander`はbreak/free中のふらつき歩き（scrolling=false）。遷移トリガーは timeout/prompt/interaction の3種。`fixedWanderDirection`オプションでmarch方向を固定可能。`GestureRecognizer`でドラッグ/撫でるを判定。`isInteractionLocked()`でポモドーロ作業中のインタラクション拒否を判定。`lockState`/`unlockState`で状態ロック（congrats時happy、work時march）。`BehaviorPreset.durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）
 - **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
 - **shared**: `EventBus`（Pub/Sub）。UI/インフラ層への通知専用。階層間の状態連動はPomodoroOrchestratorが直接コールバックで管理
@@ -94,9 +94,15 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 `.env.development` で開発用の設定を行う。`.env.development.example` を参照。
 
 ```bash
-# タイマー短縮モード（work=1min / break=1min / long-break=1min）
+# タイマー短縮モード（秒数指定）
+# 書式: VITE_DEBUG_TIMER=work/break/long-break/sets
+# 省略部分は前の値を引き継ぐ。setsデフォルト=2
 # .env.development に以下を記述して npm run dev で起動
-VITE_DEBUG_TIMER=1
+VITE_DEBUG_TIMER=10         # 全フェーズ10秒、Sets=2
+VITE_DEBUG_TIMER=10/5       # work=10秒、break=5秒、long-break=5秒、Sets=2
+VITE_DEBUG_TIMER=10/5/15    # work=10秒、break=5秒、long-break=15秒、Sets=2
+VITE_DEBUG_TIMER=10/5/15/3  # work=10秒、break=5秒、long-break=15秒、Sets=3
+# 注意: break/long-breakが30秒未満の場合、break-getsetトリガー（残り30秒）が開始直後に発火する
 
 # DevTools自動オープン
 VITE_DEV_TOOLS=1

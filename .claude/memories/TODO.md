@@ -28,7 +28,7 @@
 - `AppSettingsService`が分→ms変換＋バリデーション＋`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `SettingsChanged`購読でsession再作成→TimerOverlay再構築のフロー実装
 - pomodoroモード中はギアアイコン・トグルボタン非表示
-- `createDefaultConfig(debug)`でデバッグ/通常モードを統一管理
+- `parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定をパース
 
 ### ~~CyclePlan（フェーズ順列の一元管理）~~ — 完了
 - `buildCyclePlan(config)`がTimerConfigからCyclePhase[]を生成する値オブジェクト

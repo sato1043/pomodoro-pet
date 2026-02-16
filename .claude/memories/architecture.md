@@ -79,7 +79,7 @@ EventBus（UI/インフラ通知）:
 - `timer/value-objects/CyclePlan.ts` — フェーズ順列生成（buildCyclePlan, cycleTotalMs, CONGRATS_DURATION_MS）
 - `timer/value-objects/TimerPhase.ts` — work/break/long-break/congratsフェーズ
 - `timer/value-objects/PhaseTrigger.ts` — PhaseTimeTrigger型定義（TriggerTiming, PhaseTriggerSpec, PhaseTriggerMap）
-- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`createDefaultConfig(debug)`でデバッグモード（1min/1min/1min）を切替
+- `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定（`work/break/long-break/sets`）をパース
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
 - `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（BehaviorPreset対応、fixedWanderDirection対応）
@@ -125,9 +125,10 @@ EventBus（UI/インフラ通知）:
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 261件
+### tests/ — 271件
 - `domain/timer/PomodoroStateMachine.test.ts` — 53件
 - `domain/timer/CyclePlan.test.ts` — 7件
+- `domain/timer/TimerConfig.test.ts` — 10件
 - `domain/character/BehaviorStateMachine.test.ts` — 70件
 - `domain/character/GestureRecognizer.test.ts` — 17件
 - `domain/environment/SceneConfig.test.ts` — 11件

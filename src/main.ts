@@ -1,7 +1,7 @@
 import * as THREE from 'three'
 import { createEventBus } from './domain/shared/EventBus'
 import { createPomodoroStateMachine } from './domain/timer/entities/PomodoroStateMachine'
-import { createDefaultConfig } from './domain/timer/value-objects/TimerConfig'
+import { createDefaultConfig, parseDebugTimer } from './domain/timer/value-objects/TimerConfig'
 import { createTimerOverlay, type TimerOverlayElements } from './adapters/ui/TimerOverlay'
 import { createAppSceneManager } from './application/app-scene/AppSceneManager'
 import { createAppSettingsService } from './application/settings/AppSettingsService'
@@ -106,8 +106,9 @@ async function main(): Promise<void> {
 
   // ポモドーロタイマー初期化
   const bus = createEventBus()
-  const isDebugTimer = import.meta.env.VITE_DEBUG_TIMER === '1'
-  const initialConfig = createDefaultConfig(isDebugTimer)
+  const debugConfig = parseDebugTimer(import.meta.env.VITE_DEBUG_TIMER ?? '')
+  const isDebugTimer = debugConfig !== null
+  const initialConfig = debugConfig ?? createDefaultConfig()
 
   let session = createPomodoroStateMachine(initialConfig, { phaseTriggers: BREAK_BGM_TRIGGERS })
 

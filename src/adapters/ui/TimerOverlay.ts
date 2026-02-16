@@ -106,7 +106,10 @@ function segLabel(type: PhaseType): string {
   }
 }
 
-function fmtDuration(min: number): string {
+function fmtDurationMs(ms: number): string {
+  const totalSec = Math.round(ms / 1000)
+  if (totalSec < 60) return `${totalSec}s`
+  const min = Math.round(ms / 60000)
   const h = Math.floor(min / 60)
   const m = min % 60
   if (h > 0 && m > 0) return `${h}h ${m}min`
@@ -164,19 +167,17 @@ function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
 }
 
 function buildTimelineBarHTML(
-  w: number, b: number, lb: number, sets: number,
+  timerConfig: TimerConfig,
   activePhase?: { set: number; type: PhaseType }
 ): string {
-  const timerConfig = createConfig(w * 60000, b * 60000, lb * 60000, sets)
   const plan = buildCyclePlan(timerConfig)
   const setViews = buildSetViews(plan, new Date())
 
-  // B/LBの表示幅を調整して視認性を確保
+  // B/LBの表示幅を調整して視認性を確保（ms単位で比例計算）
   const displayFlex = (phase: CyclePhase): number => {
-    const min = phase.durationMs / 60000
-    if (phase.type === 'work') return min
-    if (phase.type === 'long-break') return b * 2
-    return b * 1.5
+    if (phase.type === 'work') return phase.durationMs
+    if (phase.type === 'long-break') return timerConfig.breakDurationMs * 2
+    return timerConfig.breakDurationMs * 1.5
   }
 
   // activePhaseのplan内インデックスを算出
@@ -210,26 +211,28 @@ function buildTimelineBarHTML(
   return `<div class="tl-bar">${barParts.join('')}</div>`
 }
 
-function buildTimelineHTML(w: number, b: number, lb: number, sets: number): string {
-  const timerConfig = createConfig(w * 60000, b * 60000, lb * 60000, sets)
+function buildTimelineHTML(timerConfig: TimerConfig): string {
   const plan = buildCyclePlan(timerConfig)
   const now = new Date()
   const setViews = buildSetViews(plan, now)
   const displayPlan = plan.filter(p => p.type !== 'congrats')
-  const totalMin = Math.round(cycleTotalMs(displayPlan) / 60000)
+  const totalMs = cycleTotalMs(displayPlan)
+
+  const wLabel = fmtDurationMs(timerConfig.workDurationMs)
+  const bLabel = fmtDurationMs(timerConfig.breakDurationMs)
 
   const dateLine = fmtDateLine(now)
   const configLine =
-    `(<span class="tl-config-work">${w}</span> + ` +
-    `<span class="tl-config-break">${b}</span>) ` +
-    `× ${sets} Sets = <span class="tl-config-total">${fmtDuration(totalMin)}</span>`
+    `(<span class="tl-config-work">${wLabel}</span> + ` +
+    `<span class="tl-config-break">${bLabel}</span>) ` +
+    `× ${timerConfig.setsPerCycle} Sets = <span class="tl-config-total">${fmtDurationMs(totalMs)}</span>`
 
   // セットラベル
   const labels = setViews.map(sv =>
     `<span class="tl-set-label">${sv.label}</span>`
   ).join('')
 
-  const bar = buildTimelineBarHTML(w, b, lb, sets)
+  const bar = buildTimelineBarHTML(timerConfig)
 
   // 時刻行（開始 + 各セット終了）
   const timesHTML =
@@ -295,7 +298,9 @@ export function createTimerOverlay(
   const container = document.createElement('div')
   container.id = 'timer-overlay'
   function buildSummaryHTML(): string {
-    return buildTimelineHTML(selectedWork, selectedBreak, selectedLongBreak, selectedSets)
+    return buildTimelineHTML(createConfig(
+      selectedWork * 60000, selectedBreak * 60000, selectedLongBreak * 60000, selectedSets
+    ))
   }
 
   container.innerHTML = `
@@ -915,10 +920,7 @@ export function createTimerOverlay(
       lastActiveSet = curSet
       lastActiveType = phase
       pomodoroTimelineEl.innerHTML = buildTimelineBarHTML(
-        msToMinutes(config.workDurationMs),
-        msToMinutes(config.breakDurationMs),
-        msToMinutes(config.longBreakDurationMs),
-        config.setsPerCycle,
+        config,
         { set: curSet, type: phase }
       )
     }

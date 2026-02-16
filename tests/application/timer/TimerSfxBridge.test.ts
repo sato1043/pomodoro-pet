@@ -145,6 +145,44 @@ describe('TimerSfxBridge', () => {
     })
   })
 
+  describe('PhaseStarted(break/long-break) — break開始音', () => {
+    it('break開始時にbreak-start音を再生する', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/break-start.mp3', 1.0)
+    })
+
+    it('long-break開始時にもbreak-start音を再生する', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'long-break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/break-start.mp3', 1.0)
+    })
+
+    it('PhaseStarted(work)ではbreak-start音を再生しない', () => {
+      bridgeTimerToSfx(bus, sfx)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/break-start.mp3', expect.anything())
+    })
+  })
+
   describe('PhaseStarted(congrats) — サイクル完了ファンファーレ', () => {
     it('デフォルトのファンファーレURLを再生する', () => {
       bridgeTimerToSfx(bus, sfx)

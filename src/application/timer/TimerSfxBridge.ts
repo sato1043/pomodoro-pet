@@ -15,6 +15,8 @@ export interface TimerSfxConfig {
   workCompleteGain: number
   fanfareUrl: string
   fanfareGain: number
+  breakStartUrl: string
+  breakStartGain: number
   breakChillUrl: string
   breakChillGain: number
   breakGetsetUrl: string
@@ -37,6 +39,8 @@ const DEFAULT_CONFIG: TimerSfxConfig = {
   workCompleteGain: 1.0,
   fanfareUrl: './audio/fanfare.mp3',
   fanfareGain: 1.0,
+  breakStartUrl: './audio/break-start.mp3',
+  breakStartGain: 1.0,
   breakChillUrl: './audio/break-chill.mp3',
   breakChillGain: 1.0,
   breakGetsetUrl: './audio/break-getset.mp3',
@@ -94,6 +98,9 @@ export function bridgeTimerToSfx(
       }
     }
     if (event.type === 'PhaseStarted' && (event.phase === 'break' || event.phase === 'long-break')) {
+      sfx.play(cfg.breakStartUrl, cfg.breakStartGain).catch(() => {
+        // 再生失敗時は無視
+      })
       if (audioControl) {
         savedPreset = audioControl.currentPreset
         audioControl.switchPreset('silence')
