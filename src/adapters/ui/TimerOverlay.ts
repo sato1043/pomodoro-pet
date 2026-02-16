@@ -268,6 +268,10 @@ export function createTimerOverlay(
   debugTimer = false
 ): TimerOverlayElements {
 
+  // Pause/Resume SVGアイコン（WSL2絵文字フォント非対応のためインラインSVG）
+  const pauseIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/><rect x="6.5" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/></svg>'
+  const resumeIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><polygon points="2,1 10,5.5 2,10" fill="currentColor"/></svg>'
+
   // 選択肢の定義
   const workOptions = [25, 50, 90]
   const breakOptions = [5, 10, 15]
@@ -341,6 +345,8 @@ export function createTimerOverlay(
       <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
     </div>
     <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
+      <span id="btn-pause-resume" class="timer-corner-icon">${pauseIconSvg}</span>
+      <span id="btn-exit-pomodoro" class="timer-exit-link">exit</span>
       <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
       <div class="timer-phase-time">
         <span class="timer-phase" id="timer-phase">WORK</span>
@@ -349,11 +355,6 @@ export function createTimerOverlay(
       <div class="timer-pomodoro-timeline" id="timer-pomodoro-timeline"></div>
       <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
       <div class="timer-progress" id="timer-progress">[○○○○]</div>
-      <div class="timer-controls">
-        <button id="btn-pause" class="timer-btn">Pause</button>
-        <button id="btn-resume" class="timer-btn" style="display:none">Resume</button>
-        <button id="btn-exit-pomodoro" class="timer-btn timer-btn-exit">Exit</button>
-      </div>
     </div>
     <div class="timer-congrats-mode" id="timer-congrats-mode" style="display:none">
       <div class="congrats-confetti" id="congrats-confetti"></div>
@@ -585,11 +586,6 @@ export function createTimerOverlay(
       letter-spacing: 4px;
       margin-bottom: 12px;
     }
-    .timer-controls {
-      display: flex;
-      gap: 8px;
-      justify-content: center;
-    }
     .timer-btn {
       background: rgba(255, 255, 255, 0.15);
       color: #fff;
@@ -628,12 +624,34 @@ export function createTimerOverlay(
     .timer-btn-primary:hover {
       background: rgba(76, 175, 80, 0.5);
     }
-    .timer-btn-exit {
-      background: rgba(244, 67, 54, 0.2);
-      border-color: rgba(244, 67, 54, 0.4);
+    .timer-pomodoro-mode {
+      position: relative;
     }
-    .timer-btn-exit:hover {
-      background: rgba(244, 67, 54, 0.35);
+    .timer-corner-icon {
+      position: absolute;
+      top: 0;
+      right: 28px;
+      color: rgba(255, 255, 255, 0.3);
+      cursor: pointer;
+      transition: color 0.2s;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+    }
+    .timer-corner-icon:hover {
+      color: rgba(255, 255, 255, 0.7);
+    }
+    .timer-exit-link {
+      position: absolute;
+      top: 0;
+      right: 0;
+      color: rgba(255, 255, 255, 0.3);
+      font-size: 11px;
+      cursor: pointer;
+      transition: color 0.2s;
+    }
+    .timer-exit-link:hover {
+      color: rgba(244, 67, 54, 0.6);
     }
     .timer-congrats-mode {
       position: relative;
@@ -701,9 +719,8 @@ export function createTimerOverlay(
   const progressEl = container.querySelector('#timer-progress') as HTMLDivElement
   const btnConfirmSettings = container.querySelector('#btn-confirm-settings') as HTMLButtonElement
   const btnEnterPomodoro = container.querySelector('#btn-enter-pomodoro') as HTMLButtonElement
-  const btnPause = container.querySelector('#btn-pause') as HTMLButtonElement
-  const btnResume = container.querySelector('#btn-resume') as HTMLButtonElement
-  const btnExitPomodoro = container.querySelector('#btn-exit-pomodoro') as HTMLButtonElement
+  const btnPauseResume = container.querySelector('#btn-pause-resume') as HTMLElement
+  const btnExitPomodoro = container.querySelector('#btn-exit-pomodoro') as HTMLElement
 
   // ボタングループのクリックハンドラ
   function handleCfgClick(e: Event): void {
@@ -911,8 +928,7 @@ export function createTimerOverlay(
     setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
     flowEl.textContent = buildFlowText(buildCyclePlan(config), phase, session.currentSet)
     progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
-    btnPause.style.display = session.isRunning ? '' : 'none'
-    btnResume.style.display = session.isRunning ? 'none' : ''
+    btnPauseResume.innerHTML = session.isRunning ? pauseIconSvg : resumeIconSvg
 
     // タイムラインバー: フェーズ変更時のみDOM更新
     const curSet = session.currentSet
@@ -951,13 +967,12 @@ export function createTimerOverlay(
     orchestrator.startPomodoro()
   })
 
-  btnPause.addEventListener('click', () => {
-    orchestrator.pause()
-    updateTimerDisplay()
-  })
-
-  btnResume.addEventListener('click', () => {
-    orchestrator.resume()
+  btnPauseResume.addEventListener('click', () => {
+    if (session.isRunning) {
+      orchestrator.pause()
+    } else {
+      orchestrator.resume()
+    }
     updateTimerDisplay()
   })
 
