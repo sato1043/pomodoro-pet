@@ -1,9 +1,5 @@
 import type { PomodoroStateMachine } from '../../domain/timer/entities/PomodoroStateMachine'
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
-import { createConfig } from '../../domain/timer/value-objects/TimerConfig'
-import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
-import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/CyclePlan'
-import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { EventBus } from '../../domain/shared/EventBus'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
@@ -11,205 +7,9 @@ import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrche
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
-import { createVolumeControl } from './VolumeControl'
-
-function formatTime(ms: number): string {
-  const totalSeconds = Math.max(0, Math.ceil(ms / 1000))
-  const minutes = Math.floor(totalSeconds / 60)
-  const seconds = totalSeconds % 60
-  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
-}
-
-function phaseLabel(type: PhaseType): string {
-  switch (type) {
-    case 'work': return 'WORK'
-    case 'break': return 'BREAK'
-    case 'long-break': return 'LONG BREAK'
-    case 'congrats': return 'CONGRATS'
-  }
-}
-
-function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
-  switch (type) {
-    case 'work': return { filled: 'rgba(76,175,80,0.85)', unfilled: 'rgba(76,175,80,0.2)' }
-    case 'break': return { filled: 'rgba(66,165,245,0.85)', unfilled: 'rgba(66,165,245,0.2)' }
-    case 'long-break': return { filled: 'rgba(171,71,188,0.85)', unfilled: 'rgba(171,71,188,0.2)' }
-    case 'congrats': return { filled: 'rgba(255,213,79,0.85)', unfilled: 'rgba(255,213,79,0.2)' }
-  }
-}
-
-const OVERLAY_BASE_BG = 'rgba(0, 0, 0, 0.75)'
-
-function overlayTintBg(type: PhaseType, progress: number): string {
-  const rgb = (() => {
-    switch (type) {
-      case 'work': return '76,175,80'
-      case 'break': return '66,165,245'
-      case 'long-break': return '171,71,188'
-      case 'congrats': return '255,213,79'
-    }
-  })()
-  const alpha = 0.04 + progress * 0.20 // 0.04 → 0.24
-  return `linear-gradient(to bottom, transparent, rgba(${rgb},${alpha.toFixed(3)})), ${OVERLAY_BASE_BG}`
-}
-
-function msToMinutes(ms: number): number {
-  return Math.round(ms / 60000)
-}
-
-function resolveSelected(options: number[], selected: number): number {
-  return options.includes(selected) ? selected : options[0]
-}
-
-function buildButtonGroup(name: string, options: number[], selected: number): string {
-  const resolved = resolveSelected(options, selected)
-  return options.map(v => {
-    const active = v === resolved ? ' active' : ''
-    return `<button class="timer-cfg-btn${active}" data-cfg="${name}" data-value="${v}">${v}</button>`
-  }).join('')
-}
-
-// --- Timeline Summary pure functions ---
-
-interface TimelineSetView {
-  label: string
-  phases: CyclePhase[]
-  endTime: Date
-}
-
-function segLabel(type: PhaseType): string {
-  switch (type) {
-    case 'work': return 'W'
-    case 'break': return 'B'
-    case 'long-break': return 'LB'
-    case 'congrats': return 'C'
-  }
-}
-
-function fmtDurationMs(ms: number): string {
-  const totalSec = Math.round(ms / 1000)
-  if (totalSec < 60) return `${totalSec}s`
-  const min = Math.round(ms / 60000)
-  const h = Math.floor(min / 60)
-  const m = min % 60
-  if (h > 0 && m > 0) return `${h}h ${m}min`
-  if (h > 0) return `${h}h`
-  return `${m}min`
-}
-
-function fmtDateLine(date: Date): string {
-  const h = date.getHours()
-  const mi = String(date.getMinutes()).padStart(2, '0')
-  const ampm = h < 12 ? 'AM' : 'PM'
-  const h12 = h % 12 || 12
-  return `<div class="tl-clock">${String(h12).padStart(2, '0')}<span class="tl-blink">:</span>${mi}<span class="tl-date-sub">${ampm}</span></div>`
-}
-
-function fmtClock(date: Date): string {
-  const h = date.getHours()
-  const mi = String(date.getMinutes()).padStart(2, '0')
-  const h12 = h % 12 || 12
-  const ampm = h < 12 ? 'AM' : 'PM'
-  return `${h12}:${mi}<span class="tl-ampm">${ampm}</span>`
-}
-
-function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
-  const displayPlan = plan.filter(p => p.type !== 'congrats')
-  const views: TimelineSetView[] = []
-  let cursor = startTime.getTime()
-  let currentSetNum = 0
-  let currentPhases: CyclePhase[] = []
-
-  for (const phase of displayPlan) {
-    if (phase.setNumber !== currentSetNum) {
-      if (currentPhases.length > 0) {
-        views.push({
-          label: `Set ${currentSetNum}`,
-          phases: currentPhases,
-          endTime: new Date(cursor)
-        })
-      }
-      currentSetNum = phase.setNumber
-      currentPhases = []
-    }
-    currentPhases.push(phase)
-    cursor += phase.durationMs
-  }
-  if (currentPhases.length > 0) {
-    views.push({
-      label: `Set ${currentSetNum}`,
-      phases: currentPhases,
-      endTime: new Date(cursor)
-    })
-  }
-
-  return views
-}
-
-function buildTimelineBarHTML(timerConfig: TimerConfig): string {
-  const plan = buildCyclePlan(timerConfig)
-  const setViews = buildSetViews(plan, new Date())
-
-  // B/LBの表示幅を調整して視認性を確保（ms単位で比例計算）
-  const displayFlex = (phase: CyclePhase): number => {
-    if (phase.type === 'work') return phase.durationMs
-    if (phase.type === 'long-break') return timerConfig.breakDurationMs * 2
-    return timerConfig.breakDurationMs * 1.5
-  }
-
-  const barParts: string[] = []
-  setViews.forEach((sv, si) => {
-    if (si > 0) barParts.push('<span class="tl-set-sep"></span>')
-    sv.phases.forEach(phase => {
-      barParts.push(
-        `<span class="tl-seg tl-seg-${phase.type}" style="flex:${displayFlex(phase)}">${segLabel(phase.type)}</span>`
-      )
-    })
-  })
-
-  return `<div class="tl-bar">${barParts.join('')}</div>`
-}
-
-function buildTimelineHTML(timerConfig: TimerConfig): string {
-  const plan = buildCyclePlan(timerConfig)
-  const now = new Date()
-  const setViews = buildSetViews(plan, now)
-  const displayPlan = plan.filter(p => p.type !== 'congrats')
-  const totalMs = cycleTotalMs(displayPlan)
-
-  const wLabel = fmtDurationMs(timerConfig.workDurationMs)
-  const bLabel = fmtDurationMs(timerConfig.breakDurationMs)
-
-  const dateLine = fmtDateLine(now)
-  const configLine =
-    `(<span class="tl-config-work">${wLabel}</span> + ` +
-    `<span class="tl-config-break">${bLabel}</span>) ` +
-    `× ${timerConfig.setsPerCycle} Sets = <span class="tl-config-total">${fmtDurationMs(totalMs)}</span>`
-
-  // セットラベル
-  const labels = setViews.map(sv =>
-    `<span class="tl-set-label">${sv.label}</span>`
-  ).join('')
-
-  const bar = buildTimelineBarHTML(timerConfig)
-
-  // 時刻行（開始 + 各セット終了）
-  const timesHTML =
-    `<span>${fmtClock(now)}</span>` +
-    setViews.map(sv => `<span>${fmtClock(sv.endTime)}</span>`).join('')
-
-  return (
-    `<div class="tl-container">` +
-      dateLine +
-      `<div class="tl-config">${configLine}</div>` +
-      `<div class="tl-row">` +
-        `<div class="tl-labels">${labels}</div>` +
-        bar +
-        `<div class="tl-times">${timesHTML}</div>` +
-      `</div>` +
-    `</div>`
-  )
-}
+import { createFreeTimerPanel } from './FreeTimerPanel'
+import { createPomodoroTimerPanel } from './PomodoroTimerPanel'
+import { createCongratsPanel } from './CongratsPanel'
 
 export interface TimerOverlayElements {
   container: HTMLDivElement
@@ -228,115 +28,31 @@ export function createTimerOverlay(
   debugTimer = false
 ): TimerOverlayElements {
 
-  // Pause/Resume/Stop SVGアイコン（WSL2絵文字フォント非対応のためインラインSVG）
-  const pauseIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/><rect x="6.5" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/></svg>'
-  const resumeIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><polygon points="2,1 10,5.5 2,10" fill="currentColor"/></svg>'
-  const stopIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><rect x="1" y="1" width="9" height="9" rx="1" fill="currentColor"/></svg>'
-
-  // 選択肢の定義
-  const workOptions = [25, 50, 90]
-  const breakOptions = [5, 10, 15]
-  const longBreakOptions = [15, 30, 60]
-  const setsOptions = [1, 2, 3, 4]
-
-  // 現在の選択値（ボタングループの状態）。選択肢にない値は先頭にフォールバック
-  let selectedWork = resolveSelected(workOptions, msToMinutes(config.workDurationMs))
-  let selectedBreak = resolveSelected(breakOptions, msToMinutes(config.breakDurationMs))
-  let selectedLongBreak = resolveSelected(longBreakOptions, msToMinutes(config.longBreakDurationMs))
-  let selectedSets = resolveSelected(setsOptions, config.setsPerCycle)
-
-  // ボリュームコントロール
-  const volumeControl = createVolumeControl({
-    audio,
-    sfx,
-    onSoundChange(): void {
-      if (!settingsExpanded) {
-        settingsService.updateSoundConfig({
-          preset: audio.currentPreset,
-          volume: audio.volume,
-          isMuted: audio.isMuted
-        })
-      }
-    }
+  // サブコンポーネント生成
+  const freePanel = createFreeTimerPanel({
+    config, settingsService, orchestrator, audio, sfx, debugTimer
   })
+  const pomodoroPanel = createPomodoroTimerPanel({
+    session, config, orchestrator
+  })
+  const congratsPanel = createCongratsPanel()
 
+  // コンテナ組み立て
   const container = document.createElement('div')
   container.id = 'timer-overlay'
-  function buildSummaryHTML(): string {
-    return buildTimelineHTML(createConfig(
-      selectedWork * 60000, selectedBreak * 60000, selectedLongBreak * 60000, selectedSets
-    ))
-  }
+  container.innerHTML = `<div class="timer-overlay-title">Pomodoro Pet</div>`
 
-  container.innerHTML = `
-    <div class="timer-overlay-title">Pomodoro Pet</div>
-    <span class="timer-set-dots" id="timer-set-dots" style="display:none"></span>
-    <div class="timer-free-mode" id="timer-free-mode">
-      <button class="timer-settings-toggle" id="timer-settings-toggle">☰</button>
-      <div class="timer-settings-summary" id="timer-settings-summary">
-        ${buildSummaryHTML()}
-      </div>
-      <div class="timer-settings" id="timer-settings" style="display:none">
-        <div class="timer-settings-field">
-          <label class="timer-settings-label-work">Work</label>
-          <div class="timer-cfg-group" id="timer-cfg-work-group">
-            ${buildButtonGroup('work', workOptions, selectedWork)}
-          </div>
-        </div>
-        <div class="timer-settings-field">
-          <label class="timer-settings-label-break">Break</label>
-          <div class="timer-cfg-group" id="timer-cfg-break-group">
-            ${buildButtonGroup('break', breakOptions, selectedBreak)}
-          </div>
-        </div>
-        <div class="timer-settings-field">
-          <label class="timer-settings-label-long-break">Long Break</label>
-          <div class="timer-cfg-group" id="timer-cfg-long-break-group">
-            ${buildButtonGroup('long-break', longBreakOptions, selectedLongBreak)}
-          </div>
-        </div>
-        <div class="timer-settings-field">
-          <label>Sets</label>
-          <div class="timer-cfg-group" id="timer-cfg-sets-group">
-            ${buildButtonGroup('sets', setsOptions, selectedSets)}
-          </div>
-        </div>
-      </div>
-      <div id="timer-sound-slot"></div>
-      <button id="btn-confirm-settings" class="timer-btn timer-btn-confirm" style="display:none">Set</button>
-      <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
-    </div>
-    <span id="btn-pause-resume" class="timer-corner-icon" style="display:none">${pauseIconSvg}</span>
-    <span id="btn-exit-pomodoro" class="timer-exit-link" style="display:none">${stopIconSvg}</span>
-    <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
-      <div class="timer-ring-container">
-        <svg class="timer-ring-svg" viewBox="0 0 200 200" width="200" height="200">
-          <circle class="timer-ring-bg" cx="100" cy="100" r="90"
-                  fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
-          <circle class="timer-ring-progress" id="timer-ring-progress" cx="100" cy="100" r="90"
-                  fill="none" stroke="rgba(76,175,80,0.85)" stroke-width="12"
-                  stroke-linecap="round"
-                  stroke-dasharray="565.49" stroke-dashoffset="565.49"
-                  transform="rotate(-90 100 100)"/>
-        </svg>
-        <div class="timer-ring-inner">
-          <span class="timer-phase" id="timer-phase">WORK</span>
-          <span class="timer-display" id="timer-display">25:00</span>
-        </div>
-      </div>
-    </div>
-    <div class="timer-congrats-mode" id="timer-congrats-mode" style="display:none">
-      <div class="congrats-confetti" id="congrats-confetti"></div>
-      <div class="congrats-message">Congratulations!</div>
-      <div class="congrats-sub">Pomodoro cycle completed</div>
-      <div class="congrats-hint"></div>
-    </div>
-  `
+  const titleEl = container.querySelector('.timer-overlay-title') as HTMLDivElement
 
-  // VolumeControlをスロットに挿入
-  const soundSlot = container.querySelector('#timer-sound-slot') as HTMLDivElement
-  soundSlot.replaceWith(volumeControl.container)
+  // overlay直下に配置する要素
+  container.appendChild(pomodoroPanel.dotsEl)
+  container.appendChild(freePanel.container)
+  container.appendChild(pomodoroPanel.pauseResumeEl)
+  container.appendChild(pomodoroPanel.stopEl)
+  container.appendChild(pomodoroPanel.container)
+  container.appendChild(congratsPanel.container)
 
+  // スタイル集約
   const style = document.createElement('style')
   style.textContent = `
     #timer-overlay {
@@ -356,10 +72,7 @@ export function createTimerOverlay(
       pointer-events: none;
       transition: background 0.3s ease;
     }
-    .timer-free-mode,
-    .timer-pomodoro-mode,
     .timer-overlay-title,
-    .timer-settings-toggle,
     #settings-trigger {
       pointer-events: auto;
     }
@@ -373,630 +86,62 @@ export function createTimerOverlay(
       color: rgba(255, 255, 255, 0.6);
       text-align: left;
     }
-    .timer-set-dots {
-      position: absolute;
-      top: 40px;
-      left: 16px;
-      transform: translateY(-50%);
-      font-size: 14px;
-      letter-spacing: 4px;
-      line-height: 1;
-      pointer-events: none;
-    }
-    .timer-settings {
-      display: inline-grid;
-      grid-template-columns: auto auto;
-      gap: 16px 16px;
-      align-items: center;
-      margin-top: 24px;
-      margin-bottom: 24px;
-      padding-right: 20px;
-      text-align: left;
-    }
-    .timer-settings-field {
-      display: contents;
-    }
-    .timer-settings-field label {
-      font-size: 26px;
-      color: #aaa;
-      text-align: right;
-    }
-    .timer-settings-field label.timer-settings-label-work {
-      color: #4caf50;
-    }
-    .timer-settings-field label.timer-settings-label-break {
-      color: #42a5f5;
-    }
-    .timer-settings-field label.timer-settings-label-long-break {
-      color: #ab47bc;
-    }
-    .timer-cfg-group {
-      display: flex;
-      gap: 6px;
-      width: 210px;
-    }
-    .timer-cfg-btn {
-      background: rgba(255, 255, 255, 0.08);
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      border-radius: 6px;
-      color: #999;
-      font-size: 26px;
-      font-weight: 700;
-      flex: 1;
-      padding: 6px 0;
-      cursor: pointer;
-      text-align: center;
-      transition: background 0.15s, color 0.15s, border-color 0.15s;
-      font-variant-numeric: tabular-nums;
-    }
-    .timer-cfg-btn:hover {
-      background: rgba(255, 255, 255, 0.15);
-      color: #ccc;
-    }
-    .timer-cfg-btn.active {
-      background: rgba(255, 255, 255, 0.2);
-      border-color: rgba(255, 255, 255, 0.5);
-      color: #fff;
-    }
-    .timer-cfg-btn[data-cfg="work"] {
-      background: rgba(76, 175, 80, 0.15);
-      border-color: rgba(76, 175, 80, 0.3);
-    }
-    .timer-cfg-btn[data-cfg="work"]:hover {
-      background: rgba(76, 175, 80, 0.25);
-    }
-    .timer-cfg-btn[data-cfg="work"].active {
-      background: rgba(76, 175, 80, 0.35);
-      border-color: rgba(76, 175, 80, 0.6);
-    }
-    .timer-cfg-btn[data-cfg="break"] {
-      background: rgba(66, 165, 245, 0.15);
-      border-color: rgba(66, 165, 245, 0.3);
-    }
-    .timer-cfg-btn[data-cfg="break"]:hover {
-      background: rgba(66, 165, 245, 0.25);
-    }
-    .timer-cfg-btn[data-cfg="break"].active {
-      background: rgba(66, 165, 245, 0.35);
-      border-color: rgba(66, 165, 245, 0.6);
-    }
-    .timer-cfg-btn[data-cfg="long-break"] {
-      background: rgba(171, 71, 188, 0.15);
-      border-color: rgba(171, 71, 188, 0.3);
-    }
-    .timer-cfg-btn[data-cfg="long-break"]:hover {
-      background: rgba(171, 71, 188, 0.25);
-    }
-    .timer-cfg-btn[data-cfg="long-break"].active {
-      background: rgba(171, 71, 188, 0.35);
-      border-color: rgba(171, 71, 188, 0.6);
-    }
-    .timer-settings-toggle {
-      position: absolute;
-      top: 8px;
-      right: 8px;
-      width: 64px;
-      height: 64px;
-      border-radius: 50%;
-      border: none;
-      background: transparent;
-      color: rgba(255, 255, 255, 0.35);
-      font-size: 36px;
-      cursor: pointer;
-      z-index: 1001;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      transition: color 0.2s;
-      padding: 0;
-      line-height: 1;
-      transform: translateY(0px);
-    }
-    .timer-settings-toggle:hover {
-      color: rgba(255, 255, 255, 0.8);
-    }
-    .timer-settings-summary {
-      margin-top: 16px;
-      margin-bottom: 16px;
-    }
-    .tl-container { text-align: center; margin: 16px 0 24px; }
-    .tl-clock { font-size: 80px; color: #fff; text-align: center; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; transform: scaleY(1.2); }
-    .tl-ampm { font-size: 0.8em; color: rgba(255,255,255,0.4); margin-left: 1px; }
-    .tl-date-sub { font-size: 0.6em; color: rgba(255,255,255,0.5); font-weight: 400; }
-    @keyframes tl-blink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0; } }
-    .tl-blink { animation: tl-blink 1s step-end infinite; }
-    .tl-config { font-size: 16px; color: rgba(255,255,255,0.7); margin-bottom: 12px; font-variant-numeric: tabular-nums; background: rgba(255,255,255,0.08); border-radius: 6px; padding: 6px 12px; }
-    .tl-config-work { color: #4caf50; font-weight: 600; }
-    .tl-config-break { color: #42a5f5; font-weight: 600; }
-    .tl-config-lb { color: #ab47bc; font-weight: 600; }
-    .tl-config-total { color: #fff; font-weight: 700; }
-    .tl-row { margin-bottom: 8px; }
-    .tl-labels { display: flex; font-size: 11px; color: rgba(255,255,255,0.5); margin-bottom: 2px; }
-    .tl-set-label { flex: 1; text-align: center; }
-    .tl-bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; gap: 1px; }
-    .tl-seg { display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: rgba(255,255,255,0.8); min-width: 0; overflow: hidden; }
-    .tl-seg-work { background: rgba(76,175,80,0.6); }
-    .tl-seg-break { background: rgba(66,165,245,0.6); }
-    .tl-seg-long-break { background: rgba(171,71,188,0.6); }
-    .tl-set-sep { width: 2px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
-    .tl-times { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-variant-numeric: tabular-nums; }
-    .tl-time-mid { flex: 1; text-align: center; }
-    ${volumeControl.style}
-    .timer-ring-container {
-      position: relative;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 200px;
-      height: 200px;
-      margin: 8px auto 24px;
-    }
-    .timer-ring-svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-    .timer-ring-progress {
-      transition: stroke 0.3s ease;
-    }
-    .timer-ring-inner {
-      position: relative;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 1;
-    }
-    .timer-phase {
-      font-size: 14px;
-      font-weight: 600;
-      letter-spacing: 2px;
-      color: #4caf50;
-    }
-    .timer-phase.break {
-      color: #42a5f5;
-    }
-    .timer-phase.long-break {
-      color: #ab47bc;
-    }
-    .timer-display {
-      font-size: 48px;
-      font-weight: 700;
-      font-variant-numeric: tabular-nums;
-      line-height: 1.1;
-    }
-    .timer-btn {
-      background: rgba(255, 255, 255, 0.15);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.25);
-      border-radius: 6px;
-      padding: 6px 16px;
-      font-size: 13px;
-      cursor: pointer;
-      transition: background 0.2s;
-    }
-    .timer-btn:hover:not(:disabled) {
-      background: rgba(255, 255, 255, 0.25);
-    }
-    .timer-btn:disabled {
-      opacity: 0.4;
-      cursor: default;
-    }
-    .timer-btn-confirm {
-      background: rgba(255, 255, 255, 0.12);
-      border-color: rgba(255, 255, 255, 0.3);
-      font-size: 26px;
-      padding: 14px 24px;
-      width: 100%;
-    }
-    .timer-btn-confirm:hover {
-      background: rgba(255, 255, 255, 0.22);
-    }
-    .timer-btn-primary {
-      background: rgba(76, 175, 80, 0.3);
-      border-color: rgba(76, 175, 80, 0.5);
-      font-size: 33px;
-      padding: 20px 24px;
-      margin-top: 0;
-      width: 100%;
-    }
-    .timer-btn-primary:hover {
-      background: rgba(76, 175, 80, 0.5);
-    }
-    .timer-pomodoro-mode {
-      position: relative;
-    }
-    .timer-corner-icon {
-      position: absolute;
-      top: 40px;
-      right: 34px;
-      transform: translateY(-50%);
-      color: rgba(255, 255, 255, 0.3);
-      cursor: pointer;
-      transition: color 0.2s;
-      line-height: 1;
-      display: inline-flex;
-      align-items: center;
-      padding: 4px;
-      pointer-events: auto;
-    }
-    .timer-corner-icon:hover {
-      color: rgba(255, 255, 255, 0.7);
-    }
-    .timer-exit-link {
-      position: absolute;
-      top: 40px;
-      right: 14px;
-      transform: translateY(-50%);
-      color: rgba(255, 255, 255, 0.3);
-      cursor: pointer;
-      transition: color 0.2s;
-      padding: 4px;
-      pointer-events: auto;
-      display: inline-flex;
-      align-items: center;
-      line-height: 1;
-    }
-    .timer-exit-link:hover {
-      color: rgba(244, 67, 54, 0.6);
-    }
-    .timer-congrats-mode {
-      position: relative;
-      overflow: hidden;
-      padding: 40px 0;
-    }
-    .congrats-message {
-      font-size: 42px;
-      font-weight: 700;
-      color: #ffd54f;
-      text-shadow: 0 0 20px rgba(255, 213, 79, 0.4);
-      margin-bottom: 8px;
-      animation: congrats-pop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .congrats-sub {
-      font-size: 16px;
-      color: rgba(255, 255, 255, 0.7);
-      margin-bottom: 16px;
-    }
-    .congrats-hint {
-      font-size: 12px;
-      color: rgba(255, 255, 255, 0.35);
-      animation: congrats-blink 2s ease-in-out infinite;
-    }
-    @keyframes congrats-pop {
-      0% { transform: scale(0.3); opacity: 0; }
-      100% { transform: scale(1); opacity: 1; }
-    }
-    @keyframes congrats-blink {
-      0%, 100% { opacity: 0.35; }
-      50% { opacity: 0.7; }
-    }
-    .congrats-confetti {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      pointer-events: none;
-      overflow: hidden;
-    }
-    .confetti-piece {
-      position: absolute;
-      width: 8px;
-      height: 8px;
-      top: -10px;
-      animation: confetti-fall linear forwards;
-    }
-    @keyframes confetti-fall {
-      0% { transform: translateY(0) rotate(0deg); opacity: 1; }
-      80% { opacity: 1; }
-      100% { transform: translateY(250px) rotate(720deg); opacity: 0; }
-    }
+    ${freePanel.style}
+    ${pomodoroPanel.style}
+    ${congratsPanel.style}
   `
   document.head.appendChild(style)
 
-  const titleEl = container.querySelector('.timer-overlay-title') as HTMLDivElement
-  const setDotsEl = container.querySelector('#timer-set-dots') as HTMLSpanElement
-  const freeModeEl = container.querySelector('#timer-free-mode') as HTMLDivElement
-  const pomodoroModeEl = container.querySelector('#timer-pomodoro-mode') as HTMLDivElement
-  const congratsModeEl = container.querySelector('#timer-congrats-mode') as HTMLDivElement
-  const confettiEl = container.querySelector('#congrats-confetti') as HTMLDivElement
-  const displayEl = container.querySelector('#timer-display') as HTMLSpanElement
-  const phaseEl = container.querySelector('#timer-phase') as HTMLSpanElement
-  const ringProgressEl = container.querySelector('#timer-ring-progress') as SVGCircleElement
-  const btnConfirmSettings = container.querySelector('#btn-confirm-settings') as HTMLButtonElement
-  const btnEnterPomodoro = container.querySelector('#btn-enter-pomodoro') as HTMLButtonElement
-  const btnPauseResume = container.querySelector('#btn-pause-resume') as HTMLElement
-  const btnExitPomodoro = container.querySelector('#btn-exit-pomodoro') as HTMLElement
-
-  // ボタングループのクリックハンドラ
-  function handleCfgClick(e: Event): void {
-    const target = e.target as HTMLElement
-    if (!target.classList.contains('timer-cfg-btn')) return
-
-    const name = target.dataset.cfg
-    const value = Number(target.dataset.value)
-    if (!name || isNaN(value)) return
-
-    // 選択状態を更新
-    switch (name) {
-      case 'work': selectedWork = value; break
-      case 'break': selectedBreak = value; break
-      case 'long-break': selectedLongBreak = value; break
-      case 'sets': selectedSets = value; break
-    }
-
-    // 同じグループ内のactiveクラスを切り替え
-    const group = target.closest('.timer-cfg-group')
-    if (group) {
-      group.querySelectorAll('.timer-cfg-btn').forEach(btn => btn.classList.remove('active'))
-      target.classList.add('active')
-    }
-
-    // サマリーテキストを更新
-    updateSummary()
-  }
-
-  freeModeEl.addEventListener('click', handleCfgClick)
-
-  // 折りたたみトグル
-  const settingsEl = container.querySelector('#timer-settings') as HTMLDivElement
-  const summaryEl = container.querySelector('#timer-settings-summary') as HTMLDivElement
-  const toggleEl = container.querySelector('#timer-settings-toggle') as HTMLButtonElement
-  let settingsExpanded = false
-
-  // 展開時のスナップショット（Setを押さずに閉じたら復元する）
-  let savedWork = selectedWork
-  let savedBreak = selectedBreak
-  let savedLongBreak = selectedLongBreak
-  let savedSets = selectedSets
-  let savedPreset = audio.currentPreset
-  let savedVolume = audio.volume
-  let savedMuted = audio.isMuted
-  let confirmedBySet = false
-
-  function saveSnapshot(): void {
-    savedWork = selectedWork
-    savedBreak = selectedBreak
-    savedLongBreak = selectedLongBreak
-    savedSets = selectedSets
-    savedPreset = audio.currentPreset
-    savedVolume = audio.volume
-    savedMuted = audio.isMuted
-  }
-
-  function restoreSnapshot(): void {
-    selectedWork = savedWork
-    selectedBreak = savedBreak
-    selectedLongBreak = savedLongBreak
-    selectedSets = savedSets
-    // ボタングループのactiveクラスも復元
-    const groups: Array<{ id: string; value: number }> = [
-      { id: 'timer-cfg-work-group', value: selectedWork },
-      { id: 'timer-cfg-break-group', value: selectedBreak },
-      { id: 'timer-cfg-long-break-group', value: selectedLongBreak },
-      { id: 'timer-cfg-sets-group', value: selectedSets },
-    ]
-    for (const { id, value } of groups) {
-      const group = container.querySelector(`#${id}`)
-      if (!group) continue
-      group.querySelectorAll('.timer-cfg-btn').forEach(btn => {
-        const el = btn as HTMLElement
-        el.classList.toggle('active', Number(el.dataset.value) === value)
-      })
-    }
-    // サウンド状態も復元
-    if (audio.currentPreset !== savedPreset) audio.switchPreset(savedPreset)
-    if (audio.isMuted !== savedMuted) audio.toggleMute()
-    audio.setVolume(savedVolume)
-    volumeControl.updateAll()
-  }
-
-  function updateSummary(): void {
-    summaryEl.innerHTML = buildSummaryHTML()
-  }
-
-  function toggleSettings(): void {
-    settingsExpanded = !settingsExpanded
-
-    if (settingsExpanded) {
-      // 展開時: スナップショットを保存
-      saveSnapshot()
-    } else if (!confirmedBySet) {
-      // Setを押さずに折りたたみ: スナップショットに復元
-      restoreSnapshot()
-    }
-    confirmedBySet = false
-
-    settingsEl.style.display = settingsExpanded ? '' : 'none'
-    // 折りたたみ時はプリセットボタンのみ非表示、ボリュームインジケーターは残す
-    if (settingsExpanded) {
-      volumeControl.showPresets()
-    } else {
-      volumeControl.hidePresets()
-    }
-    if (!settingsExpanded) updateSummary()
-    summaryEl.style.display = settingsExpanded ? 'none' : ''
-    toggleEl.textContent = settingsExpanded ? '×' : '☰'
-    toggleEl.style.transform = settingsExpanded ? 'translateY(-2px)' : 'translateY(0px)'
-    btnConfirmSettings.style.display = settingsExpanded ? '' : 'none'
-    btnEnterPomodoro.style.display = settingsExpanded ? 'none' : ''
-    const gearEl = container.querySelector('#settings-trigger') as HTMLElement | null
-    if (gearEl) gearEl.style.display = settingsExpanded ? '' : 'none'
-  }
-
-  toggleEl.addEventListener('click', toggleSettings)
-
-  btnConfirmSettings.addEventListener('click', () => {
-    settingsService.updateTimerConfig({
-      workMinutes: selectedWork,
-      breakMinutes: selectedBreak,
-      longBreakMinutes: selectedLongBreak,
-      setsPerCycle: selectedSets
-    })
-    settingsService.updateSoundConfig({
-      preset: audio.currentPreset,
-      volume: audio.volume,
-      isMuted: audio.isMuted
-    })
-    confirmedBySet = true
-    toggleSettings()
-  })
-
-  function syncButtonSelection(): void {
-    const cur = settingsService.currentConfig
-    selectedWork = resolveSelected(workOptions, msToMinutes(cur.workDurationMs))
-    selectedBreak = resolveSelected(breakOptions, msToMinutes(cur.breakDurationMs))
-    selectedLongBreak = resolveSelected(longBreakOptions, msToMinutes(cur.longBreakDurationMs))
-    selectedSets = resolveSelected(setsOptions, cur.setsPerCycle)
-
-    const groups: Array<{ id: string; value: number }> = [
-      { id: 'timer-cfg-work-group', value: selectedWork },
-      { id: 'timer-cfg-break-group', value: selectedBreak },
-      { id: 'timer-cfg-long-break-group', value: selectedLongBreak },
-      { id: 'timer-cfg-sets-group', value: selectedSets },
-    ]
-    for (const { id, value } of groups) {
-      const group = container.querySelector(`#${id}`)
-      if (!group) continue
-      group.querySelectorAll('.timer-cfg-btn').forEach(btn => {
-        const el = btn as HTMLElement
-        el.classList.toggle('active', Number(el.dataset.value) === value)
-      })
-    }
-
-    updateSummary()
-  }
-
-  function spawnConfetti(): void {
-    confettiEl.innerHTML = ''
-    const colors = ['#ffd54f', '#ff7043', '#42a5f5', '#66bb6a', '#ab47bc', '#ef5350']
-    const count = 30
-    for (let i = 0; i < count; i++) {
-      const piece = document.createElement('span')
-      piece.className = 'confetti-piece'
-      piece.style.left = `${Math.random() * 100}%`
-      piece.style.background = colors[i % colors.length]
-      piece.style.animationDuration = `${1.5 + Math.random() * 1.5}s`
-      piece.style.animationDelay = `${Math.random() * 0.8}s`
-      piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px'
-      piece.style.width = `${6 + Math.random() * 6}px`
-      piece.style.height = `${6 + Math.random() * 6}px`
-      confettiEl.appendChild(piece)
-    }
-  }
-
+  // モード切替
   function switchToMode(mode: 'free' | 'pomodoro' | 'congrats'): void {
-    freeModeEl.style.display = 'none'
-    pomodoroModeEl.style.display = 'none'
-    congratsModeEl.style.display = 'none'
+    freePanel.container.style.display = 'none'
+    pomodoroPanel.container.style.display = 'none'
+    congratsPanel.container.style.display = 'none'
 
     if (mode === 'free') {
       titleEl.style.display = ''
-      setDotsEl.style.display = 'none'
-      btnPauseResume.style.display = 'none'
-      btnExitPomodoro.style.display = 'none'
-      freeModeEl.style.display = ''
+      pomodoroPanel.dotsEl.style.display = 'none'
+      pomodoroPanel.pauseResumeEl.style.display = 'none'
+      pomodoroPanel.stopEl.style.display = 'none'
+      freePanel.container.style.display = ''
       container.style.background = ''
-      syncButtonSelection()
+      freePanel.syncSettings()
     } else if (mode === 'pomodoro') {
       titleEl.style.display = 'none'
-      setDotsEl.style.display = ''
-      btnPauseResume.style.display = ''
-      btnExitPomodoro.style.display = ''
-      pomodoroModeEl.style.display = ''
-      updateTimerDisplay()
+      pomodoroPanel.dotsEl.style.display = ''
+      pomodoroPanel.pauseResumeEl.style.display = ''
+      pomodoroPanel.stopEl.style.display = ''
+      pomodoroPanel.container.style.display = ''
+      pomodoroPanel.updateDisplay()
+      pomodoroPanel.applyTint(container)
     } else if (mode === 'congrats') {
       titleEl.style.display = 'none'
-      setDotsEl.style.display = 'none'
-      btnPauseResume.style.display = 'none'
-      btnExitPomodoro.style.display = 'none'
-      congratsModeEl.style.display = ''
-      spawnConfetti()
+      pomodoroPanel.dotsEl.style.display = 'none'
+      pomodoroPanel.pauseResumeEl.style.display = 'none'
+      pomodoroPanel.stopEl.style.display = 'none'
+      congratsPanel.container.style.display = ''
+      congratsPanel.spawnConfetti()
     }
   }
 
-  let lastIsRunning: boolean | null = null
-
-  const RING_CIRCUMFERENCE = 2 * Math.PI * 90 // ≈ 565.49
-
-  function updateTimerDisplay(): void {
-    const phase = session.currentPhase.type
-    const colors = phaseColor(phase)
-    displayEl.textContent = formatTime(session.remainingMs)
-    phaseEl.textContent = phaseLabel(phase)
-    phaseEl.className = `timer-phase ${phase !== 'work' ? phase : ''}`
-    if (session.isRunning !== lastIsRunning) {
-      lastIsRunning = session.isRunning
-      btnPauseResume.innerHTML = session.isRunning ? pauseIconSvg : resumeIconSvg
-    }
-
-    // 円形プログレスリング更新
-    const dur = session.currentPhase.durationMs
-    const ringProgress = Math.max(0, Math.min(1, (dur - session.remainingMs) / dur))
-    const offset = RING_CIRCUMFERENCE * (1 - ringProgress)
-    ringProgressEl.style.strokeDashoffset = String(offset)
-    ringProgressEl.style.stroke = colors.filled
-
-    // タイマー数字にフェーズカラー
-    displayEl.style.color = colors.filled
-
-    // サイクル進捗ドット（フェーズ単位）
-    const plan = buildCyclePlan(config).filter(p => p.type !== 'congrats')
-    const currentIdx = plan.findIndex(
-      p => p.setNumber === session.currentSet && p.type === phase
-    )
-    const dots = plan.map((p, i) => {
-      const c = phaseColor(p.type)
-      const color = i < currentIdx ? 'rgba(255,255,255,0.7)'
-        : i === currentIdx ? c.filled
-        : 'rgba(255,255,255,0.2)'
-      return `<span style="color:${color}">●</span>`
-    }).join('')
-    setDotsEl.innerHTML = dots
-
-    // 背景ティント（時間経過で濃くなるグラデーション）
-    container.style.background = overlayTintBg(phase, ringProgress)
-  }
-
-  btnEnterPomodoro.addEventListener('click', () => {
-    // デバッグタイマー時はデバッグ値を維持するため設定更新をスキップ
-    if (!debugTimer) {
-      settingsService.updateTimerConfig({
-        workMinutes: selectedWork,
-        breakMinutes: selectedBreak,
-        longBreakMinutes: selectedLongBreak,
-        setsPerCycle: selectedSets
-      })
-    }
-
-    // SettingsChanged → session再作成が同期的に完了した後、pomodoroに遷移
-    orchestrator.startPomodoro()
+  // EventBus購読
+  const unsubTick = bus.subscribe('TimerTicked', () => {
+    pomodoroPanel.updateDisplay()
+    pomodoroPanel.applyTint(container)
   })
-
-  btnPauseResume.addEventListener('click', () => {
-    if (session.isRunning) {
-      orchestrator.pause()
-    } else {
-      orchestrator.resume()
-    }
-    updateTimerDisplay()
-  })
-
-  btnExitPomodoro.addEventListener('click', () => {
-    orchestrator.exitPomodoro()
-  })
-
-  const unsubTick = bus.subscribe('TimerTicked', () => updateTimerDisplay())
   const unsubPhase = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
     if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
       switchToMode('congrats')
     } else if (event.type === 'PhaseStarted') {
       switchToMode('pomodoro')
-      updateTimerDisplay()
+      pomodoroPanel.updateDisplay()
+      pomodoroPanel.applyTint(container)
     }
   })
-  const unsubReset = bus.subscribe('TimerReset', () => updateTimerDisplay())
+  const unsubReset = bus.subscribe('TimerReset', () => {
+    pomodoroPanel.updateDisplay()
+    pomodoroPanel.applyTint(container)
+  })
   const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
     if (event.type === 'AppSceneChanged') {
       if (event.scene === 'free' || event.scene === 'pomodoro') {
@@ -1005,11 +150,7 @@ export function createTimerOverlay(
     }
   })
 
-  // 折りたたみ時は1秒ごとに時計を更新（開発時はコメントアウト）
-  const clockInterval = setInterval(() => {
-    if (!settingsExpanded) updateSummary()
-  }, 1000)
-
+  // 初期シーン判定
   const initialScene = orchestrator.sceneManager.currentScene
   if (initialScene === 'free' || initialScene === 'pomodoro') {
     switchToMode(initialScene)
@@ -1018,10 +159,10 @@ export function createTimerOverlay(
   return {
     container,
     refreshVolume() {
-      volumeControl.updateAll()
+      freePanel.refreshVolume()
     },
     dispose() {
-      clearInterval(clockInterval)
+      freePanel.dispose()
       unsubTick()
       unsubPhase()
       unsubReset()

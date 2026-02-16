@@ -107,7 +107,10 @@ EventBus（UI/インフラ通知）:
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定を統合。☰/×トグルで折りたたみ、タイムラインサマリーに切替。pomodoroモードはSVG円形プログレスリング（200px, r=90）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過で濃化）。左肩にサイクル進捗ドット（フェーズ単位）、右肩にpause/stopアイコン。起動時に`refreshVolume()`で保存済み音量設定を即時反映
+- `ui/TimerOverlay.ts` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、EventBus購読でモード切替（free/pomodoro/congrats）を管理。dispose集約
+- `ui/FreeTimerPanel.ts` — freeモード。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元
+- `ui/PomodoroTimerPanel.ts` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過で濃化）。左肩にサイクル進捗ドット、右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`をexport
+- `ui/CongratsPanel.ts` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.ts` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント
 - `ui/PromptInput.ts` — プロンプト入力（下部中央）
 - `ui/SettingsPanel.ts` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）

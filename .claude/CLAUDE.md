@@ -67,8 +67,11 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `ui/TimerOverlay` — 3モード（free/pomodoro/congrats）のUI切替。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）を統合。折りたたみ機能（☰/×トグル）で設定行を畳み、タイムラインサマリー（色分き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。pomodoroモードはSVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット（フェーズ単位、完了=白、現在=フェーズカラー、未到達=半透明）。タイトル行の右肩にpause/stopアイコン。congratsモードは祝福メッセージ＋CSS紙吹雪エフェクト、クリックでdismiss。`refreshVolume()`で起動時の音量設定即時反映
-- `ui/VolumeControl` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。TimerOverlayから利用
+- `ui/TimerOverlay` — モード遷移コーディネーター（~170行）。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、EventBus購読でモード切替（free/pomodoro/congrats）を管理。`TimerOverlayElements`インターフェースで外部API（container, refreshVolume, dispose）を公開
+- `ui/FreeTimerPanel` — freeモード（~630行）。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。`refreshVolume()`で起動時の音量設定即時反映
+- `ui/PomodoroTimerPanel` — pomodoroモード（~280行）。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット（フェーズ単位、完了=白、現在=フェーズカラー、未到達=半透明）。右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`純粋関数をexport
+- `ui/CongratsPanel` — congratsモード（~95行）。祝福メッセージ＋CSS紙吹雪エフェクト
+- `ui/VolumeControl` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。FreeTimerPanelから利用
 - `ui/PromptInput` — プロンプト入力UI
 - `ui/SettingsPanel` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
 
