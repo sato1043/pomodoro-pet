@@ -3,6 +3,7 @@ import { createEventBus, type EventBus } from '../../../src/domain/shared/EventB
 import { bridgeTimerToSfx, type AudioControl } from '../../../src/application/timer/TimerSfxBridge'
 import type { SfxPlayer } from '../../../src/infrastructure/audio/SfxPlayer'
 import type { TimerEvent } from '../../../src/domain/timer/events/TimerEvents'
+import type { PomodoroEvent } from '../../../src/application/timer/PomodoroEvents'
 
 function createMockSfxPlayer(): SfxPlayer & { playCalls: string[]; loopCalls: string[] } {
   const playCalls: string[] = []
@@ -492,6 +493,43 @@ describe('TimerSfxBridge', () => {
       })
 
       expect(sfx.playLoop).toHaveBeenCalledWith('/audio/custom-getset.mp3', 3000, 1.0)
+    })
+
+    it('PomodoroAborted → exit音を再生する', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<PomodoroEvent>('PomodoroAborted', {
+        type: 'PomodoroAborted',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/pomodoro-exit.mp3', 1.0)
+    })
+
+    it('PomodoroCompleted → exit音を再生しない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<PomodoroEvent>('PomodoroCompleted', {
+        type: 'PomodoroCompleted',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalledWith('./audio/pomodoro-exit.mp3', expect.anything())
+    })
+
+    it('TimerReset → exit音を再生しない（BGM停止+環境音復帰のみ）', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+      sfx.playCalls.length = 0
+
+      bus.publish<TimerEvent>('TimerReset', { type: 'TimerReset' })
+
+      expect(sfx.playCalls).not.toContain('./audio/pomodoro-exit.mp3')
     })
 
     it('カスタムgain指定 → 各再生に反映される', () => {

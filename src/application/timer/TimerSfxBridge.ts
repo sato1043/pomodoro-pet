@@ -7,6 +7,7 @@
 import type { EventBus } from '../../domain/shared/EventBus'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import type { PomodoroEvent } from './PomodoroEvents'
 
 export interface TimerSfxConfig {
   workStartUrl: string
@@ -21,6 +22,8 @@ export interface TimerSfxConfig {
   breakChillGain: number
   breakGetsetUrl: string
   breakGetsetGain: number
+  exitUrl: string
+  exitGain: number
 }
 
 /** 環境音制御用の最小インターフェース */
@@ -44,7 +47,9 @@ const DEFAULT_CONFIG: TimerSfxConfig = {
   breakChillUrl: './audio/break-chill.mp3',
   breakChillGain: 1.0,
   breakGetsetUrl: './audio/break-getset.mp3',
-  breakGetsetGain: 1.0
+  breakGetsetGain: 1.0,
+  exitUrl: './audio/pomodoro-exit.mp3',
+  exitGain: 1.0
 }
 
 export function bridgeTimerToSfx(
@@ -131,11 +136,18 @@ export function bridgeTimerToSfx(
     }
   })
 
+  const unsubAborted = bus.subscribe<PomodoroEvent>('PomodoroAborted', (event) => {
+    if (event.type === 'PomodoroAborted') {
+      sfx.play(cfg.exitUrl, cfg.exitGain).catch(() => {})
+    }
+  })
+
   return () => {
     unsubPhaseCompleted()
     unsubPhaseStarted()
     unsubTrigger()
     unsubPaused()
     unsubReset()
+    unsubAborted()
   }
 }

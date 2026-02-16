@@ -254,6 +254,7 @@ function buildTimelineHTML(timerConfig: TimerConfig): string {
 
 export interface TimerOverlayElements {
   container: HTMLDivElement
+  refreshVolume: () => void
   dispose: () => void
 }
 
@@ -268,9 +269,10 @@ export function createTimerOverlay(
   debugTimer = false
 ): TimerOverlayElements {
 
-  // Pause/Resume SVGアイコン（WSL2絵文字フォント非対応のためインラインSVG）
+  // Pause/Resume/Stop SVGアイコン（WSL2絵文字フォント非対応のためインラインSVG）
   const pauseIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><rect x="2" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/><rect x="6.5" y="1" width="2.5" height="9" rx="0.5" fill="currentColor"/></svg>'
   const resumeIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><polygon points="2,1 10,5.5 2,10" fill="currentColor"/></svg>'
+  const stopIconSvg = '<svg width="11" height="11" viewBox="0 0 11 11"><rect x="1" y="1" width="9" height="9" rx="1" fill="currentColor"/></svg>'
 
   // 選択肢の定義
   const workOptions = [25, 50, 90]
@@ -346,7 +348,7 @@ export function createTimerOverlay(
     </div>
     <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
       <span id="btn-pause-resume" class="timer-corner-icon">${pauseIconSvg}</span>
-      <span id="btn-exit-pomodoro" class="timer-exit-link">exit</span>
+      <span id="btn-exit-pomodoro" class="timer-exit-link">${stopIconSvg}</span>
       <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
       <div class="timer-phase-time">
         <span class="timer-phase" id="timer-phase">WORK</span>
@@ -630,13 +632,15 @@ export function createTimerOverlay(
     .timer-corner-icon {
       position: absolute;
       top: 0;
-      right: 28px;
+      right: 18px;
       color: rgba(255, 255, 255, 0.3);
       cursor: pointer;
       transition: color 0.2s;
       line-height: 1;
       display: inline-flex;
       align-items: center;
+      padding: 4px;
+      pointer-events: auto;
     }
     .timer-corner-icon:hover {
       color: rgba(255, 255, 255, 0.7);
@@ -646,9 +650,13 @@ export function createTimerOverlay(
       top: 0;
       right: 0;
       color: rgba(255, 255, 255, 0.3);
-      font-size: 11px;
       cursor: pointer;
       transition: color 0.2s;
+      padding: 4px;
+      pointer-events: auto;
+      display: inline-flex;
+      align-items: center;
+      line-height: 1;
     }
     .timer-exit-link:hover {
       color: rgba(244, 67, 54, 0.6);
@@ -919,6 +927,7 @@ export function createTimerOverlay(
   const pomodoroTimelineEl = container.querySelector('#timer-pomodoro-timeline') as HTMLDivElement
   let lastActiveSet = -1
   let lastActiveType: PhaseType | '' = ''
+  let lastIsRunning: boolean | null = null
 
   function updateTimerDisplay(): void {
     const phase = session.currentPhase.type
@@ -928,7 +937,10 @@ export function createTimerOverlay(
     setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
     flowEl.textContent = buildFlowText(buildCyclePlan(config), phase, session.currentSet)
     progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
-    btnPauseResume.innerHTML = session.isRunning ? pauseIconSvg : resumeIconSvg
+    if (session.isRunning !== lastIsRunning) {
+      lastIsRunning = session.isRunning
+      btnPauseResume.innerHTML = session.isRunning ? pauseIconSvg : resumeIconSvg
+    }
 
     // タイムラインバー: フェーズ変更時のみDOM更新
     const curSet = session.currentSet
@@ -1010,6 +1022,9 @@ export function createTimerOverlay(
 
   return {
     container,
+    refreshVolume() {
+      volumeControl.updateAll()
+    },
     dispose() {
       clearInterval(clockInterval)
       unsubTick()

@@ -83,9 +83,11 @@
 - `package.json`の`build.win.icon`に`build/icon.ico`を設定済み
 - タスクバー（32x32）での視認性に限界あり。改善には小サイズ用の簡略化デザインが必要
 
-### ポモドーロタイマーの操作ボタン整理
-- Pauseボタンは不要（削除する）
-- Exitボタンはなるべく目立たせない（誤操作防止）
+### ~~ポモドーロタイマーの操作ボタン整理~~ — 完了
+- Pause/Resumeボタン削除 → 右肩SVGアイコン（❚❚/▶）に置換
+- Exitボタン削除 → 右肩SVG停止アイコン（■）に置換（控えめ表示、誤操作防止）
+- `PomodoroAborted`/`PomodoroCompleted`ドメインイベントを新設し、手動中断時に`pomodoro-exit.mp3`を再生
+- 起動時の音量設定復元・AudioAdapter初期値ミュート化
 
 ### シーンチェンジ演出
 - free↔pomodoro等のAppScene遷移時に表示上の演出を挟む仕組みを導入する

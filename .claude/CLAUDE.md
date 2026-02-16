@@ -55,19 +55,19 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### アプリケーション層 (`src/application/`)
 
-- `PomodoroOrchestrator` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック（onBehaviorChange）、EventBusはUI/インフラ通知のみ。CycleCompleted時に自動でexitPomodoro。`phaseToPreset()`でフェーズ→BehaviorPresetマッピング
+- `PomodoroOrchestrator` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック（onBehaviorChange）、EventBusはUI/インフラ通知のみ。CycleCompleted時に自動でexitPomodoro。`phaseToPreset()`でフェーズ→BehaviorPresetマッピング。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行（`PomodoroEvents.ts`で型定義）
 - `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoroがAppSceneEvent[]を返す
 - `AppSettingsService` — タイマー設定＋サウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
-- `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能
+- `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能
 
 ### アダプター層 (`src/adapters/`)
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `ui/TimerOverlay` — 3モード（free/pomodoro/congrats）のUI切替。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）を統合。折りたたみ機能（☰/×トグル）で設定行を畳み、タイムラインサマリー（色分き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。congratsモードは祝福メッセージ＋CSS紙吹雪エフェクト、クリックでdismiss
+- `ui/TimerOverlay` — 3モード（free/pomodoro/congrats）のUI切替。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）を統合。折りたたみ機能（☰/×トグル）で設定行を畳み、タイムラインサマリー（色分き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。pomodoroモードは右肩にSVGアイコン（pause❚❚/resume▶、stop■）を配置（ボタンではなくspanで控えめに表示）。congratsモードは祝福メッセージ＋CSS紙吹雪エフェクト、クリックでdismiss。`refreshVolume()`で起動時の音量設定即時反映
 - `ui/VolumeControl` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。TimerOverlayから利用
 - `ui/PromptInput` — プロンプト入力UI
 - `ui/SettingsPanel` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
@@ -81,7 +81,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
-- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング（AudioAdapterも同様）
+- `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング
 
 ## Static Assets
 

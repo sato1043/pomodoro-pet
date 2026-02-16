@@ -196,6 +196,7 @@ async function main(): Promise<void> {
 
   // 保存済み設定の復元（購読登録後に実行）
   await settingsService.loadFromStorage()
+  timerUI.refreshVolume()
 
   // プロンプト入力UI
   const promptUI = createPromptInput(character, behaviorSM, charHandle)

@@ -282,7 +282,8 @@ PomodoroOrchestratorが直接コールバック（`onBehaviorChange`）でプリ
 | `src/domain/character/value-objects/BehaviorPreset.ts` | 5種のプリセット定義 |
 | `src/domain/character/services/BehaviorStateMachine.ts` | applyPreset()でプリセット適用 |
 | `src/application/timer/PomodoroOrchestrator.ts` | フェーズ→プリセット切替の一元管理 |
-| `tests/application/timer/PomodoroOrchestrator.test.ts` | テスト（22件） |
+| `src/application/timer/PomodoroEvents.ts` | PomodoroAborted/PomodoroCompletedイベント型 |
+| `tests/application/timer/PomodoroOrchestrator.test.ts` | テスト（25件） |
 
 ## Layer 4: CharacterState
 
@@ -354,11 +355,31 @@ PomodoroOrchestrator
   │     session.start()                → EventBus(PhaseStarted)
   │     onBehaviorChange(現フェーズ)     （直接コールバック）
   │
-  └── exitPomodoro()
-        AppSceneManager.exitPomodoro() → EventBus(AppSceneChanged)
-        session.reset()                → EventBus(TimerReset)
-        onBehaviorChange(autonomous)    （直接コールバック）
+  ├── exitPomodoro()  ← 手動中断
+  │     doExitPomodoro('abort')
+  │       AppSceneManager.exitPomodoro() → EventBus(AppSceneChanged)
+  │       session.reset()                → EventBus(TimerReset)
+  │       onBehaviorChange(autonomous)    （直接コールバック）
+  │       EventBus(PomodoroAborted)       → TimerSfxBridge（exit音再生）
+  │
+  └── [CycleCompleted検出時]  ← サイクル完了
+        doExitPomodoro('complete')
+          AppSceneManager.exitPomodoro() → EventBus(AppSceneChanged)
+          session.reset()                → EventBus(TimerReset)
+          onBehaviorChange(autonomous)    （直接コールバック）
+          EventBus(PomodoroCompleted)
 ```
+
+### ポモドーロライフサイクルイベント
+
+```typescript
+type PomodoroEvent =
+  | { type: 'PomodoroAborted'; timestamp: number }
+  | { type: 'PomodoroCompleted'; timestamp: number }
+```
+
+- `PomodoroAborted` — ユーザーがstopアイコンで手動中断した場合に発行。TimerSfxBridgeが`pomodoro-exit.mp3`を再生
+- `PomodoroCompleted` — CycleCompleted（全セット完了）による自動終了時に発行
 
 階層間連動は直接コールバック。EventBusはUI/インフラ層への通知のみ。
 

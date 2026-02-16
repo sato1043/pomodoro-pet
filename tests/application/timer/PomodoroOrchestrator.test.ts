@@ -7,6 +7,7 @@ import { createConfig } from '../../../src/domain/timer/value-objects/TimerConfi
 import { CONGRATS_DURATION_MS } from '../../../src/domain/timer/value-objects/CyclePlan'
 import type { TimerEvent } from '../../../src/domain/timer/events/TimerEvents'
 import type { AppSceneEvent } from '../../../src/application/app-scene/AppScene'
+import type { PomodoroEvent } from '../../../src/application/timer/PomodoroEvents'
 import type { CharacterBehavior } from '../../../src/domain/character/value-objects/BehaviorPreset'
 
 describe('PomodoroOrchestrator', () => {
@@ -124,6 +125,29 @@ describe('PomodoroOrchestrator', () => {
       expect(behaviorChanges).toContain('autonomous')
     })
 
+    it('PomodoroAbortedをEventBusに発行する', () => {
+      orchestrator.startPomodoro()
+
+      const received: PomodoroEvent[] = []
+      bus.subscribe<PomodoroEvent>('PomodoroAborted', (e) => received.push(e))
+
+      orchestrator.exitPomodoro()
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({ type: 'PomodoroAborted' })
+    })
+
+    it('PomodoroCompletedは発行しない', () => {
+      orchestrator.startPomodoro()
+
+      const received: PomodoroEvent[] = []
+      bus.subscribe<PomodoroEvent>('PomodoroCompleted', (e) => received.push(e))
+
+      orchestrator.exitPomodoro()
+
+      expect(received).toHaveLength(0)
+    })
+
     it('freeの時にexitPomodoroしても何もしない', () => {
       const received: AppSceneEvent[] = []
       bus.subscribe<AppSceneEvent>('AppSceneChanged', (e) => received.push(e))
@@ -231,6 +255,30 @@ describe('PomodoroOrchestrator', () => {
       expect(sceneManager.currentScene).toBe('free')
       expect(s.isRunning).toBe(false)
       expect(behaviorChanges).toContain('autonomous')
+    })
+
+    it('CycleCompleted時にPomodoroCompletedを発行する', () => {
+      const singleSetConfig = createConfig(3000, 2000, 4000, 1)
+      const s = createPomodoroStateMachine(singleSetConfig)
+      const orch = createPomodoroOrchestrator({
+        bus,
+        sceneManager,
+        session: s,
+        onBehaviorChange: () => {}
+      })
+
+      orch.startPomodoro()
+
+      const received: PomodoroEvent[] = []
+      bus.subscribe<PomodoroEvent>('PomodoroCompleted', (e) => received.push(e))
+      bus.subscribe<PomodoroEvent>('PomodoroAborted', (e) => received.push(e))
+
+      orch.tick(3000)
+      orch.tick(CONGRATS_DURATION_MS)
+      orch.tick(2000)
+
+      expect(received).toHaveLength(1)
+      expect(received[0]).toMatchObject({ type: 'PomodoroCompleted' })
     })
 
     it('CycleCompleted時にAppSceneChanged(free)がEventBusに発行される', () => {

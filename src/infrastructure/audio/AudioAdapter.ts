@@ -18,8 +18,8 @@ export function createAudioAdapter(): AudioAdapter {
   let masterGain: GainNode | null = null
   let activeNodes: AudioNode[] = []
   let currentPreset: SoundPreset = 'silence'
-  let volume = 0.5
-  let isMuted = false
+  let volume = 0
+  let isMuted = true
 
   function ensureContext(): { ctx: AudioContext; masterGain: GainNode } {
     if (!ctx) {

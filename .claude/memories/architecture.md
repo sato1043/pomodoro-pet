@@ -38,6 +38,8 @@ EventBus（UI/インフラ通知）:
   PhaseStarted/PhaseCompleted/TimerTicked/TimerPaused/TimerReset → TimerOverlay
   PhaseCompleted(work)/PhaseStarted(congrats) → TimerSfxBridge
   TriggerFired(break-getset/long-break-getset) → TimerSfxBridge（休憩BGM切替）
+  PomodoroAborted → TimerSfxBridge（exit音再生）
+  PomodoroCompleted → （現在は購読者なし、将来の統計機能等で利用）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
 ```
@@ -95,16 +97,17 @@ EventBus（UI/インフラ通知）:
 - `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro）。純粋な状態ホルダー（EventBus不要）
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoadedイベント型定義
-- `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ
+- `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
+- `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
-- `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）
+- `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定を統合。☰/×トグルで折りたたみ、タイムラインサマリーに切替
+- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定を統合。☰/×トグルで折りたたみ、タイムラインサマリーに切替。pomodoroモードは右肩にSVGアイコン（pause❚❚/resume▶、stop■）を配置。起動時に`refreshVolume()`で保存済み音量設定を即時反映
 - `ui/VolumeControl.ts` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント
 - `ui/PromptInput.ts` — プロンプト入力（下部中央）
 - `ui/SettingsPanel.ts` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
@@ -117,7 +120,7 @@ EventBus（UI/インフラ通知）:
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkSpecベース、中央帯回避配置、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
-- `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング
+- `audio/AudioAdapter.ts` — 再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止）
 - `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング
 
 ### src/ — エントリ
@@ -125,7 +128,7 @@ EventBus（UI/インフラ通知）:
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 271件
+### tests/ — 280件
 - `domain/timer/PomodoroStateMachine.test.ts` — 53件
 - `domain/timer/CyclePlan.test.ts` — 7件
 - `domain/timer/TimerConfig.test.ts` — 10件
@@ -137,6 +140,6 @@ EventBus（UI/インフラ通知）:
 - `application/character/InterpretPrompt.test.ts` — 17件
 - `application/environment/ScrollUseCase.test.ts` — 11件
 - `application/settings/AppSettingsService.test.ts` — 13件
-- `application/timer/PomodoroOrchestrator.test.ts` — 22件
-- `application/timer/TimerSfxBridge.test.ts` — 27件
+- `application/timer/PomodoroOrchestrator.test.ts` — 25件
+- `application/timer/TimerSfxBridge.test.ts` — 30件
 - `setup.test.ts` — 1件

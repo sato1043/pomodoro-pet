@@ -11,6 +11,7 @@ import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import type { AppSceneManager } from '../app-scene/AppSceneManager'
 import type { AppSceneEvent } from '../app-scene/AppScene'
 import type { CharacterBehavior } from '../../domain/character/value-objects/BehaviorPreset'
+import type { PomodoroEvent } from './PomodoroEvents'
 
 /** フェーズ → BehaviorPreset の純粋マッピング */
 export function phaseToPreset(phase: PhaseType): CharacterBehavior {
@@ -58,12 +59,21 @@ export function createPomodoroOrchestrator(
     }
   }
 
-  function doExitPomodoro(): void {
+  function publishPomodoroEvent(event: PomodoroEvent): void {
+    bus.publish(event.type, event)
+  }
+
+  function doExitPomodoro(reason: 'abort' | 'complete'): void {
     const sceneEvents = sceneManager.exitPomodoro()
     if (sceneEvents.length === 0) return
     publishSceneEvents(sceneEvents)
     publishTimerEvents(session.reset())
     onBehaviorChange('autonomous')
+    publishPomodoroEvent(
+      reason === 'abort'
+        ? { type: 'PomodoroAborted', timestamp: Date.now() }
+        : { type: 'PomodoroCompleted', timestamp: Date.now() }
+    )
   }
 
   return {
@@ -82,7 +92,7 @@ export function createPomodoroOrchestrator(
     },
 
     exitPomodoro(): void {
-      doExitPomodoro()
+      doExitPomodoro('abort')
     },
 
     pause(): void {
@@ -118,7 +128,7 @@ export function createPomodoroOrchestrator(
 
       // CycleCompleted後の自動遷移（イベント発行後に実行）
       if (hasCycleCompleted) {
-        doExitPomodoro()
+        doExitPomodoro('complete')
       }
     },
 
