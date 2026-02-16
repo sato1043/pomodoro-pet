@@ -95,6 +95,7 @@ EventBus（UI/インフラ通知）:
 ### src/application/ — ユースケース
 - `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings）とAppSceneEvent型
 - `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro）。純粋な状態ホルダー（EventBus不要）
+- `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()/displaySceneToMode()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoadedイベント型定義
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
@@ -107,7 +108,8 @@ EventBus（UI/インフラ通知）:
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、EventBus購読でモード切替（free/pomodoro/congrats）を管理。dispose集約
+- `ui/TimerOverlay.ts` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）を管理。microtaskコアレシングでEventBusイベントを1回のトランジションに集約。dispose集約
+- `ui/SceneTransition.ts` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。playBlackout(cb): opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。再生中の呼び出しはcb()のみ即実行
 - `ui/FreeTimerPanel.ts` — freeモード。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元
 - `ui/PomodoroTimerPanel.ts` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過で濃化）。左肩にサイクル進捗ドット、右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`をexport
 - `ui/CongratsPanel.ts` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト

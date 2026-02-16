@@ -89,14 +89,15 @@
 - `PomodoroAborted`/`PomodoroCompleted`ドメインイベントを新設し、手動中断時に`pomodoro-exit.mp3`を再生
 - 起動時の音量設定復元・AudioAdapter初期値ミュート化
 
-### シーンチェンジ演出
-- free↔pomodoro等のAppScene遷移時に表示上の演出を挟む仕組みを導入する
-- 映画的なシーンチェンジ（暗転、フェードイン/アウト等）を可能にする
-- まずは暗転（フェードアウト→フェードイン）のみ実装する
-- AppScene遷移だけでなくwork↔breakのフェーズ切替にも適用できるよう汎用化する
-- 映像演出と効果音演出を統合管理する設計を検討する
-  - 特定の演出では映像のみ・効果音のみの定義でもよいが、基盤としては統合されているほうが有意義
-  - 例: 暗転（映像のみ）、ファンファーレ（音のみ）、congrats（映像+音）など一元的に扱える
+### ~~シーンチェンジ演出~~ — 完了
+- 宣言的シーン遷移グラフ（`DISPLAY_SCENE_GRAPH`）で全遷移ルールをテーブル定義
+- `DisplayScene`型（AppScene+PhaseTypeの結合キー）で5つの表示シーンを定義
+- `DisplayTransitionState`によるテーブルルックアップで遷移効果を解決
+- `SceneTransition`による全画面暗転オーバレイ（350ms フェードアウト→モード切替→350ms フェードイン）
+- microtaskコアレシングで同期バッチイベント（AppSceneChanged+PhaseStarted）を1回のトランジションに集約
+- free→pomodoro、break/long-break→work、congrats→free: blackout。work→break/long-break/congrats: immediate（暗転なし）
+- 将来拡張: `TransitionEffect`にcrossfade/wipe追加、`TransitionRule`にaudioフィールド追加で映像+音声統合管理
+- 詳細: [scene-transition-design.md](scene-transition-design.md)
 
 ### メインプロセスのESM化検討
 - 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない

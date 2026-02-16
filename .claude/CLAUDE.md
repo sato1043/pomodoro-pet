@@ -57,6 +57,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 - `PomodoroOrchestrator` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック（onBehaviorChange）、EventBusはUI/インフラ通知のみ。CycleCompleted時に自動でexitPomodoro。`phaseToPreset()`でフェーズ→BehaviorPresetマッピング。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行（`PomodoroEvents.ts`で型定義）
 - `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoroがAppSceneEvent[]を返す
+- `DisplayTransition` — 宣言的シーン遷移グラフ。`DisplayScene`型（AppScene+PhaseTypeの結合キー）、`DISPLAY_SCENE_GRAPH`定数（遷移ルールのテーブル）、`DisplayTransitionState`（テーブルルックアップによる状態管理）。`toDisplayScene()`/`displaySceneToMode()`変換ヘルパー
 - `AppSettingsService` — タイマー設定＋サウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
@@ -67,7 +68,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `ui/TimerOverlay` — モード遷移コーディネーター（~170行）。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、EventBus購読でモード切替（free/pomodoro/congrats）を管理。`TimerOverlayElements`インターフェースで外部API（container, refreshVolume, dispose）を公開
+- `ui/TimerOverlay` — モード遷移コーディネーター（~215行）。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）を管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約し、同期バッチイベントを1回のトランジションにまとめる。`TimerOverlayElements`インターフェースで外部API（container, refreshVolume, dispose）を公開
+- `ui/SceneTransition` — 暗転レンダリング（~55行）。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。CSSトランジション + setTimeout。再生中の呼び出しはcb()のみ即実行
 - `ui/FreeTimerPanel` — freeモード（~630行）。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。`refreshVolume()`で起動時の音量設定即時反映
 - `ui/PomodoroTimerPanel` — pomodoroモード（~280行）。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット（フェーズ単位、完了=白、現在=フェーズカラー、未到達=半透明）。右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel` — congratsモード（~95行）。祝福メッセージ＋CSS紙吹雪エフェクト
@@ -132,6 +134,7 @@ VITE_DEV_PORT=3000
 - [app-mode-design.md](.claude/memories/app-mode-design.md) — AppScene（free/pomodoro/settings）設計文書
 - [fbx-integration.md](.claude/memories/fbx-integration.md) — FBXモデル導入ノウハウ
 - [interaction-design.md](.claude/memories/interaction-design.md) — インタラクション設計（ジェスチャー判定・拡張ガイド）
+- [scene-transition-design.md](.claude/memories/scene-transition-design.md) — シーンチェンジ演出（暗転トランジション）設計
 
 ## Key Conventions
 

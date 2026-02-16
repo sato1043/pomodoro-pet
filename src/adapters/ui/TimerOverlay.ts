@@ -7,6 +7,13 @@ import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrche
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import {
+  createDisplayTransitionState,
+  toDisplayScene,
+  displaySceneToMode,
+  type DisplayScene
+} from '../../application/app-scene/DisplayTransition'
+import { createSceneTransition } from './SceneTransition'
 import { createFreeTimerPanel } from './FreeTimerPanel'
 import { createPomodoroTimerPanel } from './PomodoroTimerPanel'
 import { createCongratsPanel } from './CongratsPanel'
@@ -52,6 +59,13 @@ export function createTimerOverlay(
   container.appendChild(pomodoroPanel.container)
   container.appendChild(congratsPanel.container)
 
+  // シーントランジション初期化
+  const initialScene = orchestrator.sceneManager.currentScene
+  const initialDS = toDisplayScene(initialScene, null)
+  const displayTransition = createDisplayTransitionState(initialDS)
+  const sceneTransition = createSceneTransition()
+  document.body.appendChild(sceneTransition.overlay)
+
   // スタイル集約
   const style = document.createElement('style')
   style.textContent = `
@@ -89,6 +103,7 @@ export function createTimerOverlay(
     ${freePanel.style}
     ${pomodoroPanel.style}
     ${congratsPanel.style}
+    ${sceneTransition.style}
   `
   document.head.appendChild(style)
 
@@ -124,18 +139,45 @@ export function createTimerOverlay(
     }
   }
 
+  // microtaskコアレシングによるトランジション実行
+  let pendingTarget: DisplayScene | null = null
+  let flushScheduled = false
+
+  function requestTransition(target: DisplayScene): void {
+    pendingTarget = target
+    if (!flushScheduled) {
+      flushScheduled = true
+      queueMicrotask(flushTransition)
+    }
+  }
+
+  function flushTransition(): void {
+    flushScheduled = false
+    if (!pendingTarget) return
+    const target = pendingTarget
+    pendingTarget = null
+
+    const effect = displayTransition.resolve(target)
+    const doSwitch = (): void => {
+      switchToMode(displaySceneToMode(target))
+      displayTransition.advance(target)
+    }
+
+    if (effect.type === 'blackout' && !sceneTransition.isPlaying) {
+      sceneTransition.playBlackout(doSwitch)
+    } else {
+      doSwitch()
+    }
+  }
+
   // EventBus購読
   const unsubTick = bus.subscribe('TimerTicked', () => {
     pomodoroPanel.updateDisplay()
     pomodoroPanel.applyTint(container)
   })
   const unsubPhase = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
-    if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
-      switchToMode('congrats')
-    } else if (event.type === 'PhaseStarted') {
-      switchToMode('pomodoro')
-      pomodoroPanel.updateDisplay()
-      pomodoroPanel.applyTint(container)
+    if (event.type === 'PhaseStarted') {
+      requestTransition(toDisplayScene('pomodoro', event.phase))
     }
   })
   const unsubReset = bus.subscribe('TimerReset', () => {
@@ -145,16 +187,13 @@ export function createTimerOverlay(
   const unsubScene = bus.subscribe<AppSceneEvent>('AppSceneChanged', (event) => {
     if (event.type === 'AppSceneChanged') {
       if (event.scene === 'free' || event.scene === 'pomodoro') {
-        switchToMode(event.scene)
+        requestTransition(toDisplayScene(event.scene, null))
       }
     }
   })
 
-  // 初期シーン判定
-  const initialScene = orchestrator.sceneManager.currentScene
-  if (initialScene === 'free' || initialScene === 'pomodoro') {
-    switchToMode(initialScene)
-  }
+  // 初期シーン表示
+  switchToMode(displaySceneToMode(initialDS))
 
   return {
     container,
@@ -163,6 +202,7 @@ export function createTimerOverlay(
     },
     dispose() {
       freePanel.dispose()
+      sceneTransition.dispose()
       unsubTick()
       unsubPhase()
       unsubReset()
