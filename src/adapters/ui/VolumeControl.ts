@@ -75,13 +75,20 @@ export function createVolumeControl(config: VolumeControlConfig): VolumeControlH
     if (muteBtn) muteBtn.innerHTML = audio.isMuted ? SVG_SPEAKER_OFF : SVG_SPEAKER_ON
   }
 
+  function syncSfx(): void {
+    sfx?.setVolume(audio.volume)
+    sfx?.setMuted(audio.isMuted)
+  }
+
   function syncMuteWithVolume(): void {
     if (audio.volume <= 0 && !audio.isMuted) {
       volumeBeforeMute = 0.1
       audio.toggleMute()
+      syncSfx()
       updateMuteUI()
     } else if (audio.volume > 0 && audio.isMuted) {
       audio.toggleMute()
+      syncSfx()
       updateMuteUI()
     }
   }
@@ -130,6 +137,7 @@ export function createVolumeControl(config: VolumeControlConfig): VolumeControlH
       audio.setVolume(volumeBeforeMute)
       playTestSound()
     }
+    syncSfx()
     updateMuteUI()
     updateVolumeUI()
     notifySoundChange()
@@ -140,6 +148,7 @@ export function createVolumeControl(config: VolumeControlConfig): VolumeControlH
 
   volDown.addEventListener('click', () => {
     audio.setVolume(Math.max(0, audio.volume - 0.1))
+    sfx?.setVolume(audio.volume)
     updateVolumeUI()
     playTestSound()
     notifySoundChange()
@@ -147,6 +156,7 @@ export function createVolumeControl(config: VolumeControlConfig): VolumeControlH
 
   volUp.addEventListener('click', () => {
     audio.setVolume(Math.min(1, audio.volume + 0.1))
+    sfx?.setVolume(audio.volume)
     updateVolumeUI()
     playTestSound()
     notifySoundChange()
@@ -156,6 +166,7 @@ export function createVolumeControl(config: VolumeControlConfig): VolumeControlH
     seg.addEventListener('click', () => {
       const idx = Number((seg as HTMLElement).dataset.seg)
       audio.setVolume((idx + 1) / 10)
+      sfx?.setVolume(audio.volume)
       updateVolumeUI()
       playTestSound()
       notifySoundChange()

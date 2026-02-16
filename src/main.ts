@@ -186,12 +186,14 @@ async function main(): Promise<void> {
     timerUI.container.appendChild(settingsPanel.trigger)
   })
 
-  // SoundSettingsLoaded → AudioAdapterに適用
+  // SoundSettingsLoaded → AudioAdapter + SfxPlayerに適用
   bus.subscribe<SettingsEvent>('SoundSettingsLoaded', (event) => {
     if (event.type !== 'SoundSettingsLoaded') return
     audio.switchPreset(event.sound.preset as SoundPreset)
     audio.setVolume(event.sound.volume)
     if (event.sound.isMuted !== audio.isMuted) audio.toggleMute()
+    sfxPlayer.setVolume(event.sound.volume)
+    sfxPlayer.setMuted(event.sound.isMuted)
   })
 
   // 保存済み設定の復元（購読登録後に実行）
