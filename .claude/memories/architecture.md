@@ -107,7 +107,7 @@ EventBus（UI/インフラ通知）:
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定を統合。☰/×トグルで折りたたみ、タイムラインサマリーに切替。pomodoroモードは右肩にSVGアイコン（pause❚❚/resume▶、stop■）を配置。起動時に`refreshVolume()`で保存済み音量設定を即時反映
+- `ui/TimerOverlay.ts` — タイマーUI（上部、半透明パネル）。freeモードにタイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋サウンド設定を統合。☰/×トグルで折りたたみ、タイムラインサマリーに切替。pomodoroモードはSVG円形プログレスリング（200px, r=90）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過で濃化）。左肩にサイクル進捗ドット（フェーズ単位）、右肩にpause/stopアイコン。起動時に`refreshVolume()`で保存済み音量設定を即時反映
 - `ui/VolumeControl.ts` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント
 - `ui/PromptInput.ts` — プロンプト入力（下部中央）
 - `ui/SettingsPanel.ts` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）

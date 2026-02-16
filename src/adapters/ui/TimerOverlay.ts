@@ -29,16 +29,6 @@ function phaseLabel(type: PhaseType): string {
   }
 }
 
-function phaseMinLabel(phase: CyclePhase): string {
-  const min = Math.round(phase.durationMs / 60000)
-  switch (phase.type) {
-    case 'work': return `${min}min work`
-    case 'break': return `${min}min break`
-    case 'long-break': return `${min}min long break`
-    case 'congrats': return 'congrats'
-  }
-}
-
 function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
   switch (type) {
     case 'work': return { filled: 'rgba(76,175,80,0.85)', unfilled: 'rgba(76,175,80,0.2)' }
@@ -48,29 +38,19 @@ function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
   }
 }
 
-function buildFlowText(
-  plan: CyclePhase[],
-  phaseType: PhaseType,
-  currentSet: number
-): string {
-  // 計画内で現在のフェーズを探す
-  const idx = plan.findIndex(p => p.setNumber === currentSet && p.type === phaseType)
-  if (idx < 0) return ''
+const OVERLAY_BASE_BG = 'rgba(0, 0, 0, 0.75)'
 
-  const current = plan[idx]
-  const next = idx + 1 < plan.length ? plan[idx + 1] : null
-
-  if (current.type !== 'work' || !next) {
-    return `▸ ${phaseMinLabel(current)}`
-  }
-  return `▸ ${phaseMinLabel(current)} → ${phaseMinLabel(next)}`
-}
-
-function buildProgressDots(completedSets: number, totalSets: number): string {
-  const dots = Array.from({ length: totalSets }, (_, i) =>
-    i < completedSets ? '●' : '○'
-  ).join('')
-  return `[${dots}]`
+function overlayTintBg(type: PhaseType, progress: number): string {
+  const rgb = (() => {
+    switch (type) {
+      case 'work': return '76,175,80'
+      case 'break': return '66,165,245'
+      case 'long-break': return '171,71,188'
+      case 'congrats': return '255,213,79'
+    }
+  })()
+  const alpha = 0.04 + progress * 0.20 // 0.04 → 0.24
+  return `linear-gradient(to bottom, transparent, rgba(${rgb},${alpha.toFixed(3)})), ${OVERLAY_BASE_BG}`
 }
 
 function msToMinutes(ms: number): number {
@@ -166,10 +146,7 @@ function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
   return views
 }
 
-function buildTimelineBarHTML(
-  timerConfig: TimerConfig,
-  activePhase?: { set: number; type: PhaseType }
-): string {
+function buildTimelineBarHTML(timerConfig: TimerConfig): string {
   const plan = buildCyclePlan(timerConfig)
   const setViews = buildSetViews(plan, new Date())
 
@@ -180,31 +157,13 @@ function buildTimelineBarHTML(
     return timerConfig.breakDurationMs * 1.5
   }
 
-  // activePhaseのplan内インデックスを算出
-  const activeIdx = activePhase
-    ? plan.findIndex(p => p.setNumber === activePhase.set && p.type === activePhase.type)
-    : -1
-
-  // バーセグメント（セット間にセパレータ）
   const barParts: string[] = []
-  let flatIdx = 0
   setViews.forEach((sv, si) => {
     if (si > 0) barParts.push('<span class="tl-set-sep"></span>')
     sv.phases.forEach(phase => {
-      let extraClass = ''
-      let inlineStyle = `flex:${displayFlex(phase)}`
-      if (activeIdx >= 0) {
-        if (flatIdx === activeIdx) {
-          extraClass = ' tl-seg-active'
-        } else if (flatIdx < activeIdx) {
-          extraClass = ' tl-seg-done'
-          inlineStyle += `;background:${phaseColor(phase.type).filled}`
-        }
-      }
       barParts.push(
-        `<span class="tl-seg tl-seg-${phase.type}${extraClass}" style="${inlineStyle}">${segLabel(phase.type)}</span>`
+        `<span class="tl-seg tl-seg-${phase.type}" style="flex:${displayFlex(phase)}">${segLabel(phase.type)}</span>`
       )
-      flatIdx++
     })
   })
 
@@ -311,6 +270,7 @@ export function createTimerOverlay(
 
   container.innerHTML = `
     <div class="timer-overlay-title">Pomodoro Pet</div>
+    <span class="timer-set-dots" id="timer-set-dots" style="display:none"></span>
     <div class="timer-free-mode" id="timer-free-mode">
       <button class="timer-settings-toggle" id="timer-settings-toggle">☰</button>
       <div class="timer-settings-summary" id="timer-settings-summary">
@@ -346,17 +306,24 @@ export function createTimerOverlay(
       <button id="btn-confirm-settings" class="timer-btn timer-btn-confirm" style="display:none">Set</button>
       <button id="btn-enter-pomodoro" class="timer-btn timer-btn-primary">Start Pomodoro</button>
     </div>
+    <span id="btn-pause-resume" class="timer-corner-icon" style="display:none">${pauseIconSvg}</span>
+    <span id="btn-exit-pomodoro" class="timer-exit-link" style="display:none">${stopIconSvg}</span>
     <div class="timer-pomodoro-mode" id="timer-pomodoro-mode" style="display:none">
-      <span id="btn-pause-resume" class="timer-corner-icon">${pauseIconSvg}</span>
-      <span id="btn-exit-pomodoro" class="timer-exit-link">${stopIconSvg}</span>
-      <div class="timer-set-info" id="timer-set-info">Set 1 / 4</div>
-      <div class="timer-phase-time">
-        <span class="timer-phase" id="timer-phase">WORK</span>
-        <span class="timer-display" id="timer-display">25:00</span>
+      <div class="timer-ring-container">
+        <svg class="timer-ring-svg" viewBox="0 0 200 200" width="200" height="200">
+          <circle class="timer-ring-bg" cx="100" cy="100" r="90"
+                  fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="12"/>
+          <circle class="timer-ring-progress" id="timer-ring-progress" cx="100" cy="100" r="90"
+                  fill="none" stroke="rgba(76,175,80,0.85)" stroke-width="12"
+                  stroke-linecap="round"
+                  stroke-dasharray="565.49" stroke-dashoffset="565.49"
+                  transform="rotate(-90 100 100)"/>
+        </svg>
+        <div class="timer-ring-inner">
+          <span class="timer-phase" id="timer-phase">WORK</span>
+          <span class="timer-display" id="timer-display">25:00</span>
+        </div>
       </div>
-      <div class="timer-pomodoro-timeline" id="timer-pomodoro-timeline"></div>
-      <div class="timer-flow" id="timer-flow">▸ 25min work → 5min break</div>
-      <div class="timer-progress" id="timer-progress">[○○○○]</div>
     </div>
     <div class="timer-congrats-mode" id="timer-congrats-mode" style="display:none">
       <div class="congrats-confetti" id="congrats-confetti"></div>
@@ -387,6 +354,7 @@ export function createTimerOverlay(
       backdrop-filter: blur(8px);
       user-select: none;
       pointer-events: none;
+      transition: background 0.3s ease;
     }
     .timer-free-mode,
     .timer-pomodoro-mode,
@@ -404,6 +372,16 @@ export function createTimerOverlay(
       font-weight: 600;
       color: rgba(255, 255, 255, 0.6);
       text-align: left;
+    }
+    .timer-set-dots {
+      position: absolute;
+      top: 40px;
+      left: 16px;
+      transform: translateY(-50%);
+      font-size: 14px;
+      letter-spacing: 4px;
+      line-height: 1;
+      pointer-events: none;
     }
     .timer-settings {
       display: inline-grid;
@@ -540,25 +518,34 @@ export function createTimerOverlay(
     .tl-seg-work { background: rgba(76,175,80,0.6); }
     .tl-seg-break { background: rgba(66,165,245,0.6); }
     .tl-seg-long-break { background: rgba(171,71,188,0.6); }
-    .timer-pomodoro-timeline .tl-seg { opacity: 0.5; }
-    .timer-pomodoro-timeline .tl-seg-active { opacity: 1; }
-    .timer-pomodoro-timeline .tl-seg-done { opacity: 0.85; }
     .tl-set-sep { width: 2px; background: rgba(255,255,255,0.3); flex-shrink: 0; }
     .tl-times { display: flex; justify-content: space-between; font-size: 11px; color: rgba(255,255,255,0.45); margin-top: 2px; font-variant-numeric: tabular-nums; }
     .tl-time-mid { flex: 1; text-align: center; }
     ${volumeControl.style}
-    .timer-pomodoro-timeline { margin: 8px 0; }
-    .timer-set-info {
-      font-size: 12px;
-      color: #aaa;
-      margin-bottom: 4px;
-      letter-spacing: 1px;
-    }
-    .timer-phase-time {
-      display: flex;
-      align-items: baseline;
+    .timer-ring-container {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
       justify-content: center;
-      gap: 12px;
+      width: 200px;
+      height: 200px;
+      margin: 8px auto 24px;
+    }
+    .timer-ring-svg {
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .timer-ring-progress {
+      transition: stroke 0.3s ease;
+    }
+    .timer-ring-inner {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1;
     }
     .timer-phase {
       font-size: 14px;
@@ -577,16 +564,6 @@ export function createTimerOverlay(
       font-weight: 700;
       font-variant-numeric: tabular-nums;
       line-height: 1.1;
-    }
-    .timer-flow {
-      font-size: 11px;
-      color: #888;
-      margin: 4px 0;
-    }
-    .timer-progress {
-      font-size: 16px;
-      letter-spacing: 4px;
-      margin-bottom: 12px;
     }
     .timer-btn {
       background: rgba(255, 255, 255, 0.15);
@@ -631,8 +608,9 @@ export function createTimerOverlay(
     }
     .timer-corner-icon {
       position: absolute;
-      top: 0;
-      right: 18px;
+      top: 40px;
+      right: 34px;
+      transform: translateY(-50%);
       color: rgba(255, 255, 255, 0.3);
       cursor: pointer;
       transition: color 0.2s;
@@ -647,8 +625,9 @@ export function createTimerOverlay(
     }
     .timer-exit-link {
       position: absolute;
-      top: 0;
-      right: 0;
+      top: 40px;
+      right: 14px;
+      transform: translateY(-50%);
       color: rgba(255, 255, 255, 0.3);
       cursor: pointer;
       transition: color 0.2s;
@@ -716,15 +695,15 @@ export function createTimerOverlay(
   `
   document.head.appendChild(style)
 
+  const titleEl = container.querySelector('.timer-overlay-title') as HTMLDivElement
+  const setDotsEl = container.querySelector('#timer-set-dots') as HTMLSpanElement
   const freeModeEl = container.querySelector('#timer-free-mode') as HTMLDivElement
   const pomodoroModeEl = container.querySelector('#timer-pomodoro-mode') as HTMLDivElement
   const congratsModeEl = container.querySelector('#timer-congrats-mode') as HTMLDivElement
   const confettiEl = container.querySelector('#congrats-confetti') as HTMLDivElement
-  const setInfoEl = container.querySelector('#timer-set-info') as HTMLDivElement
   const displayEl = container.querySelector('#timer-display') as HTMLSpanElement
   const phaseEl = container.querySelector('#timer-phase') as HTMLSpanElement
-  const flowEl = container.querySelector('#timer-flow') as HTMLDivElement
-  const progressEl = container.querySelector('#timer-progress') as HTMLDivElement
+  const ringProgressEl = container.querySelector('#timer-ring-progress') as SVGCircleElement
   const btnConfirmSettings = container.querySelector('#btn-confirm-settings') as HTMLButtonElement
   const btnEnterPomodoro = container.querySelector('#btn-enter-pomodoro') as HTMLButtonElement
   const btnPauseResume = container.querySelector('#btn-pause-resume') as HTMLElement
@@ -913,55 +892,71 @@ export function createTimerOverlay(
     congratsModeEl.style.display = 'none'
 
     if (mode === 'free') {
+      titleEl.style.display = ''
+      setDotsEl.style.display = 'none'
+      btnPauseResume.style.display = 'none'
+      btnExitPomodoro.style.display = 'none'
       freeModeEl.style.display = ''
+      container.style.background = ''
       syncButtonSelection()
     } else if (mode === 'pomodoro') {
+      titleEl.style.display = 'none'
+      setDotsEl.style.display = ''
+      btnPauseResume.style.display = ''
+      btnExitPomodoro.style.display = ''
       pomodoroModeEl.style.display = ''
       updateTimerDisplay()
     } else if (mode === 'congrats') {
+      titleEl.style.display = 'none'
+      setDotsEl.style.display = 'none'
+      btnPauseResume.style.display = 'none'
+      btnExitPomodoro.style.display = 'none'
       congratsModeEl.style.display = ''
       spawnConfetti()
     }
   }
 
-  const pomodoroTimelineEl = container.querySelector('#timer-pomodoro-timeline') as HTMLDivElement
-  let lastActiveSet = -1
-  let lastActiveType: PhaseType | '' = ''
   let lastIsRunning: boolean | null = null
+
+  const RING_CIRCUMFERENCE = 2 * Math.PI * 90 // ≈ 565.49
 
   function updateTimerDisplay(): void {
     const phase = session.currentPhase.type
+    const colors = phaseColor(phase)
     displayEl.textContent = formatTime(session.remainingMs)
     phaseEl.textContent = phaseLabel(phase)
     phaseEl.className = `timer-phase ${phase !== 'work' ? phase : ''}`
-    setInfoEl.textContent = `Set ${session.currentSet} / ${session.totalSets}`
-    flowEl.textContent = buildFlowText(buildCyclePlan(config), phase, session.currentSet)
-    progressEl.textContent = buildProgressDots(session.completedSets, session.totalSets)
     if (session.isRunning !== lastIsRunning) {
       lastIsRunning = session.isRunning
       btnPauseResume.innerHTML = session.isRunning ? pauseIconSvg : resumeIconSvg
     }
 
-    // タイムラインバー: フェーズ変更時のみDOM更新
-    const curSet = session.currentSet
-    if (curSet !== lastActiveSet || phase !== lastActiveType) {
-      lastActiveSet = curSet
-      lastActiveType = phase
-      pomodoroTimelineEl.innerHTML = buildTimelineBarHTML(
-        config,
-        { set: curSet, type: phase }
-      )
-    }
+    // 円形プログレスリング更新
+    const dur = session.currentPhase.durationMs
+    const ringProgress = Math.max(0, Math.min(1, (dur - session.remainingMs) / dur))
+    const offset = RING_CIRCUMFERENCE * (1 - ringProgress)
+    ringProgressEl.style.strokeDashoffset = String(offset)
+    ringProgressEl.style.stroke = colors.filled
 
-    // アクティブセグメントの塗りつぶし進捗を更新
-    const activeSeg = pomodoroTimelineEl.querySelector('.tl-seg-active') as HTMLElement | null
-    if (activeSeg) {
-      const dur = session.currentPhase.durationMs
-      const progress = Math.max(0, Math.min(1, (dur - session.remainingMs) / dur))
-      const pct = (progress * 100).toFixed(1)
-      const c = phaseColor(phase)
-      activeSeg.style.background = `linear-gradient(to right, ${c.filled} ${pct}%, ${c.unfilled} ${pct}%)`
-    }
+    // タイマー数字にフェーズカラー
+    displayEl.style.color = colors.filled
+
+    // サイクル進捗ドット（フェーズ単位）
+    const plan = buildCyclePlan(config).filter(p => p.type !== 'congrats')
+    const currentIdx = plan.findIndex(
+      p => p.setNumber === session.currentSet && p.type === phase
+    )
+    const dots = plan.map((p, i) => {
+      const c = phaseColor(p.type)
+      const color = i < currentIdx ? 'rgba(255,255,255,0.7)'
+        : i === currentIdx ? c.filled
+        : 'rgba(255,255,255,0.2)'
+      return `<span style="color:${color}">●</span>`
+    }).join('')
+    setDotsEl.innerHTML = dots
+
+    // 背景ティント（時間経過で濃くなるグラデーション）
+    container.style.background = overlayTintBg(phase, ringProgress)
   }
 
   btnEnterPomodoro.addEventListener('click', () => {
