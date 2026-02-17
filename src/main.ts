@@ -1,17 +1,18 @@
 import * as THREE from 'three'
+import { createElement } from 'react'
+import { createRoot, type Root } from 'react-dom/client'
+import { App } from './adapters/ui/App'
+import type { AppDeps } from './adapters/ui/AppContext'
 import { createEventBus } from './domain/shared/EventBus'
 import { createPomodoroStateMachine } from './domain/timer/entities/PomodoroStateMachine'
 import { createDefaultConfig, parseDebugTimer } from './domain/timer/value-objects/TimerConfig'
-import { createTimerOverlay, type TimerOverlayElements } from './adapters/ui/TimerOverlay'
 import { createAppSceneManager } from './application/app-scene/AppSceneManager'
 import { createAppSettingsService } from './application/settings/AppSettingsService'
 import type { SettingsEvent } from './application/settings/SettingsEvents'
-import { createSettingsPanel } from './adapters/ui/SettingsPanel'
 import { createCharacter } from './domain/character/entities/Character'
 import { createThreeCharacter, type ThreeCharacterHandle, type FBXCharacterConfig } from './adapters/three/ThreeCharacterAdapter'
 import { createBehaviorStateMachine } from './domain/character/services/BehaviorStateMachine'
 import { updateBehavior } from './application/character/UpdateBehaviorUseCase'
-import { createPromptInput } from './adapters/ui/PromptInput'
 import { createInteractionAdapter } from './adapters/three/ThreeInteractionAdapter'
 import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/environment/value-objects/SceneConfig'
 import { createScrollManager } from './application/environment/ScrollUseCase'
@@ -158,32 +159,25 @@ async function main(): Promise<void> {
     bus, sceneManager, session, onBehaviorChange: switchPreset
   })
 
-  let timerUI: TimerOverlayElements = createTimerOverlay(session, bus, initialConfig, orchestrator, settingsService, audio, sfxPlayer, isDebugTimer)
-  document.body.appendChild(timerUI.container)
+  // React UIマウント
+  const appRoot: Root = createRoot(document.getElementById('app-root')!)
+  function renderReactUI(): void {
+    const deps: AppDeps = {
+      bus, session, config: settingsService.currentConfig, orchestrator,
+      settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
+      character, behaviorSM, charHandle
+    }
+    appRoot.render(createElement(App, { deps }))
+  }
 
-  // 設定パネル（Environment）
-  const settingsPanel = createSettingsPanel(bus)
-  timerUI.container.appendChild(settingsPanel.trigger)
-  document.body.appendChild(settingsPanel.container)
-
-  // SettingsChanged → session + orchestrator再作成
+  // SettingsChanged → session + orchestrator再作成 + React再レンダリング
   bus.subscribe<SettingsEvent>('SettingsChanged', (event) => {
-    // 1. 旧リソース破棄
     orchestrator.dispose()
-    timerUI.dispose()
-
-    // 2. 新session作成
     session = createPomodoroStateMachine(event.config, { phaseTriggers: BREAK_BGM_TRIGGERS })
-
-    // 3. Orchestrator再作成
     orchestrator = createPomodoroOrchestrator({
       bus, sceneManager, session, onBehaviorChange: switchPreset
     })
-
-    // 4. TimerOverlay再作成
-    timerUI = createTimerOverlay(session, bus, event.config, orchestrator, settingsService, audio, sfxPlayer, isDebugTimer)
-    document.body.appendChild(timerUI.container)
-    timerUI.container.appendChild(settingsPanel.trigger)
+    renderReactUI()
   })
 
   // SoundSettingsLoaded → AudioAdapter + SfxPlayerに適用
@@ -194,15 +188,14 @@ async function main(): Promise<void> {
     if (event.sound.isMuted !== audio.isMuted) audio.toggleMute()
     sfxPlayer.setVolume(event.sound.volume)
     sfxPlayer.setMuted(event.sound.isMuted)
+    renderReactUI()
   })
 
   // 保存済み設定の復元（購読登録後に実行）
   await settingsService.loadFromStorage()
-  timerUI.refreshVolume()
 
-  // プロンプト入力UI
-  const promptUI = createPromptInput(character, behaviorSM, charHandle)
-  document.body.appendChild(promptUI.container)
+  // 初回React UIレンダリング
+  renderReactUI()
 
   // インタラクション（ホバー、クリック、摘まみ上げ）
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle)

@@ -20,10 +20,14 @@
         width: 100%;
         height: 100%;
       }
+      #app-root {
+        /* Reactルートコンテナ。ポータル先はdocument.bodyのため最小限のスタイルのみ */
+      }
     </style>
   </head>
   <body>
     <div id="canvas-container"></div>
+    <div id="app-root"></div>
     <script type="module" src="./main.ts"></script>
   </body>
 </html>
