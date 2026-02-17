@@ -112,7 +112,6 @@ export function TimerOverlay(): JSX.Element {
     <>
       <div id="timer-overlay" style={{
           ...(overlayBackground ? { background: overlayBackground } : {}),
-          ...(mode !== 'free' ? { pointerEvents: 'auto' } : {}),
         }}>
         {mode !== 'pomodoro' && mode !== 'congrats' && (
           <div className="timer-overlay-title">Pomodoro Pet</div>
