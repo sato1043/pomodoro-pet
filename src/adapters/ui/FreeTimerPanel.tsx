@@ -290,11 +290,13 @@ export function FreeTimerPanel({
         if (audio.currentPreset !== snap.preset) audio.switchPreset(snap.preset)
         if (audio.isMuted !== snap.muted) audio.toggleMute()
         audio.setVolume(snap.volume)
+        sfx?.setVolume(snap.volume)
+        sfx?.setMuted(snap.muted)
         setVolumeKey(k => k + 1)
       }
       return !prev
     })
-  }, [settings, audio])
+  }, [settings, audio, sfx])
 
   const handleConfirm = useCallback(() => {
     settingsService.updateTimerConfig({

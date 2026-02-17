@@ -35,6 +35,11 @@ export function VolumeControl({ audio, sfx, showPresets, onSoundChange, forceUpd
     notifySoundChange()
   }, [audio, notifySoundChange])
 
+  const syncSfx = useCallback(() => {
+    sfx?.setVolume(audio.volume)
+    sfx?.setMuted(audio.isMuted)
+  }, [sfx, audio])
+
   const handleMuteClick = useCallback(() => {
     if (!audio.isMuted) {
       volumeBeforeMuteRef.current = audio.volume
@@ -45,29 +50,33 @@ export function VolumeControl({ audio, sfx, showPresets, onSoundChange, forceUpd
       audio.setVolume(volumeBeforeMuteRef.current)
       playTestSound()
     }
+    syncSfx()
     notifySoundChange()
-  }, [audio, playTestSound, notifySoundChange])
+  }, [audio, playTestSound, syncSfx, notifySoundChange])
 
   const handleVolDown = useCallback(() => {
     audio.setVolume(Math.max(0, audio.volume - 0.1))
     syncMuteWithVolume()
+    syncSfx()
     playTestSound()
     notifySoundChange()
-  }, [audio, playTestSound, notifySoundChange])
+  }, [audio, playTestSound, syncSfx, notifySoundChange])
 
   const handleVolUp = useCallback(() => {
     audio.setVolume(Math.min(1, audio.volume + 0.1))
     syncMuteWithVolume()
+    syncSfx()
     playTestSound()
     notifySoundChange()
-  }, [audio, playTestSound, notifySoundChange])
+  }, [audio, playTestSound, syncSfx, notifySoundChange])
 
   const handleSegClick = useCallback((idx: number) => {
     audio.setVolume((idx + 1) / 10)
     syncMuteWithVolume()
+    syncSfx()
     playTestSound()
     notifySoundChange()
-  }, [audio, playTestSound, notifySoundChange])
+  }, [audio, playTestSound, syncSfx, notifySoundChange])
 
   function syncMuteWithVolume(): void {
     if (audio.volume <= 0 && !audio.isMuted) {
