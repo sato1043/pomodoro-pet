@@ -109,13 +109,21 @@
 - 未実装スタブのSettingsPanelを削除
 - sfxPlayer音量・ミュート同期を復元、pointerEvents透過を修正
 
-### ReactコンポーネントのCSS方式改善
+### ReactコンポーネントのCSS方式改善 — vanilla-extract導入
 - 現在は単一の`timer-overlay.css`にグローバルセレクタで全スタイルを定義
 - PromptInputはインラインスタイルのみで、`::placeholder`・`:focus`・`:hover`等の擬似クラスが欠落
-- 検討オプション:
-  - CSS Modules（`.module.css`）でコンポーネント単位のスコープ化
-  - コンポーネント別CSSファイル分割（現在の1ファイルを分離）
-  - 擬似クラス対応: PromptInputの`::placeholder`色・`:focus`ボーダー・`:hover`ボタン背景をCSSファイルに追加
+- **vanilla-extract**を採用する（ダークモード導入に備えたテーマ型安全性のため）
+  - `createThemeContract()`でテーマ構造を定義し、ライト/ダークテーマ間の構造一致をコンパイル時に保証
+  - `style()`でCSSプロパティ名・値の型チェック、`recipe()`でバリアント型安全性
+  - `@vanilla-extract/vite-plugin`でVite統合
+  - ゼロランタイム（ビルド時にCSSを生成、パフォーマンスコストなし）
+- 移行手順:
+  1. `@vanilla-extract/css` + `@vanilla-extract/vite-plugin` を導入
+  2. テーマコントラクト定義（`theme.css.ts`）: カラー・スペーシング・フォント等のデザイントークン
+  3. ライトテーマ・ダークテーマの値を定義
+  4. `timer-overlay.css`をコンポーネント別の`.css.ts`ファイルに段階的に移行
+  5. PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
+  6. 動的スタイル（フェーズカラー・プログレス等）は`createVar()` + `assignInlineVars()`で対応
 
 ### メインプロセスのESM化検討
 - 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない
