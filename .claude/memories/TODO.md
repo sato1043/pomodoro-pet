@@ -24,7 +24,7 @@
 - ☰/×トグルで設定行を畳み、タイムラインサマリー（CyclePlanベース横棒グラフ＋AM/PM時刻＋合計時間）に切替
 - デフォルト折りたたみ。展開時はSetボタンで確定（スナップショット/リストア）
 - 折りたたみ時のボリューム/ミュート変更は即時保存
-- SettingsPanelはギアアイコン→モーダルでEnvironment設定（スタブ）のみ
+- SettingsPanelはギアアイコン→モーダルでEnvironment設定（スタブ）のみ → React化時に削除済み
 - `AppSettingsService`が分→ms変換＋バリデーション＋`SettingsChanged`/`SoundSettingsLoaded`イベント発行
 - `SettingsChanged`購読でsession再作成→TimerOverlay再構築のフロー実装
 - pomodoroモード中はギアアイコン・トグルボタン非表示
@@ -98,6 +98,24 @@
 - free→pomodoro、break/long-break→work、congrats→free: blackout。work→break/long-break/congrats: immediate（暗転なし）
 - 将来拡張: `TransitionEffect`にcrossfade/wipe追加、`TransitionRule`にaudioフィールド追加で映像+音声統合管理
 - 詳細: [scene-transition-design.md](scene-transition-design.md)
+
+### ~~UI層のReact化~~ — 完了
+- 全UIコンポーネントを命令型DOM操作（`.ts`）からReact JSX（`.tsx`）に移行
+- `App.tsx`/`AppContext.tsx`（依存注入）/`useEventBus` hookを新規追加
+- CSSを`timer-overlay.css`に分離
+- `createPortal`でdocument.bodyにポータル化（旧DOM構造を再現）
+- 全テキスト文字アイコン（☰⚙×等）をインラインSVGコンポーネントに統一
+- `dangerouslySetInnerHTML`を排除（Reactイベント委譲の不具合を解消）
+- 未実装スタブのSettingsPanelを削除
+- sfxPlayer音量・ミュート同期を復元、pointerEvents透過を修正
+
+### ReactコンポーネントのCSS方式改善
+- 現在は単一の`timer-overlay.css`にグローバルセレクタで全スタイルを定義
+- PromptInputはインラインスタイルのみで、`::placeholder`・`:focus`・`:hover`等の擬似クラスが欠落
+- 検討オプション:
+  - CSS Modules（`.module.css`）でコンポーネント単位のスコープ化
+  - コンポーネント別CSSファイル分割（現在の1ファイルを分離）
+  - 擬似クラス対応: PromptInputの`::placeholder`色・`:focus`ボーダー・`:hover`ボタン背景をCSSファイルに追加
 
 ### メインプロセスのESM化検討
 - 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない

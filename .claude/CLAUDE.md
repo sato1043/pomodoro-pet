@@ -66,16 +66,20 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### アダプター層 (`src/adapters/`)
 
+全UIコンポーネントはReact JSX（`.tsx`）で実装。`createPortal`でdocument.bodyにポータル化。アイコンはインラインSVGコンポーネント。CSSは`ui/styles/timer-overlay.css`に分離。
+
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `ui/TimerOverlay` — モード遷移コーディネーター（~215行）。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）を管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約し、同期バッチイベントを1回のトランジションにまとめる。`TimerOverlayElements`インターフェースで外部API（container, refreshVolume, dispose）を公開
-- `ui/SceneTransition` — 暗転レンダリング（~55行）。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。CSSトランジション + setTimeout。再生中の呼び出しはcb()のみ即実行
-- `ui/FreeTimerPanel` — freeモード（~630行）。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元。`refreshVolume()`で起動時の音量設定即時反映
-- `ui/PomodoroTimerPanel` — pomodoroモード（~280行）。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット（フェーズ単位、完了=白、現在=フェーズカラー、未到達=半透明）。右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`純粋関数をexport
-- `ui/CongratsPanel` — congratsモード（~95行）。祝福メッセージ＋CSS紙吹雪エフェクト
-- `ui/VolumeControl` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。FreeTimerPanelから利用
-- `ui/PromptInput` — プロンプト入力UI
-- `ui/SettingsPanel` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
+- `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、TimerOverlay/PromptInputを配置
+- `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
+- `ui/TimerOverlay.tsx` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelをモードに応じて切替。DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約
+- `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応
+- `ui/FreeTimerPanel.tsx` — freeモード。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。SVGアイコンのトグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。デフォルト折りたたみ。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元（タイマー設定・サウンド設定・sfxPlayer同期）
+- `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット。右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
+- `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
+- `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。FreeTimerPanelから利用
+- `ui/PromptInput.tsx` — プロンプト入力UI
+- `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 
 ### インフラ層 (`src/infrastructure/`)
 
