@@ -9,6 +9,7 @@ import type { AppSettingsService } from '../../application/settings/AppSettingsS
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { VolumeControl } from './VolumeControl'
+import * as styles from './styles/free-timer-panel.css'
 
 // --- 純粋関数 ---
 
@@ -79,6 +80,12 @@ function fmtClock(date: Date): { h12: number; mi: string; ampm: string } {
   }
 }
 
+const SEGMENT_STYLE: Record<string, string> = {
+  work: styles.tlSegWork,
+  break: styles.tlSegBreak,
+  'long-break': styles.tlSegLongBreak,
+}
+
 // --- 選択肢 ---
 const WORK_OPTIONS = [25, 50, 90]
 const BREAK_OPTIONS = [5, 10, 15]
@@ -147,11 +154,11 @@ function ButtonGroup({ name, options, selected, onChange }: {
 }): JSX.Element {
   const resolved = resolveSelected(options, selected)
   return (
-    <div className="timer-cfg-group">
+    <div className={styles.cfgGroup}>
       {options.map(v => (
         <button
           key={v}
-          className={`timer-cfg-btn${v === resolved ? ' active' : ''}`}
+          className={`${styles.cfgBtn}${v === resolved ? ' active' : ''}`}
           data-cfg={name}
           onClick={() => onChange(v)}
         >
@@ -175,14 +182,14 @@ function TimelineBar({ timerConfig }: { timerConfig: TimerConfig }): JSX.Element
   }
 
   return (
-    <div className="tl-bar">
+    <div className={styles.tlBar}>
       {setViews.map((sv, si) => (
         <span key={si} style={{ display: 'contents' }}>
-          {si > 0 && <span className="tl-set-sep" />}
+          {si > 0 && <span className={styles.tlSetSep} />}
           {sv.phases.map((phase, pi) => (
             <span
               key={pi}
-              className={`tl-seg tl-seg-${phase.type}`}
+              className={`${styles.tlSeg} ${SEGMENT_STYLE[phase.type] ?? ''}`}
               style={{ flex: displayFlex(phase) }}
             >
               {segLabel(phase.type)}
@@ -208,35 +215,35 @@ function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Ele
   const nowClock = fmtClock(now)
 
   return (
-    <div className="tl-container">
-      <div className="tl-clock">
+    <div className={styles.tlContainer}>
+      <div className={styles.tlClock}>
         {String(nowClock.h12).padStart(2, '0')}
-        <span className="tl-blink">:</span>
+        <span className={styles.tlBlink}>:</span>
         {nowClock.mi}
-        <span className="tl-date-sub">{nowClock.ampm}</span>
+        <span className={styles.tlDateSub}>{nowClock.ampm}</span>
       </div>
-      <div className="tl-config">
-        (<span className="tl-config-work">{wLabel}</span> +{' '}
-        <span className="tl-config-break">{bLabel}</span>){' '}
+      <div className={styles.tlConfig}>
+        (<span className={styles.tlConfigWork}>{wLabel}</span> +{' '}
+        <span className={styles.tlConfigBreak}>{bLabel}</span>){' '}
         &times; {timerConfig.setsPerCycle} Sets ={' '}
-        <span className="tl-config-total">{fmtDurationMs(totalMs)}</span>
+        <span className={styles.tlConfigTotal}>{fmtDurationMs(totalMs)}</span>
       </div>
-      <div className="tl-row">
-        <div className="tl-labels">
+      <div className={styles.tlRow}>
+        <div className={styles.tlLabels}>
           {setViews.map((sv, i) => (
-            <span key={i} className="tl-set-label">{sv.label}</span>
+            <span key={i} className={styles.tlSetLabel}>{sv.label}</span>
           ))}
         </div>
         <TimelineBar timerConfig={timerConfig} />
-        <div className="tl-times">
+        <div className={styles.tlTimes}>
           <span>
-            {nowClock.h12}:{nowClock.mi}<span className="tl-ampm">{nowClock.ampm}</span>
+            {nowClock.h12}:{nowClock.mi}<span className={styles.tlAmpm}>{nowClock.ampm}</span>
           </span>
           {setViews.map((sv, i) => {
             const c = fmtClock(sv.endTime)
             return (
               <span key={i}>
-                {c.h12}:{c.mi}<span className="tl-ampm">{c.ampm}</span>
+                {c.h12}:{c.mi}<span className={styles.tlAmpm}>{c.ampm}</span>
               </span>
             )
           })}
@@ -334,9 +341,9 @@ export function FreeTimerPanel({
   }, [])
 
   return (
-    <div className="timer-free-mode">
+    <div className={styles.freeMode}>
       <button
-        className="timer-settings-toggle"
+        className={styles.settingsToggle}
         onClick={handleToggle}
         style={{ transform: expanded ? 'translateY(-2px)' : 'translateY(0px)' }}
       >
@@ -344,27 +351,27 @@ export function FreeTimerPanel({
       </button>
 
       {!expanded && (
-        <div className="timer-settings-summary">
+        <div className={styles.settingsSummary}>
           <TimelineSummary timerConfig={currentTimerConfig} />
         </div>
       )}
 
       {expanded && (
-        <div className="timer-settings">
-          <div className="timer-settings-field">
-            <label className="timer-settings-label-work">Work</label>
+        <div className={styles.settings}>
+          <div className={styles.settingsField}>
+            <label className={`${styles.label} ${styles.labelWork}`}>Work</label>
             <ButtonGroup name="work" options={WORK_OPTIONS} selected={settings.work} onChange={v => updateSetting('work', v)} />
           </div>
-          <div className="timer-settings-field">
-            <label className="timer-settings-label-break">Break</label>
+          <div className={styles.settingsField}>
+            <label className={`${styles.label} ${styles.labelBreak}`}>Break</label>
             <ButtonGroup name="break" options={BREAK_OPTIONS} selected={settings.break} onChange={v => updateSetting('break', v)} />
           </div>
-          <div className="timer-settings-field">
-            <label className="timer-settings-label-long-break">Long Break</label>
+          <div className={styles.settingsField}>
+            <label className={`${styles.label} ${styles.labelLongBreak}`}>Long Break</label>
             <ButtonGroup name="long-break" options={LONG_BREAK_OPTIONS} selected={settings.longBreak} onChange={v => updateSetting('longBreak', v)} />
           </div>
-          <div className="timer-settings-field">
-            <label>Sets</label>
+          <div className={styles.settingsField}>
+            <label className={styles.label}>Sets</label>
             <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => updateSetting('sets', v)} />
           </div>
         </div>
@@ -379,10 +386,10 @@ export function FreeTimerPanel({
       />
 
       {expanded && (
-        <button className="timer-btn timer-btn-confirm" onClick={handleConfirm}>Set</button>
+        <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={handleConfirm}>Set</button>
       )}
       {!expanded && (
-        <button className="timer-btn timer-btn-primary" onClick={handleStartPomodoro}>Start Pomodoro</button>
+        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleStartPomodoro}>Start Pomodoro</button>
       )}
     </div>
   )

@@ -3,6 +3,8 @@ import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import { buildCyclePlan } from '../../domain/timer/value-objects/CyclePlan'
 import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrchestrator'
+import { vars } from './styles/theme.css'
+import * as styles from './styles/pomodoro-timer-panel.css'
 
 // --- 純粋関数（外部からもimport可能） ---
 
@@ -75,8 +77,6 @@ function StopIcon(): JSX.Element {
 
 const RING_CIRCUMFERENCE = 2 * Math.PI * 90
 
-const btnReset = { background: 'none', border: 'none', font: 'inherit' } as const
-
 // --- コンポーネント ---
 
 interface PomodoroTimerPanelProps {
@@ -113,37 +113,36 @@ export function PomodoroTimerPanel({ session, config, orchestrator }: PomodoroTi
   return (
     <>
       {/* ドット（overlay直下に配置） */}
-      <span className="timer-set-dots">
+      <span className={styles.setDots}>
         {plan.map((p, i) => {
           const c = phaseColor(p.type)
-          const color = i < currentIdx ? 'rgba(255,255,255,0.7)'
+          const color = i < currentIdx ? vars.color.textSecondary
             : i === currentIdx ? c.filled
-            : 'rgba(255,255,255,0.2)'
+            : vars.color.surfaceHover
           return <span key={i} style={{ color }}>&#9679;</span>
         })}
       </span>
 
       {/* pause/resume アイコン */}
-      <button className="timer-corner-icon" onClick={handlePause} style={btnReset}>
+      <button className={styles.cornerIcon} onClick={handlePause}>
         {session.isRunning ? <PauseIcon /> : <ResumeIcon />}
       </button>
 
       {/* stop アイコン */}
-      <button className="timer-exit-link" onClick={handleStop} style={btnReset}>
+      <button className={styles.exitLink} onClick={handleStop}>
         <StopIcon />
       </button>
 
       {/* メインコンテンツ */}
-      <div className="timer-pomodoro-mode">
-        <div className="timer-ring-container">
-          <svg className="timer-ring-svg" viewBox="0 0 200 200" width="200" height="200">
+      <div className={styles.pomodoroMode}>
+        <div className={styles.ringContainer}>
+          <svg className={styles.ringSvg} viewBox="0 0 200 200" width="200" height="200">
             <circle
-              className="timer-ring-bg"
               cx="100" cy="100" r="90"
-              fill="none" stroke="rgba(255,255,255,0.1)" strokeWidth="12"
+              fill="none" stroke={vars.color.surfaceSubtle} strokeWidth="12"
             />
             <circle
-              className="timer-ring-progress"
+              className={styles.ringProgress}
               cx="100" cy="100" r="90"
               fill="none"
               stroke={colors.filled}
@@ -154,11 +153,11 @@ export function PomodoroTimerPanel({ session, config, orchestrator }: PomodoroTi
               transform="rotate(-90 100 100)"
             />
           </svg>
-          <div className="timer-ring-inner">
-            <span className={`timer-phase${phase !== 'work' ? ` ${phase}` : ''}`}>
+          <div className={styles.ringInner}>
+            <span className={`${styles.phaseLabel} ${styles.phaseLabelVariant[phase]}`}>
               {phaseLabel(phase)}
             </span>
-            <span className="timer-display" style={{ color: colors.filled }}>
+            <span className={styles.timerDisplay} style={{ color: colors.filled }}>
               {formatTime(session.remainingMs)}
             </span>
           </div>

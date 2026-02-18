@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import * as styles from './styles/congrats-panel.css'
 
 const CONFETTI_COLORS = ['#ffd54f', '#ff7043', '#42a5f5', '#66bb6a', '#ab47bc', '#ef5350']
 const CONFETTI_COUNT = 30
@@ -33,12 +34,12 @@ export function CongratsPanel({ triggerKey }: CongratsPanelProps): JSX.Element {
   const pieces = useMemo(() => generateConfetti(), [triggerKey])
 
   return (
-    <div className="timer-congrats-mode">
-      <div className="congrats-confetti">
+    <div className={styles.congratsMode}>
+      <div className={styles.confettiContainer}>
         {pieces.map((p, i) => (
           <span
             key={i}
-            className="confetti-piece"
+            className={styles.confettiPiece}
             style={{
               left: p.left,
               background: p.background,
@@ -51,9 +52,9 @@ export function CongratsPanel({ triggerKey }: CongratsPanelProps): JSX.Element {
           />
         ))}
       </div>
-      <div className="congrats-message">Congratulations!</div>
-      <div className="congrats-sub">Pomodoro cycle completed</div>
-      <div className="congrats-hint" />
+      <div className={styles.message}>Congratulations!</div>
+      <div className={styles.sub}>Pomodoro cycle completed</div>
+      <div className={styles.hint} />
     </div>
   )
 }

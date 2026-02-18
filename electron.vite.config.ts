@@ -1,6 +1,7 @@
 import { defineConfig, externalizeDepsPlugin } from 'electron-vite'
 import { loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
+import { vanillaExtractPlugin } from '@vanilla-extract/vite-plugin'
 
 const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
@@ -24,7 +25,7 @@ export default defineConfig({
   renderer: {
     root: 'src',
     publicDir: '../assets',
-    plugins: [react()],
+    plugins: [react(), vanillaExtractPlugin()],
     server: {
       port: Number(env.VITE_DEV_PORT) || 5173
     },

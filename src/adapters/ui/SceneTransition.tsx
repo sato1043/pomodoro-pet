@@ -1,4 +1,5 @@
 import { useState, useRef, useImperativeHandle, forwardRef } from 'react'
+import * as styles from './styles/scene-transition.css'
 
 const FADE_DURATION_MS = 350
 
@@ -34,6 +35,6 @@ export const SceneTransition = forwardRef<SceneTransitionRef>(
       }
     }))
 
-    return <div className="scene-transition-overlay" style={{ opacity }} />
+    return <div className={styles.overlay} style={{ opacity }} />
   }
 )

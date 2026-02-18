@@ -16,7 +16,8 @@ import { FreeTimerPanel } from './FreeTimerPanel'
 import { PomodoroTimerPanel } from './PomodoroTimerPanel'
 import { CongratsPanel } from './CongratsPanel'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
-import './styles/timer-overlay.css'
+import { darkThemeClass } from './styles/theme.css'
+import * as overlayStyles from './styles/timer-overlay.css'
 
 type DisplayMode = 'free' | 'pomodoro' | 'congrats'
 
@@ -110,11 +111,11 @@ export function TimerOverlay(): JSX.Element {
   // #app-root内ではなくbody直下に配置することでpointer-events階層の問題を回避
   return createPortal(
     <>
-      <div id="timer-overlay" style={{
+      <div id="timer-overlay" className={`${overlayStyles.overlay} ${darkThemeClass}`} style={{
           ...(overlayBackground ? { background: overlayBackground } : {}),
         }}>
         {mode !== 'pomodoro' && mode !== 'congrats' && (
-          <div className="timer-overlay-title">Pomodoro Pet</div>
+          <div className={overlayStyles.title}>Pomodoro Pet</div>
         )}
 
         {mode === 'free' && (
