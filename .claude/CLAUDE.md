@@ -125,7 +125,9 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
-テストはドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。テストファイル一覧と件数は [architecture.md](.claude/memories/architecture.md) を参照。
+テストはドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。テストファイル一覧は [architecture.md](.claude/memories/architecture.md) を参照。
+
+**コミット前に必ず `npm run test:coverage` を実行すること。** テスト全件通過とカバレッジレポート（`.claude/memories/coverage.txt`）の更新を確認してからコミットする。
 
 ## Project Documents
 

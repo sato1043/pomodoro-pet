@@ -8,72 +8,119 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 
 ## 機能要件と実装状況
 
-### 0. アプリケーションモード（AppMode） — 実装中
+### 0. アプリケーションシーン（AppScene） — 実装済
 
 #### 0.1 概要
-アプリケーション全体の動作モードを管理する。ポモドーロタイマーの内部状態（work/break/long-break）とは独立した上位概念である。
+アプリケーション全体の動作シーンを管理する。ポモドーロタイマーの内部状態（work/break/long-break/congrats）とは独立した上位概念である。
 
-#### 0.2 モード定義
-- `free`: ポモドーロサイクルに入っていない自由な状態。キャラクターは自由行動（idle系自律遷移）およびインタラクション（摘まみ上げ、将来的には餌やり等）が可能
-- `pomodoro`: ポモドーロサイクル実行中。PomodoroSessionが有効でタイマーUIが表示される
+#### 0.2 シーン定義
+- `free`: ポモドーロサイクルに入っていない自由な状態。キャラクターは自由行動（idle系自律遷移）およびインタラクション（摘まみ上げ・撫でる等）が可能
+- `pomodoro`: ポモドーロサイクル実行中。タイマーUIが表示される
+- `settings`: 設定画面（将来拡張用、現在はスタブ）
 
-#### 0.3 状態遷移
+#### 0.3 表示シーン（DisplayScene）
+AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態を管理する。
+- `free` — freeモードUI
+- `pomodoro:work` — 作業フェーズUI
+- `pomodoro:break` — 休憩フェーズUI
+- `pomodoro:long-break` — 長時間休憩フェーズUI
+- `pomodoro:congrats` — サイクル完了祝福UI
+
+#### 0.4 状態遷移
 - `free → pomodoro`: ユーザーの明示的な開始操作（Start Pomodoroボタン）
-- `pomodoro → free`: サイクル完了時の自動停止（CycleCompleted）、またはユーザーの明示的な終了操作（Exit Pomodoroボタン）
+- `pomodoro → free`: ユーザーの明示的な終了操作（Stopアイコン）。手動中断時は`PomodoroAborted`イベントを発行
+- `pomodoro → congrats → free`: サイクル完了時の自動遷移。`CycleCompleted` → congrats（5秒表示）→ `PomodoroCompleted`イベント → freeへ自動遷移
 
-#### 0.4 配置
-- アプリケーション層（`src/application/app-mode/`）に配置する
-- タイマードメインとキャラクタードメインを横断する関心事であるため、ドメイン層には含めない
-- EventBus経由で `AppModeChanged` イベントを発行し、各コンポーネントが購読する
+#### 0.5 配置
+- アプリケーション層（`src/application/app-scene/`）に配置
+- `AppSceneManager`が純粋な状態ホルダー（EventBus不要）として機能
+- `PomodoroOrchestrator`がEventBus経由で`AppSceneChanged`イベントを発行し、各コンポーネントが購読
 
 ### 1. ポモドーロタイマー — 実装済
 
 #### 1.1 セット構造
-- 作業25分 → 休憩5分 を1セットとする
-- 4セットで1サイクル（デフォルト）
-- 最終セット後に15分の長時間休憩
-- サイクル完了（長時間休憩終了）後にタイマーを自動停止する
-- 将来的には設定UIで作業時間・休憩時間・長時間休憩時間・セット数を変更可能にする（現時点では固定値）
+- 作業25分 → 休憩5分 を1セットとする（デフォルト）
+- 4セットで1サイクル（設定UIで1〜4を選択可能）
+- 最終セット後に15分の長時間休憩（Sets=1はBreak、Sets>1の最終セットはLong Break）
+- 最終workの直後にcongrats（5秒）を挿入
+- サイクル完了（長時間休憩終了）後にタイマーを自動停止し、freeへ遷移
+- 作業時間（25/50/90分）、休憩時間（5/10/15分）、長時間休憩（15/30/60分）、セット数（1〜4）を設定UIで変更可能
+- `CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプ・congrats挿入を一元管理
 
-#### 1.2 タイマーUI
-- 画面上部に水平中央配置、画面幅いっぱい（左右10pxマージン）
-- freeモード時: タイマー詳細を非表示にし「Start Pomodoro」ボタンを表示
-- pomodoroモード時: タイマーUI全体を表示 + 「Exit Pomodoro」ボタンを追加
-  - Pause/Reset ボタン
-  - MM:SS 残り時間表示
-  - 「Set N/M」セット進捗表示
-  - フロー説明テキスト（現在のフェーズの説明）
-  - 進捗ドット（完了セットを視覚表示）
+#### 1.2 タイマーUI（React）
+全UIコンポーネントはReact JSX（`.tsx`）で実装。`createPortal`でdocument.bodyにポータル化。
+
+**freeモード（FreeTimerPanel）:**
+- タイトル「Pomodoro Pet」を表示
+- ☰/×トグルで設定パネルの展開/折りたたみを切り替え
+- 折りたたみ時: タイムラインサマリー（CyclePlanベース色付き横棒グラフ＋現在時刻＋セット終了時刻＋合計時間）を表示
+- 展開時: タイマー設定ボタングループ（Work [25/50/90], Break [5/10/15], Long Break [15/30/60], Sets [1/2/3/4]）を表示
+- VolumeControl（サウンドプリセット選択・10段階ボリュームインジケーター・SVGミュートボタン）を常時表示
+- 展開時はSetボタンで設定確定。押さずに閉じるとスナップショット復元（タイマー設定・サウンド設定・sfxPlayer同期）
+- 折りたたみ時のボリューム/ミュート変更は即時保存
+- 「Start Pomodoro」ボタンでポモドーロ開始
+
+**pomodoroモード（PomodoroTimerPanel）:**
+- タイトル非表示
+- SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現
+- リング内にフェーズラベル＋フェーズカラー数字を配置（work=緑、break=青、long-break=紫、congrats=黄）
+- 背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）
+- 左肩にサイクル進捗ドット（フェーズ単位、完了=白、現在=フェーズカラー、未到達=半透明）
+- 右肩にSVGアイコンボタン: pause/resume（❚❚/▶）、stop（■）
+
+**congratsモード（CongratsPanel）:**
+- 祝福メッセージ「Congratulations!」＋サブテキスト「Pomodoro cycle completed」
+- CSS紙吹雪エフェクト（30個、6色、ランダムサイズ・遅延・形状）
+- 5秒で自動dismiss、またはクリックで閉じてfreeモードに遷移
 
 #### 1.3 デバッグ用タイマー短縮モード
-- 環境変数 `VITE_DEBUG_TIMER=1` で有効化
-- work=5秒 / break=3秒 / long-break=4秒 に短縮される
-- `.env.development` に記述して `npm run dev` で起動する
+- 環境変数 `VITE_DEBUG_TIMER` で有効化
+- 書式: `VITE_DEBUG_TIMER=work/break/long-break/sets`（秒数指定）
+- 省略部分は前の値を引き継ぐ。setsデフォルト=2
+- 例: `10`（全10秒）、`10/5`（work=10秒、break=5秒）、`10/5/15/3`（各指定）
+- `.env.development` に記述して `npm run dev` で起動
+- break/long-breakが30秒未満の場合、break-getsetトリガー（残り30秒）が開始直後に発火する
 
 ### 2. 3Dキャラクター — 実装済
 
 #### 2.1 モデル
 - FBXモデル（ms07_Wildboar イノシシ）を使用
 - テクスチャはPNG手動適用（FBX内のPSD参照は読めないため）
-- FBX読み込み失敗時はプレースホルダーキャラクターにフォールバック
+- FBX読み込み失敗時はプレースホルダーキャラクター（プリミティブ人型＋8種プロシージャルアニメーション）にフォールバック
 - AnimationControllerによるcrossFadeブレンド（0.3秒）
 
 #### 2.2 配置
-- キャラクターは画面中央よりやや下に固定表示する
-- キャラクター自体は移動しない（背景がスクロールすることで歩行を表現する）
+- キャラクターは画面中央よりやや下に固定表示
+- キャラクター自体は移動しない（背景がスクロールすることで歩行を表現）
 
 ### 3. キャラクター行動AI — 実装済
 
 #### 3.1 状態
-- 7状態ステートマシン: idle, wander, sit, sleep, happy, reaction, dragged
-- 各状態は`scrolling`プロパティを持ち、その動作がスクロール（進行）を伴うかどうかを定義する
-  - `wander`: scrolling=true（歩きながら進む）
-  - その他: scrolling=false（その場の動作）
+10状態ステートマシン:
 
-#### 3.2 自律行動
-- タイムアウトによる自動遷移: idle→wander→sit→idle 循環
-- タイマーが停止中（`scrollingAllowed=false`）のときは、scrolling状態（wander）をスキップして次の状態（sit）へ遷移する
-- つまりタイマー停止中はキャラクターが歩かない
+| 状態 | アニメーション | scrolling | 説明 |
+|---|---|---|---|
+| idle | idle | false | 待機 |
+| wander | walk | false | 自由歩き（break/free中のふらつき、スクロールなし） |
+| march | walk | true | 目的ある前進（work中、スクロールあり） |
+| sit | sit | false | 座る |
+| sleep | sleep | false | 寝る |
+| happy | happy | false | 喜ぶ |
+| reaction | wave | false | リアクション（クリック応答） |
+| dragged | idle | false | 摘まみ上げ中 |
+| pet | pet | false | 撫でられ中 |
+| refuse | refuse | false | インタラクション拒否（work中） |
+
+#### 3.2 BehaviorPreset（行動プリセット）
+宣言的に振る舞いを制御する5つのプリセット:
+
+| プリセット | 用途 | 遷移サイクル | interactionLocked |
+|---|---|---|---|
+| autonomous | free時の自律行動 | idle→wander→sit→idle | false |
+| march-cycle | work中の行進 | march→idle→march（march 30〜60秒、idle 3〜5秒） | true |
+| rest-cycle | break中の休息 | happy→sit→idle→sit（happyは初回のみ） | false |
+| joyful-rest | long-break中の喜び休息 | happy→sit→idle→happy（happy繰り返し） | false |
+| celebrate | congrats時の祝福 | happy固定（lockedState） | false |
 
 #### 3.3 プロンプト入力
 - 英語/日本語キーワードマッチング（LLM不使用）
@@ -83,7 +130,7 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 
 #### 4.1 ホバー
 - Raycasterベースのヒットテスト
-- カーソルがpointerに変化
+- カーソルがpointerに変化（`InteractionConfig`で状態別ホバーカーソルをカスタマイズ可能）
 
 #### 4.2 クリック
 - reactionアニメーション再生
@@ -94,25 +141,36 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 - 横揺れに連動してキャラクターがY軸で少し回転する（揺れ方向を向く）
 - 離すとふわっと降りる（位置・回転ともに指数減衰アニメーション、毎フレーム×0.9）
 - 摘まみ上げ中は背景スクロールしない
-- タイマー動作中（作業Phase）に摘まみ上げて離した場合、歩行状態（wander）に復帰する
+
+#### 4.4 撫でる
+- `GestureRecognizer`がドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定
+- 撫でるとpetアニメーション再生
+
+#### 4.5 インタラクションロック
+- ポモドーロwork中（march-cycleプリセット）は`interactionLocked: true`
+- ロック中にインタラクションするとrefuseアニメーション再生
 
 ### 5. タイマー↔キャラクター連携 — 実装済
 
-#### 5.1 AppModeとキャラクター行動の対応
-- AppMode が `free` のとき → idle（自由行動）+ scrollingAllowed=false + インタラクション可能
-- AppMode が `pomodoro` のとき → タイマー状態に連動（下記5.2参照）
+#### 5.1 PomodoroOrchestratorによる一元管理
+`PomodoroOrchestrator`がAppScene遷移・タイマー操作・キャラクター行動を一元管理する。階層間連動は直接コールバック（`onBehaviorChange`）で実行し、EventBusはUI/インフラへの通知のみに使用する。
 
-#### 5.2 ポモドーロ中のタイマー状態とキャラクター行動の対応
-- 作業Phase開始 → wander（歩く＝スクロール）+ scrollingAllowed=true
-- 作業Phase完了 → happy（喜ぶ）
-- 休憩/長時間休憩Phase開始 → idle（自由行動）+ scrollingAllowed=false
-- タイマー一時停止 → idle + scrollingAllowed=false
-- タイマーリセット → idle + scrollingAllowed=false
+#### 5.2 フェーズ→BehaviorPresetマッピング
+`phaseToPreset()`純粋関数でフェーズをBehaviorPresetに変換:
 
-#### 5.3 要約
-- freeモード → キャラクターは自由行動。スクロールしない
-- pomodoroモードで作業Phase → キャラクターが歩き、背景がスクロールする
-- pomodoroモードで作業Phase以外 → キャラクターはその場の動作のみ（idle/sit等）
+| フェーズ | BehaviorPreset | キャラクター行動 |
+|---|---|---|
+| work | march-cycle | marchで前進（スクロール）、短い休憩を挟む |
+| break | rest-cycle | happy→sit→idle循環 |
+| long-break | joyful-rest | happy繰り返し→sit→idle循環 |
+| congrats | celebrate | happy固定 |
+
+#### 5.3 シーン別の行動
+- freeモード → autonomousプリセット（idle→wander→sit→idle循環、スクロールなし、インタラクション可能）
+- pomodoroモードwork → march-cycleプリセット（march→idle→march循環、スクロールあり、インタラクションロック）
+- pomodoroモードbreak/long-break → rest-cycle/joyful-restプリセット（スクロールなし、インタラクション可能）
+- congrats → celebrateプリセット（happy固定）
+- pause → autonomousプリセット（自由行動に復帰）
 
 ### 6. 環境生成 — 実装済
 
@@ -124,7 +182,7 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 #### 6.2 シーン設定
 - 進行方向: デフォルト+Z（奥→手前）、設定で変更可能
 - スクロール速度: 1.5 units/sec
-- 各キャラクター状態のscrollingプロパティで、その状態でスクロールするかを決定
+- `shouldScroll()`純粋関数で、現在の状態でスクロールすべきかを判定
 
 #### 6.3 チャンク仕様
 - 幅40 × 奥行20
@@ -137,27 +195,107 @@ STEAMに公開可能なポモドーロタイマーアプリをTypeScriptで開�
 - PCFSoftShadowMap
 
 ### 7. 環境音 — 実装済
+
+#### 7.1 プロシージャル環境音
 - Web Audio APIによるプロシージャル生成（外部mp3不要）
 - プリセット: Rain, Forest, Wind, Silence
-- 音量スライダー、ミュートトグル
-- 休憩BGM: break/long-break中は環境音を停止し`break-chill.mp3`をクロスフェードループ再生。残り30秒で`break-getset.mp3`に3秒クロスフェード切替して次のwork開始を予告。break終了時に環境音を復帰
+- VolumeControl（音量インジケーター・ミュートトグル）で制御
+- `AudioAdapter`が再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング
+- 初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後に復元）
 
-### 8. カメラ・画面 — 実装済
+#### 7.2 SFX音声フィードバック（TimerSfxBridge）
+`TimerSfxBridge`（アプリケーション層）がEventBus購読でタイマーSFXを一元管理:
+- `PhaseStarted(work)` → work開始音再生
+- `PhaseStarted(congrats)` → ファンファーレ再生
+- `PhaseStarted(break)` → work完了音再生（long-break前はcongrats→ファンファーレのためスキップする遅延判定）
+- `PomodoroAborted` → `pomodoro-exit.mp3`を再生
 
-#### 8.1 カメラ
+#### 7.3 休憩BGM
+- break/long-break開始時に環境音を停止し`break-chill.mp3`をクロスフェードループ再生
+- 残り30秒で`break-getset.mp3`に3秒クロスフェード切替（`PhaseTimeTrigger`を活用）
+- break/long-break終了時にBGM停止・環境音復帰
+- pause時はBGM停止、resume時は自動復帰
+- `AudioControl`インターフェースで環境音の停止/復帰を抽象化
+
+#### 7.4 SfxPlayer（インフラ層）
+- MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）
+- `crossfadeMs`指定時はループ境界・曲間切替でクロスフェード
+- per-source GainNodeで個別フェード制御＋ファイル別音量補正（`gain`パラメータ）
+- fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生
+- `MAX_GAIN=0.25`でUI音量値をスケーリング
+
+### 8. シーンチェンジ演出 — 実装済
+
+#### 8.1 宣言的シーン遷移グラフ
+- `DISPLAY_SCENE_GRAPH`定数で全遷移ルールをテーブル定義
+- `DisplayTransitionState`によるテーブルルックアップで遷移効果を解決
+
+#### 8.2 遷移効果
+| 遷移 | 効果 |
+|---|---|
+| free → pomodoro:work | blackout（暗転） |
+| pomodoro:break → pomodoro:work | blackout |
+| pomodoro:long-break → pomodoro:work | blackout |
+| pomodoro:congrats → free | blackout |
+| pomodoro:work → pomodoro:break/long-break/congrats | immediate（即時切替） |
+
+#### 8.3 暗転オーバーレイ（SceneTransition）
+- 全画面暗転オーバーレイ（`z-index: 10000`）
+- `playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)
+- forwardRef+useImperativeHandleで親からの呼び出しに対応
+
+#### 8.4 microtaskコアレシング
+- 同期バッチイベント（AppSceneChanged+PhaseStarted）をmicrotaskで集約し、1回のトランジションに統合
+
+### 9. タイマー設定カスタマイズ — 実装済
+
+#### 9.1 設定項目
+- Work: 25 / 50 / 90 分
+- Break: 5 / 10 / 15 分
+- Long Break: 15 / 30 / 60 分
+- Sets: 1 / 2 / 3 / 4
+- サウンドプリセット: Rain / Forest / Wind / Silence
+- 音量: 0〜10段階
+- ミュート: on/off
+
+#### 9.2 AppSettingsService
+- `updateTimerConfig()`: 分→ms変換＋`createConfig()`バリデーション＋`SettingsChanged`イベント発行
+- `updateSoundConfig()`: サウンド設定保存＋即時永続化
+- `SettingsChanged`購読でsession再作成→UI再構築のフロー
+
+### 10. 設定永続化 — 実装済
+
+#### 10.1 保存先
+- `{userData}/settings.json`（Windowsなら`%APPDATA%/pomodoro-pet/settings.json`）
+
+#### 10.2 方式
+- Node.js標準API（`fs` + `app.getPath('userData')`）で直接JSON読み書き
+- `electron-store`はESM/CJS衝突のため不採用
+- Electron IPC（`settings:load`/`settings:save`）→ preload contextBridge → renderer
+
+#### 10.3 起動時復元
+- `loadFromStorage()`でサウンド→タイマーの順でイベント発行
+- `SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用
+
+### 11. カメラ・画面 — 実装済
+
+#### 11.1 カメラ
 - ほぼ水平の視点でキャラクターを見る（上からではない）
 - キャラクターが画面やや下に表示される（タイマーUIが画面中央付近に来るように）
 
-#### 8.2 画面サイズ
+#### 11.2 画面サイズ
 - iPhoneと同じ縦横比（390×844、iPhone 15相当）
 
-### 9. 環境映像 — 未実装（nice-to-have）
+### 12. 環境映像 — 未実装（nice-to-have）
 
 ## 非機能要件
 - プラットフォーム: Windows
-- デスクトップアプリ: Electron
+- デスクトップアプリ: Electron v33
 - electron-builder NSIS設定済
 - 将来Steam公開対応（steamworks.js統合可能な構造）
 - クリーンアーキテクチャ（domain ← application ← adapters ← infrastructure）
 - ドメイン層は純粋関数/オブジェクトで構成、Three.jsやDOMに依存しない
 - TypeScript strict mode
+- UI層はReact 19で実装。`AppContext`による依存注入、`useEventBus`フックでEventBus購読
+- CSS: 現在は`timer-overlay.css`にグローバルセレクタ。vanilla-extractへの移行を計画中
+- テスト: Vitest v2、ドメイン層・アプリケーション層に集中

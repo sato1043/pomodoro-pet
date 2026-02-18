@@ -34,7 +34,7 @@ PomodoroOrchestratorが階層間連動を直接コールバックで管理。Eve
   onBehaviorChange callback（キャラクター行動切替）
 
 EventBus（UI/インフラ通知）:
-  AppSceneChanged → TimerOverlay, SettingsPanel
+  AppSceneChanged → TimerOverlay
   PhaseStarted/PhaseCompleted/TimerTicked/TimerPaused/TimerReset → TimerOverlay
   PhaseCompleted(work)/PhaseStarted(congrats) → TimerSfxBridge
   TriggerFired(break-getset/long-break-getset) → TimerSfxBridge（休憩BGM切替）
@@ -106,16 +106,21 @@ EventBus（UI/インフラ通知）:
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
-- `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示
-- `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）
-- `ui/TimerOverlay.ts` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelを生成・配置し、DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）を管理。microtaskコアレシングでEventBusイベントを1回のトランジションに集約。dispose集約
-- `ui/SceneTransition.ts` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。playBlackout(cb): opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。再生中の呼び出しはcb()のみ即実行
-- `ui/FreeTimerPanel.ts` — freeモード。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。☰/×トグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元
-- `ui/PomodoroTimerPanel.ts` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過で濃化）。左肩にサイクル進捗ドット、右肩にpause/stopアイコン。`phaseColor`/`overlayTintBg`をexport
-- `ui/CongratsPanel.ts` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
-- `ui/VolumeControl.ts` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
-- `ui/PromptInput.ts` — プロンプト入力（下部中央）
-- `ui/SettingsPanel.ts` — ギアアイコン→モーダルでEnvironment設定を提供（現在スタブ）
+- `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示。`FBXCharacterConfig`でモデルパス・スケール・テクスチャ・アニメーションを一括設定
+- `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）/撫でる。`InteractionConfig`で状態別ホバーカーソルをカスタマイズ可能
+- `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、TimerOverlay/PromptInputを配置
+- `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
+- `ui/TimerOverlay.tsx` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelをモードに応じて切替。DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約
+- `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応
+- `ui/FreeTimerPanel.tsx` — freeモード。タイマー設定ボタングループ（Work/Break/LongBreak/Sets）＋VolumeControl統合。SVGアイコンのトグルで折りたたみ、タイムラインサマリー（色付き横棒グラフ＋時刻＋合計時間）に切替。展開時はSetボタンで確定、押さずに閉じるとスナップショット復元（タイマー設定・サウンド設定・sfxPlayer同期）
+- `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
+- `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
+- `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
+- `ui/PromptInput.tsx` — プロンプト入力UI
+- `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
+- `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
+- `ui/styles/timer-overlay.css` — グローバルCSSスタイル（vanilla-extract移行対象）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input, timer-overlay）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -133,18 +138,19 @@ EventBus（UI/インフラ通知）:
 - `electron.d.ts` — `window.electronAPI`型定義
 - `index.html` — HTMLエントリ
 
-### tests/ — 280件
-- `domain/timer/PomodoroStateMachine.test.ts` — 53件
-- `domain/timer/CyclePlan.test.ts` — 7件
-- `domain/timer/TimerConfig.test.ts` — 10件
-- `domain/character/BehaviorStateMachine.test.ts` — 70件
-- `domain/character/GestureRecognizer.test.ts` — 17件
-- `domain/environment/SceneConfig.test.ts` — 11件
-- `domain/shared/EventBus.test.ts` — 4件
-- `application/app-scene/AppSceneManager.test.ts` — 8件
-- `application/character/InterpretPrompt.test.ts` — 17件
-- `application/environment/ScrollUseCase.test.ts` — 11件
-- `application/settings/AppSettingsService.test.ts` — 13件
-- `application/timer/PomodoroOrchestrator.test.ts` — 25件
-- `application/timer/TimerSfxBridge.test.ts` — 30件
-- `setup.test.ts` — 1件
+### tests/
+ドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。`npm test`で全件実行、`npx vitest run --coverage`でカバレッジレポート生成。
+
+- `domain/timer/PomodoroStateMachine.test.ts` — フェーズ遷移・tick・pause/reset・exitManually・セット進行・congrats・PhaseTimeTrigger
+- `domain/timer/CyclePlan.test.ts` — セット構造生成・congrats挿入・Sets=1/複数・cycleTotalMs
+- `domain/timer/TimerConfig.test.ts` — デフォルト値・バリデーション・parseDebugTimer書式パース
+- `domain/character/BehaviorStateMachine.test.ts` — 全10状態遷移・5プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState
+- `domain/character/GestureRecognizer.test.ts` — ドラッグ/撫でるジェスチャー判定・drag vs pet判定・設定カスタマイズ
+- `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
+- `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
+- `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro・全サイクル
+- `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
+- `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
+- `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault
+- `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行
+- `application/timer/TimerSfxBridge.test.ts` — work完了音/ファンファーレ使い分け・休憩BGMクロスフェード・エラーハンドリング
