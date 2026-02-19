@@ -158,6 +158,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [interaction-design.md](.claude/memories/interaction-design.md) — インタラクション設計（ジェスチャー判定・拡張ガイド）
 - [scene-transition-design.md](.claude/memories/scene-transition-design.md) — シーンチェンジ演出（暗転トランジション）設計
 - [react-migration.md](.claude/memories/react-migration.md) — React移行の経緯・効果・CSS方式選定（vanilla-extract採用理由）
+- [asset-licensing-distribution.md](.claude/memories/asset-licensing-distribution.md) — 素材ライセンスと配布方式（購入素材の法的整理・リポジトリ構成）
 
 ## Key Conventions
 

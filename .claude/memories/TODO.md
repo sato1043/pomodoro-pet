@@ -116,6 +116,14 @@
 - PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 - フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
+### 素材ライセンス整理・配布方式の決定
+- 全購入素材のライセンス条項を確認し一覧化する
+- 各素材の「バイナリ同梱配布」可否を確定する
+- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
+- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
+- THIRD_PARTY_LICENSESファイル・EULA・クレジット表記を整備する
+- 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
+
 ### 通知機能
 - フェーズ完了時にシステム通知を発行
 - Electron `Notification` API使用
