@@ -1,22 +1,16 @@
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
-import { createConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
 import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/CyclePlan'
 import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
-import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrchestrator'
-import type { AppSettingsService } from '../../application/settings/AppSettingsService'
 import type { ThemePreference } from '../../application/settings/SettingsEvents'
-import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
-import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import { useAppDeps } from './AppContext'
+import { useTheme } from './ThemeContext'
+import { useSettingsEditor, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
 import * as styles from './styles/free-timer-panel.css'
 
 // --- 純粋関数 ---
-
-function msToMinutes(ms: number): number {
-  return Math.round(ms / 60000)
-}
 
 function resolveSelected(options: number[], selected: number): number {
   return options.includes(selected) ? selected : options[0]
@@ -99,39 +93,6 @@ const WORK_OPTIONS = [25, 50, 90]
 const BREAK_OPTIONS = [5, 10, 15]
 const LONG_BREAK_OPTIONS = [15, 30, 60]
 const SETS_OPTIONS = [1, 2, 3, 4]
-
-// --- コンポーネント ---
-
-interface FreeTimerPanelProps {
-  readonly config: TimerConfig
-  readonly settingsService: AppSettingsService
-  readonly orchestrator: PomodoroOrchestrator
-  readonly audio: AudioAdapter
-  readonly sfx: SfxPlayer | null
-  readonly debugTimer: boolean
-  readonly themePreference: ThemePreference
-  readonly onThemeChange: (theme: ThemePreference) => void
-}
-
-interface TimerSettings {
-  work: number
-  break: number
-  longBreak: number
-  sets: number
-}
-
-function settingsFromConfig(config: TimerConfig): TimerSettings {
-  return {
-    work: resolveSelected(WORK_OPTIONS, msToMinutes(config.workDurationMs)),
-    break: resolveSelected(BREAK_OPTIONS, msToMinutes(config.breakDurationMs)),
-    longBreak: resolveSelected(LONG_BREAK_OPTIONS, msToMinutes(config.longBreakDurationMs)),
-    sets: resolveSelected(SETS_OPTIONS, config.setsPerCycle),
-  }
-}
-
-function settingsToTimerConfig(s: TimerSettings): TimerConfig {
-  return createConfig(s.work * 60000, s.break * 60000, s.longBreak * 60000, s.sets)
-}
 
 // --- SVGアイコン ---
 
@@ -263,163 +224,112 @@ function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Ele
   )
 }
 
-// --- メインコンポーネント ---
+// --- 折りたたみ時サマリー ---
 
-export function FreeTimerPanel({
-  config, settingsService, orchestrator, audio, sfx, debugTimer,
-  themePreference, onThemeChange
-}: FreeTimerPanelProps): JSX.Element {
-  const [settings, setSettings] = useState<TimerSettings>(() => settingsFromConfig(config))
-  const [expanded, setExpanded] = useState(false)
-  const [volumeKey, setVolumeKey] = useState(0)
-  const snapshotRef = useRef<{ settings: TimerSettings; preset: string; volume: number; muted: boolean; theme: ThemePreference } | null>(null)
-  const confirmedRef = useRef(false)
-
-  // config変更時にsettingsを同期
-  useEffect(() => {
-    setSettings(settingsFromConfig(config))
-  }, [config])
-
-  // 折りたたみ時に1秒ごとに再レンダリング（時計更新）
+function FreeTimerSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Element {
+  // 1秒ごとに時計を更新
   const [, setClockTick] = useState(0)
   useEffect(() => {
-    if (expanded) return
     const id = setInterval(() => setClockTick(t => t + 1), 1000)
     return () => clearInterval(id)
-  }, [expanded])
-
-  const currentTimerConfig = settingsToTimerConfig(settings)
-
-  const handleToggle = useCallback(() => {
-    setExpanded(prev => {
-      if (!prev) {
-        // 展開時: スナップショット保存
-        snapshotRef.current = {
-          settings: { ...settings },
-          preset: audio.currentPreset,
-          volume: audio.volume,
-          muted: audio.isMuted,
-          theme: themePreference,
-        }
-        confirmedRef.current = false
-      } else if (!confirmedRef.current && snapshotRef.current) {
-        // Setを押さずに閉じた: スナップショット復元
-        const snap = snapshotRef.current
-        setSettings(snap.settings)
-        if (audio.currentPreset !== snap.preset) audio.switchPreset(snap.preset)
-        if (audio.isMuted !== snap.muted) audio.toggleMute()
-        audio.setVolume(snap.volume)
-        sfx?.setVolume(snap.volume)
-        sfx?.setMuted(snap.muted)
-        onThemeChange(snap.theme)
-        setVolumeKey(k => k + 1)
-      }
-      return !prev
-    })
-  }, [settings, audio, sfx, themePreference, onThemeChange])
-
-  const handleConfirm = useCallback(() => {
-    settingsService.updateTimerConfig({
-      workMinutes: settings.work,
-      breakMinutes: settings.break,
-      longBreakMinutes: settings.longBreak,
-      setsPerCycle: settings.sets,
-    })
-    settingsService.updateSoundConfig({
-      preset: audio.currentPreset,
-      volume: audio.volume,
-      isMuted: audio.isMuted,
-    })
-    settingsService.updateThemeConfig(themePreference)
-    confirmedRef.current = true
-    setExpanded(false)
-  }, [settings, settingsService, audio, themePreference])
-
-  const handleStartPomodoro = useCallback(() => {
-    orchestrator.startPomodoro()
-  }, [orchestrator])
-
-  const handleSoundChange = useCallback(() => {
-    if (!expanded) {
-      settingsService.updateSoundConfig({
-        preset: audio.currentPreset,
-        volume: audio.volume,
-        isMuted: audio.isMuted,
-      })
-    }
-    setVolumeKey(k => k + 1)
-  }, [expanded, settingsService, audio])
-
-  const updateSetting = useCallback((key: keyof TimerSettings, value: number) => {
-    setSettings(prev => ({ ...prev, [key]: value }))
   }, [])
+
+  return (
+    <div className={styles.settingsSummary}>
+      <TimelineSummary timerConfig={timerConfig} />
+    </div>
+  )
+}
+
+// --- 展開時設定パネル ---
+
+interface FreeTimerSettingsProps {
+  readonly settings: TimerSettings
+  readonly onUpdate: (key: keyof TimerSettings, value: number) => void
+  readonly themePreference: ThemePreference
+  readonly onThemeChange: (theme: ThemePreference) => void
+}
+
+function FreeTimerSettings({ settings, onUpdate, themePreference, onThemeChange }: FreeTimerSettingsProps): JSX.Element {
+  return (
+    <>
+      <div className={styles.settings}>
+        <div className={styles.settingsField}>
+          <label className={`${styles.label} ${styles.labelWork}`}>Work</label>
+          <ButtonGroup name="work" options={WORK_OPTIONS} selected={settings.work} onChange={v => onUpdate('work', v)} />
+        </div>
+        <div className={styles.settingsField}>
+          <label className={`${styles.label} ${styles.labelBreak}`}>Break</label>
+          <ButtonGroup name="break" options={BREAK_OPTIONS} selected={settings.break} onChange={v => onUpdate('break', v)} />
+        </div>
+        <div className={styles.settingsField}>
+          <label className={`${styles.label} ${styles.labelLongBreak}`}>Long Break</label>
+          <ButtonGroup name="long-break" options={LONG_BREAK_OPTIONS} selected={settings.longBreak} onChange={v => onUpdate('longBreak', v)} />
+        </div>
+        <div className={styles.settingsField}>
+          <label className={styles.label}>Sets</label>
+          <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => onUpdate('sets', v)} />
+        </div>
+      </div>
+
+      <div className={styles.themeSection}>
+        <div className={styles.themePresets}>
+          {THEME_OPTIONS.map(opt => (
+            <button
+              key={opt.value}
+              className={`${styles.themePreset}${opt.value === themePreference ? ' active' : ''}`}
+              onClick={() => onThemeChange(opt.value)}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// --- メインコンポーネント ---
+
+export function FreeTimerPanel(): JSX.Element {
+  const { audio, sfx, orchestrator } = useAppDeps()
+  const { themePreference, setThemePreference } = useTheme()
+  const editor = useSettingsEditor()
 
   return (
     <div className={styles.freeMode}>
       <button
         className={styles.settingsToggle}
-        onClick={handleToggle}
-        style={{ transform: expanded ? 'translateY(-2px)' : 'translateY(0px)' }}
+        onClick={editor.toggle}
+        style={{ transform: editor.expanded ? 'translateY(-2px)' : 'translateY(0px)' }}
       >
-        {expanded ? <CloseIcon /> : <MenuIcon />}
+        {editor.expanded ? <CloseIcon /> : <MenuIcon />}
       </button>
 
-      {!expanded && (
-        <div className={styles.settingsSummary}>
-          <TimelineSummary timerConfig={currentTimerConfig} />
-        </div>
-      )}
+      {!editor.expanded && <FreeTimerSummary timerConfig={editor.currentTimerConfig} />}
 
-      {expanded && (
-        <div className={styles.settings}>
-          <div className={styles.settingsField}>
-            <label className={`${styles.label} ${styles.labelWork}`}>Work</label>
-            <ButtonGroup name="work" options={WORK_OPTIONS} selected={settings.work} onChange={v => updateSetting('work', v)} />
-          </div>
-          <div className={styles.settingsField}>
-            <label className={`${styles.label} ${styles.labelBreak}`}>Break</label>
-            <ButtonGroup name="break" options={BREAK_OPTIONS} selected={settings.break} onChange={v => updateSetting('break', v)} />
-          </div>
-          <div className={styles.settingsField}>
-            <label className={`${styles.label} ${styles.labelLongBreak}`}>Long Break</label>
-            <ButtonGroup name="long-break" options={LONG_BREAK_OPTIONS} selected={settings.longBreak} onChange={v => updateSetting('longBreak', v)} />
-          </div>
-          <div className={styles.settingsField}>
-            <label className={styles.label}>Sets</label>
-            <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => updateSetting('sets', v)} />
-          </div>
-        </div>
-      )}
-
-      {expanded && (
-        <div className={styles.themeSection}>
-          <div className={styles.themePresets}>
-            {THEME_OPTIONS.map(opt => (
-              <button
-                key={opt.value}
-                className={`${styles.themePreset}${opt.value === themePreference ? ' active' : ''}`}
-                onClick={() => onThemeChange(opt.value)}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
-        </div>
+      {editor.expanded && (
+        <FreeTimerSettings
+          settings={editor.settings}
+          onUpdate={editor.updateSetting}
+          themePreference={themePreference}
+          onThemeChange={setThemePreference}
+        />
       )}
 
       <VolumeControl
         audio={audio}
         sfx={sfx}
-        showPresets={expanded}
-        onSoundChange={handleSoundChange}
-        forceUpdateKey={volumeKey}
+        showPresets={editor.expanded}
+        onSoundChange={editor.handleSoundChange}
+        forceUpdateKey={editor.volumeKey}
       />
 
-      {expanded && (
-        <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={handleConfirm}>Set</button>
+      {editor.expanded && (
+        <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={editor.confirm}>Set</button>
       )}
-      {!expanded && (
-        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={handleStartPomodoro}>Start Pomodoro</button>
+      {!editor.expanded && (
+        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => orchestrator.startPomodoro()}>Start Pomodoro</button>
       )}
     </div>
   )

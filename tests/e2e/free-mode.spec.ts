@@ -58,6 +58,37 @@ test('Work/Break/LongBreak/Setsのボタン選択', async () => {
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
+test('Setを押さずに閉じると設定がスナップショットから復元される', async () => {
+  const { page } = app
+
+  // 展開して現在のWork activeボタンの値を記録
+  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  const initialActiveWork = await page.locator('button[data-cfg="work"].active').textContent()
+
+  // 別の値に変更
+  const targetValue = initialActiveWork?.trim() === '50' ? '90' : '50'
+  await page.locator('button[data-cfg="work"]').filter({ hasText: targetValue }).click()
+  await expect(page.locator('button[data-cfg="work"]').filter({ hasText: targetValue })).toHaveClass(/active/)
+
+  // Setを押さずに閉じる
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+
+  // 再度開いて値が復元されていることを確認
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  const restoredActiveWork = await page.locator('button[data-cfg="work"].active').textContent()
+  expect(restoredActiveWork?.trim()).toBe(initialActiveWork?.trim())
+
+  // 後片付け: 閉じる
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
 test('「Set」ボタンで設定確定しパネルが閉じる', async () => {
   const { page } = app
 

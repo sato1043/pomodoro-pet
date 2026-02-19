@@ -4,7 +4,6 @@ import { useAppDeps } from './AppContext'
 import { useEventBusCallback, useEventBusTrigger } from './hooks/useEventBus'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
-import type { SettingsEvent, ThemePreference } from '../../application/settings/SettingsEvents'
 import {
   createDisplayTransitionState,
   toDisplayScene,
@@ -17,39 +16,12 @@ import { FreeTimerPanel } from './FreeTimerPanel'
 import { PomodoroTimerPanel } from './PomodoroTimerPanel'
 import { CongratsPanel } from './CongratsPanel'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
-import { useResolvedTheme } from './hooks/useResolvedTheme'
-import { darkThemeClass, lightThemeClass } from './styles/theme.css'
 import * as overlayStyles from './styles/timer-overlay.css'
 
 type DisplayMode = 'free' | 'pomodoro' | 'congrats'
 
 export function TimerOverlay(): JSX.Element {
-  const { bus, session, config, orchestrator, settingsService, audio, sfx, debugTimer } = useAppDeps()
-
-  // テーマ管理
-  const [themePreference, setThemePreference] = useState<ThemePreference>(
-    () => settingsService.themePreference
-  )
-  const resolvedTheme = useResolvedTheme(themePreference)
-
-  useEventBusCallback<SettingsEvent>(bus, 'ThemeLoaded', (event) => {
-    if (event.type === 'ThemeLoaded') {
-      setThemePreference(event.theme)
-    }
-  })
-
-  useEffect(() => {
-    const el = document.documentElement
-    const themeClass = resolvedTheme === 'dark' ? darkThemeClass : lightThemeClass
-    const otherClass = resolvedTheme === 'dark' ? lightThemeClass : darkThemeClass
-    el.classList.remove(otherClass)
-    el.classList.add(themeClass)
-    return () => { el.classList.remove(themeClass) }
-  }, [resolvedTheme])
-
-  const handleThemeChange = useCallback((theme: ThemePreference) => {
-    setThemePreference(theme)
-  }, [])
+  const { bus, session, config, orchestrator } = useAppDeps()
 
   const [mode, setMode] = useState<DisplayMode>(() => {
     const initialScene = orchestrator.sceneManager.currentScene
@@ -146,16 +118,7 @@ export function TimerOverlay(): JSX.Element {
         )}
 
         {mode === 'free' && (
-          <FreeTimerPanel
-            config={config}
-            settingsService={settingsService}
-            orchestrator={orchestrator}
-            audio={audio}
-            sfx={sfx}
-            debugTimer={debugTimer}
-            themePreference={themePreference}
-            onThemeChange={handleThemeChange}
-          />
+          <FreeTimerPanel />
         )}
 
         {mode === 'pomodoro' && (
