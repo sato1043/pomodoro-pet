@@ -6,7 +6,9 @@ import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { ThemePreference } from '../../application/settings/SettingsEvents'
 import { useAppDeps } from './AppContext'
 import { useTheme } from './ThemeContext'
-import { useSettingsEditor, type TimerSettings } from './hooks/useSettingsEditor'
+import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
+import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
 import * as styles from './styles/free-timer-panel.css'
 
@@ -289,6 +291,72 @@ function FreeTimerSettings({ settings, onUpdate, themePreference, onThemeChange 
   )
 }
 
+// --- 折りたたみ時ビュー ---
+
+interface FreeSummaryViewProps {
+  readonly editor: SettingsEditorResult
+  readonly audio: AudioAdapter
+  readonly sfx: SfxPlayer | null
+  readonly onStart: () => void
+}
+
+function FreeSummaryView({ editor, audio, sfx, onStart }: FreeSummaryViewProps): JSX.Element {
+  return (
+    <>
+      <button className={styles.settingsToggle} onClick={editor.toggle}>
+        <MenuIcon />
+      </button>
+      <FreeTimerSummary timerConfig={editor.currentTimerConfig} />
+      <VolumeControl
+        audio={audio}
+        sfx={sfx}
+        showPresets={false}
+        onSoundChange={editor.handleSoundChange}
+        forceUpdateKey={editor.volumeKey}
+      />
+      <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onStart}>Start Pomodoro</button>
+    </>
+  )
+}
+
+// --- 展開時ビュー ---
+
+interface FreeSettingsEditorProps {
+  readonly editor: SettingsEditorResult
+  readonly audio: AudioAdapter
+  readonly sfx: SfxPlayer | null
+  readonly themePreference: ThemePreference
+  readonly onThemeChange: (theme: ThemePreference) => void
+}
+
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange }: FreeSettingsEditorProps): JSX.Element {
+  return (
+    <>
+      <button
+        className={styles.settingsToggle}
+        onClick={editor.toggle}
+        style={{ transform: 'translateY(-2px)' }}
+      >
+        <CloseIcon />
+      </button>
+      <FreeTimerSettings
+        settings={editor.settings}
+        onUpdate={editor.updateSetting}
+        themePreference={themePreference}
+        onThemeChange={onThemeChange}
+      />
+      <VolumeControl
+        audio={audio}
+        sfx={sfx}
+        showPresets={true}
+        onSoundChange={editor.handleSoundChange}
+        forceUpdateKey={editor.volumeKey}
+      />
+      <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={editor.confirm}>Set</button>
+    </>
+  )
+}
+
 // --- メインコンポーネント ---
 
 export function FreeTimerPanel(): JSX.Element {
@@ -298,39 +366,21 @@ export function FreeTimerPanel(): JSX.Element {
 
   return (
     <div className={styles.freeMode}>
-      <button
-        className={styles.settingsToggle}
-        onClick={editor.toggle}
-        style={{ transform: editor.expanded ? 'translateY(-2px)' : 'translateY(0px)' }}
-      >
-        {editor.expanded ? <CloseIcon /> : <MenuIcon />}
-      </button>
-
-      {!editor.expanded && <FreeTimerSummary timerConfig={editor.currentTimerConfig} />}
-
-      {editor.expanded && (
-        <FreeTimerSettings
-          settings={editor.settings}
-          onUpdate={editor.updateSetting}
-          themePreference={themePreference}
-          onThemeChange={setThemePreference}
-        />
-      )}
-
-      <VolumeControl
-        audio={audio}
-        sfx={sfx}
-        showPresets={editor.expanded}
-        onSoundChange={editor.handleSoundChange}
-        forceUpdateKey={editor.volumeKey}
-      />
-
-      {editor.expanded && (
-        <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={editor.confirm}>Set</button>
-      )}
-      {!editor.expanded && (
-        <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={() => orchestrator.startPomodoro()}>Start Pomodoro</button>
-      )}
+      {editor.expanded
+        ? <FreeSettingsEditor
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
+          />
+        : <FreeSummaryView
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+            onStart={() => orchestrator.startPomodoro()}
+          />
+      }
     </div>
   )
 }
