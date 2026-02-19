@@ -139,6 +139,8 @@ EventBus（UI/インフラ通知）:
 - `index.html` — HTMLエントリ
 
 ### tests/
+
+#### ユニットテスト（Vitest）
 ドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。`npm test`で全件実行、`npx vitest run --coverage`でカバレッジレポート生成。
 
 - `domain/timer/PomodoroStateMachine.test.ts` — フェーズ遷移・tick・pause/reset・exitManually・セット進行・congrats・PhaseTimeTrigger
@@ -154,3 +156,12 @@ EventBus（UI/インフラ通知）:
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行
 - `application/timer/TimerSfxBridge.test.ts` — work完了音/ファンファーレ使い分け・休憩BGMクロスフェード・エラーハンドリング
+
+#### E2Eテスト（Playwright）
+Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_TIMER=3/2/3/2`で短縮ビルドし、全ポモドーロサイクルを約1.5分で検証。vanilla-extractのハッシュ化クラス名を回避するため`data-testid`属性を使用。
+
+- `e2e/helpers/launch.ts` — Electronアプリ起動/終了ヘルパー
+- `e2e/smoke.spec.ts` — 起動・タイトル表示・Start Pomodoroボタン存在
+- `e2e/free-mode.spec.ts` — 設定パネルトグル・ボタン選択・Set確定
+- `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
+- `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元

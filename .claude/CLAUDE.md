@@ -12,6 +12,8 @@ npm run test:watch   # Vitest ウォッチモード
 npx vitest run tests/domain/timer/PomodoroStateMachine.test.ts  # 単一テスト実行
 npm run package      # ビルド + Windows NSISインストーラー生成（release/ に出力）
 npm run package:dir  # ビルド + 展開済みディレクトリ出力
+npm run test:e2e     # Playwright E2Eテスト（xvfb-run + デバッグタイマービルド）
+npm run test:e2e:headed  # E2Eテスト（GUI表示あり、Windows/GUI環境用）
 npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe起動
 npm run icon         # build/icon.pngからマルチサイズICO生成（要ImageMagick）
 ```
@@ -125,9 +127,23 @@ VITE_DEV_PORT=3000
 
 ## Testing
 
+### ユニットテスト（Vitest）
+
 テストはドメイン層とアプリケーション層に集中。Three.js依存のアダプター/インフラ層はテスト対象外。テストファイル一覧は [architecture.md](.claude/memories/architecture.md) を参照。
 
 **コミット前に必ず `npm run test:coverage` を実行すること。** テスト全件通過とカバレッジレポート（`.claude/memories/coverage.txt`）の更新を確認してからコミットする。
+
+### E2Eテスト（Playwright）
+
+PlaywrightでElectronアプリの統合テストを実行。`VITE_DEBUG_TIMER=3/2/3/2`で短縮ビルドし、全ポモドーロサイクルを約1.5分で検証する。WSL2ではxvfb-runが必要（`sudo apt install -y xvfb`）。
+
+テストファイル:
+- `tests/e2e/smoke.spec.ts` — 起動・基本表示
+- `tests/e2e/free-mode.spec.ts` — freeモードUI操作
+- `tests/e2e/pomodoro-flow.spec.ts` — ポモドーロサイクル全体フロー
+- `tests/e2e/settings-ipc.spec.ts` — 設定永続化（IPC経由）
+
+vanilla-extractのハッシュ化クラス名を回避するため、テスト対象のインタラクティブ要素には`data-testid`属性を使用する。
 
 ## Project Documents
 
