@@ -1,7 +1,7 @@
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import { createConfig, createDefaultConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { EventBus } from '../../domain/shared/EventBus'
-import type { SettingsEvent } from './SettingsEvents'
+import type { SettingsEvent, ThemePreference } from './SettingsEvents'
 
 export interface TimerConfigInput {
   readonly workMinutes: number
@@ -18,9 +18,11 @@ export interface SoundConfigInput {
 
 export interface AppSettingsService {
   readonly currentConfig: TimerConfig
+  readonly themePreference: ThemePreference
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
+  updateThemeConfig(theme: ThemePreference): void
   resetToDefault(): void
 }
 
@@ -38,13 +40,14 @@ function loadStoredData(): Promise<Record<string, unknown> | null> {
   return window.electronAPI.loadSettings()
 }
 
-function saveAllToStorage(timer: TimerConfigInput, sound: SoundConfigInput): void {
+function saveAllToStorage(timer: TimerConfigInput, sound: SoundConfigInput, theme: ThemePreference): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound })
+    window.electronAPI.saveSettings({ timer, sound, theme })
   }
 }
 
 const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMuted: false }
+const DEFAULT_THEME: ThemePreference = 'system'
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -53,6 +56,7 @@ export function createAppSettingsService(
 ): AppSettingsService {
   let currentConfig: TimerConfig = initialConfig ?? createDefaultConfig()
   let currentSound: SoundConfigInput = { ...DEFAULT_SOUND }
+  let currentTheme: ThemePreference = DEFAULT_THEME
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -72,12 +76,28 @@ export function createAppSettingsService(
     bus.publish(event.type, event)
   }
 
+  function publishThemeLoaded(theme: ThemePreference): void {
+    const event: SettingsEvent = {
+      type: 'ThemeLoaded',
+      theme,
+      timestamp: Date.now()
+    }
+    bus.publish(event.type, event)
+  }
+
   return {
     get currentConfig() { return currentConfig },
+    get themePreference() { return currentTheme },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
       if (!data) return
+
+      // テーマ設定の復元（最初に実行。UIレンダリング前にテーマクラスを適用するため）
+      if (typeof data.theme === 'string' && ['system', 'light', 'dark'].includes(data.theme)) {
+        currentTheme = data.theme as ThemePreference
+        publishThemeLoaded(currentTheme)
+      }
 
       // サウンド設定の復元（先に実行。SettingsChangedでUI再作成される前にAudioAdapterを更新するため）
       if (data.sound) {
@@ -123,19 +143,25 @@ export function createAppSettingsService(
       )
       currentConfig = config
       publishSettingsChanged(config)
-      saveAllToStorage(input, currentSound)
+      saveAllToStorage(input, currentSound, currentTheme)
     },
 
     updateSoundConfig(input: SoundConfigInput): void {
       currentSound = input
-      saveAllToStorage(configToInput(currentConfig), currentSound)
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
+    },
+
+    updateThemeConfig(theme: ThemePreference): void {
+      currentTheme = theme
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
     },
 
     resetToDefault(): void {
       currentConfig = createDefaultConfig()
       currentSound = { ...DEFAULT_SOUND }
+      currentTheme = DEFAULT_THEME
       publishSettingsChanged(currentConfig)
-      saveAllToStorage(configToInput(currentConfig), currentSound)
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
     }
   }
 }

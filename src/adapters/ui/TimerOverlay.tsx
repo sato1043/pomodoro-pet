@@ -4,6 +4,7 @@ import { useAppDeps } from './AppContext'
 import { useEventBusCallback, useEventBusTrigger } from './hooks/useEventBus'
 import type { TimerEvent } from '../../domain/timer/events/TimerEvents'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
+import type { SettingsEvent, ThemePreference } from '../../application/settings/SettingsEvents'
 import {
   createDisplayTransitionState,
   toDisplayScene,
@@ -16,13 +17,39 @@ import { FreeTimerPanel } from './FreeTimerPanel'
 import { PomodoroTimerPanel } from './PomodoroTimerPanel'
 import { CongratsPanel } from './CongratsPanel'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
-import { darkThemeClass } from './styles/theme.css'
+import { useResolvedTheme } from './hooks/useResolvedTheme'
+import { darkThemeClass, lightThemeClass } from './styles/theme.css'
 import * as overlayStyles from './styles/timer-overlay.css'
 
 type DisplayMode = 'free' | 'pomodoro' | 'congrats'
 
 export function TimerOverlay(): JSX.Element {
   const { bus, session, config, orchestrator, settingsService, audio, sfx, debugTimer } = useAppDeps()
+
+  // テーマ管理
+  const [themePreference, setThemePreference] = useState<ThemePreference>(
+    () => settingsService.themePreference
+  )
+  const resolvedTheme = useResolvedTheme(themePreference)
+
+  useEventBusCallback<SettingsEvent>(bus, 'ThemeLoaded', (event) => {
+    if (event.type === 'ThemeLoaded') {
+      setThemePreference(event.theme)
+    }
+  })
+
+  useEffect(() => {
+    const el = document.documentElement
+    const themeClass = resolvedTheme === 'dark' ? darkThemeClass : lightThemeClass
+    const otherClass = resolvedTheme === 'dark' ? lightThemeClass : darkThemeClass
+    el.classList.remove(otherClass)
+    el.classList.add(themeClass)
+    return () => { el.classList.remove(themeClass) }
+  }, [resolvedTheme])
+
+  const handleThemeChange = useCallback((theme: ThemePreference) => {
+    setThemePreference(theme)
+  }, [])
 
   const [mode, setMode] = useState<DisplayMode>(() => {
     const initialScene = orchestrator.sceneManager.currentScene
@@ -111,7 +138,7 @@ export function TimerOverlay(): JSX.Element {
   // #app-root内ではなくbody直下に配置することでpointer-events階層の問題を回避
   return createPortal(
     <>
-      <div id="timer-overlay" className={`${overlayStyles.overlay} ${darkThemeClass}`} style={{
+      <div id="timer-overlay" className={overlayStyles.overlay} style={{
           ...(overlayBackground ? { background: overlayBackground } : {}),
         }}>
         {mode !== 'pomodoro' && mode !== 'congrats' && (
@@ -126,6 +153,8 @@ export function TimerOverlay(): JSX.Element {
             audio={audio}
             sfx={sfx}
             debugTimer={debugTimer}
+            themePreference={themePreference}
+            onThemeChange={handleThemeChange}
           />
         )}
 

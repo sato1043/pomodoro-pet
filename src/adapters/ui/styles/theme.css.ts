@@ -95,7 +95,7 @@ export const lightThemeClass = createTheme(vars, {
     textCaption: 'rgba(0, 0, 0, 0.38)',
     textFaint: 'rgba(0, 0, 0, 0.35)',
 
-    overlayBg: 'rgba(255, 255, 255, 0.88)',
+    overlayBg: 'rgba(255, 255, 255, 0.75)',
     surfaceActive: 'rgba(0, 0, 0, 0.16)',
     surfaceHover: 'rgba(0, 0, 0, 0.12)',
     surfaceLighter: 'rgba(0, 0, 0, 0.1)',

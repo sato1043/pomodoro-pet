@@ -6,6 +6,7 @@ import { buildCyclePlan, cycleTotalMs } from '../../domain/timer/value-objects/C
 import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { PomodoroOrchestrator } from '../../application/timer/PomodoroOrchestrator'
 import type { AppSettingsService } from '../../application/settings/AppSettingsService'
+import type { ThemePreference } from '../../application/settings/SettingsEvents'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { VolumeControl } from './VolumeControl'
@@ -86,6 +87,13 @@ const SEGMENT_STYLE: Record<string, string> = {
   'long-break': styles.tlSegLongBreak,
 }
 
+// --- テーマ選択肢 ---
+const THEME_OPTIONS: { value: ThemePreference; label: string }[] = [
+  { value: 'system', label: 'System' },
+  { value: 'light', label: 'Light' },
+  { value: 'dark', label: 'Dark' },
+]
+
 // --- 選択肢 ---
 const WORK_OPTIONS = [25, 50, 90]
 const BREAK_OPTIONS = [5, 10, 15]
@@ -101,6 +109,8 @@ interface FreeTimerPanelProps {
   readonly audio: AudioAdapter
   readonly sfx: SfxPlayer | null
   readonly debugTimer: boolean
+  readonly themePreference: ThemePreference
+  readonly onThemeChange: (theme: ThemePreference) => void
 }
 
 interface TimerSettings {
@@ -256,12 +266,13 @@ function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Ele
 // --- メインコンポーネント ---
 
 export function FreeTimerPanel({
-  config, settingsService, orchestrator, audio, sfx, debugTimer
+  config, settingsService, orchestrator, audio, sfx, debugTimer,
+  themePreference, onThemeChange
 }: FreeTimerPanelProps): JSX.Element {
   const [settings, setSettings] = useState<TimerSettings>(() => settingsFromConfig(config))
   const [expanded, setExpanded] = useState(false)
   const [volumeKey, setVolumeKey] = useState(0)
-  const snapshotRef = useRef<{ settings: TimerSettings; preset: string; volume: number; muted: boolean } | null>(null)
+  const snapshotRef = useRef<{ settings: TimerSettings; preset: string; volume: number; muted: boolean; theme: ThemePreference } | null>(null)
   const confirmedRef = useRef(false)
 
   // config変更時にsettingsを同期
@@ -288,6 +299,7 @@ export function FreeTimerPanel({
           preset: audio.currentPreset,
           volume: audio.volume,
           muted: audio.isMuted,
+          theme: themePreference,
         }
         confirmedRef.current = false
       } else if (!confirmedRef.current && snapshotRef.current) {
@@ -299,11 +311,12 @@ export function FreeTimerPanel({
         audio.setVolume(snap.volume)
         sfx?.setVolume(snap.volume)
         sfx?.setMuted(snap.muted)
+        onThemeChange(snap.theme)
         setVolumeKey(k => k + 1)
       }
       return !prev
     })
-  }, [settings, audio, sfx])
+  }, [settings, audio, sfx, themePreference, onThemeChange])
 
   const handleConfirm = useCallback(() => {
     settingsService.updateTimerConfig({
@@ -317,9 +330,10 @@ export function FreeTimerPanel({
       volume: audio.volume,
       isMuted: audio.isMuted,
     })
+    settingsService.updateThemeConfig(themePreference)
     confirmedRef.current = true
     setExpanded(false)
-  }, [settings, settingsService, audio])
+  }, [settings, settingsService, audio, themePreference])
 
   const handleStartPomodoro = useCallback(() => {
     orchestrator.startPomodoro()
@@ -373,6 +387,22 @@ export function FreeTimerPanel({
           <div className={styles.settingsField}>
             <label className={styles.label}>Sets</label>
             <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => updateSetting('sets', v)} />
+          </div>
+        </div>
+      )}
+
+      {expanded && (
+        <div className={styles.themeSection}>
+          <div className={styles.themePresets}>
+            {THEME_OPTIONS.map(opt => (
+              <button
+                key={opt.value}
+                className={`${styles.themePreset}${opt.value === themePreference ? ' active' : ''}`}
+                onClick={() => onThemeChange(opt.value)}
+              >
+                {opt.label}
+              </button>
+            ))}
           </div>
         </div>
       )}
