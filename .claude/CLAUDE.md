@@ -92,8 +92,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
-- `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）
-- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング
+- `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）。ミュート時は`AudioContext.suspend()`でシステムリソースを解放、解除時に`resume()`で復帰
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。VolumeControl（ミュート操作UI）はFreeTimerPanelのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
 
 ## Static Assets
 

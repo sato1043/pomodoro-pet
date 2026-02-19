@@ -146,6 +146,8 @@ export function createSfxPlayer(): SfxPlayer {
 
   return {
     async play(url: string, gain = 1.0): Promise<void> {
+      if (muted) return
+
       const { ctx: audioCtx, gainNode: masterGain } = ensureContext()
       if (audioCtx.state === 'suspended') {
         await audioCtx.resume()
@@ -165,6 +167,8 @@ export function createSfxPlayer(): SfxPlayer {
     },
 
     async playLoop(url: string, crossfadeMs = 0, gain = 1.0): Promise<void> {
+      if (muted) return
+
       const { ctx: audioCtx, gainNode: masterGain } = ensureContext()
       if (audioCtx.state === 'suspended') {
         await audioCtx.resume()
@@ -217,8 +221,21 @@ export function createSfxPlayer(): SfxPlayer {
 
     setMuted(m: boolean): void {
       muted = m
-      if (gainNode && ctx) {
-        gainNode.gain.setTargetAtTime(muted ? 0 : volume * MAX_GAIN, ctx.currentTime, 0.05)
+      if (!ctx) return
+
+      if (muted) {
+        stopSimpleLoop()
+        stopCrossfadeLoop()
+        if (gainNode) {
+          gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05)
+        }
+        ctx.suspend()
+      } else {
+        ctx.resume().then(() => {
+          if (gainNode && ctx) {
+            gainNode.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.05)
+          }
+        })
       }
     },
 

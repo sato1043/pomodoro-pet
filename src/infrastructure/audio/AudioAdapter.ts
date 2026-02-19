@@ -58,6 +58,11 @@ export function createAudioAdapter(): AudioAdapter {
       if (config) {
         activeNodes = config.build(audioCtx, gain)
       }
+
+      // ミュート中はノード生成後にAudioContextを休止し、システムリソースを解放する
+      if (isMuted && audioCtx.state === 'running') {
+        audioCtx.suspend()
+      }
     },
 
     setVolume(v: number): void {
@@ -69,17 +74,23 @@ export function createAudioAdapter(): AudioAdapter {
 
     toggleMute(): void {
       isMuted = !isMuted
-      if (masterGain) {
-        masterGain.gain.setTargetAtTime(
-          isMuted ? 0 : volume * MAX_GAIN,
-          ctx!.currentTime,
-          0.1
-        )
+      if (!ctx) return
+
+      if (isMuted) {
+        masterGain!.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
+        ctx.suspend()
+      } else {
+        ctx.resume().then(() => {
+          if (masterGain && ctx) {
+            masterGain.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.1)
+          }
+        })
       }
     },
 
     async resume(): Promise<void> {
-      if (ctx && ctx.state === 'suspended') {
+      // ミュート中はautoplay policy解除でもAudioContextを復帰させない
+      if (ctx && ctx.state === 'suspended' && !isMuted) {
         await ctx.resume()
       }
     },
