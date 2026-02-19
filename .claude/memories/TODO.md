@@ -109,21 +109,12 @@
 - 未実装スタブのSettingsPanelを削除
 - sfxPlayer音量・ミュート同期を復元、pointerEvents透過を修正
 
-### ReactコンポーネントのCSS方式改善 — vanilla-extract導入
-- 現在は単一の`timer-overlay.css`にグローバルセレクタで全スタイルを定義
-- PromptInputはインラインスタイルのみで、`::placeholder`・`:focus`・`:hover`等の擬似クラスが欠落
-- **vanilla-extract**を採用する（ダークモード導入に備えたテーマ型安全性のため）
-  - `createThemeContract()`でテーマ構造を定義し、ライト/ダークテーマ間の構造一致をコンパイル時に保証
-  - `style()`でCSSプロパティ名・値の型チェック、`recipe()`でバリアント型安全性
-  - `@vanilla-extract/vite-plugin`でVite統合
-  - ゼロランタイム（ビルド時にCSSを生成、パフォーマンスコストなし）
-- 移行手順:
-  1. `@vanilla-extract/css` + `@vanilla-extract/vite-plugin` を導入
-  2. テーマコントラクト定義（`theme.css.ts`）: カラー・スペーシング・フォント等のデザイントークン
-  3. ライトテーマ・ダークテーマの値を定義
-  4. `timer-overlay.css`をコンポーネント別の`.css.ts`ファイルに段階的に移行
-  5. PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
-  6. 動的スタイル（フェーズカラー・プログレス等）は`createVar()` + `assignInlineVars()`で対応
+### ~~ReactコンポーネントのCSS方式改善 — vanilla-extract導入~~ — 完了
+- `@vanilla-extract/css` + `@vanilla-extract/vite-plugin` を導入
+- `theme.css.ts`にテーマコントラクト定義（`createThemeContract`）、ライト/ダークテーマ値を定義
+- 全7コンポーネントを個別`.css.ts`ファイルに移行（timer-overlay, free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input）
+- PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
+- フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
 ### メインプロセスのESM化検討
 - 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない
