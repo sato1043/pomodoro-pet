@@ -116,14 +116,6 @@
 - PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 - フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
-### 素材ライセンス整理・配布方式の決定
-- 全購入素材のライセンス条項を確認し一覧化する
-- 各素材の「バイナリ同梱配布」可否を確定する
-- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
-- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
-- THIRD_PARTY_LICENSESファイル・EULA・クレジット表記を整備する
-- 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
-
 ### 通知機能
 - フェーズ完了時にシステム通知を発行
 - Electron `Notification` API使用
@@ -176,6 +168,11 @@
 - 「ちょっと疲れた」→sleep、「元気出して」→happy のような曖昧な入力に対応
 - コスト・レイテンシ・オフライン対応のトレードオフを検討
 
+### About画面の作成
+- ライセンス表記
+- 利用規約
+- 必要ならプライバシーポリシー
+
 ## 優先度: 低
 
 ### Steam連携
@@ -209,3 +206,17 @@
   - `desktop/preload/index.ts`はCJSのまま維持（contextBridgeの制約）
 - メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
 - リスク: preloadとの境界整理、electron-viteのESM出力の安定性
+
+### 配布準備
+- 正しい `build.appId` / `AppUserModelId` の取得と設定
+- コード署名証明書の取得・設定
+- 自動アップデート（electron-updater）の導入検討
+- インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
+
+### 素材ライセンス整理・配布方式の決定
+- 全購入素材のライセンス条項を確認し一覧化する
+- 各素材の「バイナリ同梱配布」可否を確定する
+- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
+- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
+- THIRD_PARTY_LICENSESファイル・EULA・クレジット表記を整備する
+- 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
