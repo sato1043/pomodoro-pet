@@ -116,26 +116,17 @@
 - PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 - フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
-### メインプロセスのESM化検討
-- 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない
-- Electron v28+はメインプロセスのESMをサポート済み（現在v33）
-- 変更箇所:
-  - `package.json`に`"type": "module"`追加
-  - `electron.vite.config.ts`で`build.rollupOptions.output.format: 'es'`設定
-  - `desktop/main/index.ts`の`__dirname`を`import.meta.url` + `fileURLToPath`に書き換え
-  - `desktop/preload/index.ts`はCJSのまま維持（contextBridgeの制約）
-- メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
-- リスク: preloadとの境界整理、electron-viteのESM出力の安定性
+### 通知機能
+- フェーズ完了時にシステム通知を発行
+- Electron `Notification` API使用
+- 音声通知（ベル音等）も併用
+
+### 統計・履歴
+- 完了したポモドーロ数を日/週/月で記録
+- LocalStorageまたはファイルベースで永続化
+- 簡易グラフ表示
 
 ## 優先度: 中
-
-### Steam連携
-- `steamworks.js` パッケージを追加
-- Steamworks開発者登録（$100 USD/タイトル）
-- AppID取得後、`desktop/main/index.ts` で初期化
-- 実績（Achievement）の設計と実装
-  - 例: 初回ポモドーロ完了、10サイクル達成、全環境音を試す、等
-- Steam Overlay有効化: `require('steamworks.js').electronEnableSteamOverlay()`
 
 ### キャラクターの表情・感情表現の拡張
 - 現在の行動パターン（7状態）に加えて感情パラメータを追加
@@ -171,19 +162,23 @@
 - キャラクターの状態や感情に応じた応答メッセージの生成
 - モバイル/小画面対応（レスポンシブレイアウト）
 
+### プロンプト解釈のLLM化
+- 現在はキーワードマッチング
+- ローカルLLM（llama.cpp等）やAPI（Claude等）で自然言語解釈
+- 「ちょっと疲れた」→sleep、「元気出して」→happy のような曖昧な入力に対応
+- コスト・レイテンシ・オフライン対応のトレードオフを検討
+
 ## 優先度: 低
 
-### 通知機能
-- フェーズ完了時にシステム通知を発行
-- Electron `Notification` API使用
-- 音声通知（ベル音等）も併用
+### Steam連携
+- `steamworks.js` パッケージを追加
+- Steamworks開発者登録（$100 USD/タイトル）
+- AppID取得後、`desktop/main/index.ts` で初期化
+- 実績（Achievement）の設計と実装
+  - 例: 初回ポモドーロ完了、10サイクル達成、全環境音を試す、等
+- Steam Overlay有効化: `require('steamworks.js').electronEnableSteamOverlay()`
 
-### 統計・履歴
-- 完了したポモドーロ数を日/週/月で記録
-- LocalStorageまたはファイルベースで永続化
-- 簡易グラフ表示
-
-### キーボードショートカット
+### ~~キーボードショートカット~~ — 不採用
 - Space: Start/Pause トグル
 - R: Reset
 - 1-4: 環境音プリセット切替
@@ -196,8 +191,13 @@
 - Linux: AppImage or deb
 - Tauriへの移行検討（Steam不要の場合、バイナリサイズ大幅削減）
 
-### プロンプト解釈のLLM化
-- 現在はキーワードマッチング
-- ローカルLLM（llama.cpp等）やAPI（Claude等）で自然言語解釈
-- 「ちょっと疲れた」→sleep、「元気出して」→happy のような曖昧な入力に対応
-- コスト・レイテンシ・オフライン対応のトレードオフを検討
+### メインプロセスのESM化検討
+- 現在`externalizeDepsPlugin()`がCJS出力するため、ESM専用パッケージ（electron-store v9+等）が使えない
+- Electron v28+はメインプロセスのESMをサポート済み（現在v33）
+- 変更箇所:
+  - `package.json`に`"type": "module"`追加
+  - `electron.vite.config.ts`で`build.rollupOptions.output.format: 'es'`設定
+  - `desktop/main/index.ts`の`__dirname`を`import.meta.url` + `fileURLToPath`に書き換え
+  - `desktop/preload/index.ts`はCJSのまま維持（contextBridgeの制約）
+- メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
+- リスク: preloadとの境界整理、electron-viteのESM出力の安定性
