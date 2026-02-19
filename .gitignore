@@ -10,3 +10,4 @@ Thumbs.db
 .env.production
 .env.local
 coverage/
+test-results/

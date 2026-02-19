@@ -8,13 +8,18 @@ import * as styles from './styles/pomodoro-timer-panel.css'
 
 // --- 純粋関数（外部からもimport可能） ---
 
-export function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
+function phaseRgb(type: PhaseType): string {
   switch (type) {
-    case 'work': return { filled: 'rgba(76,175,80,0.85)', unfilled: 'rgba(76,175,80,0.2)' }
-    case 'break': return { filled: 'rgba(66,165,245,0.85)', unfilled: 'rgba(66,165,245,0.2)' }
-    case 'long-break': return { filled: 'rgba(171,71,188,0.85)', unfilled: 'rgba(171,71,188,0.2)' }
-    case 'congrats': return { filled: 'rgba(255,213,79,0.85)', unfilled: 'rgba(255,213,79,0.2)' }
+    case 'work': return vars.color.work
+    case 'break': return vars.color.break
+    case 'long-break': return vars.color.longBreak
+    case 'congrats': return vars.color.congrats
   }
+}
+
+export function phaseColor(type: PhaseType): { filled: string; unfilled: string } {
+  const rgb = phaseRgb(type)
+  return { filled: `rgba(${rgb}, 0.85)`, unfilled: `rgba(${rgb}, 0.2)` }
 }
 
 function formatTime(ms: number): string {
@@ -33,19 +38,10 @@ function phaseLabel(type: PhaseType): string {
   }
 }
 
-const OVERLAY_BASE_BG = 'rgba(0, 0, 0, 0.75)'
-
 export function overlayTintBg(type: PhaseType, progress: number): string {
-  const rgb = (() => {
-    switch (type) {
-      case 'work': return '76,175,80'
-      case 'break': return '66,165,245'
-      case 'long-break': return '171,71,188'
-      case 'congrats': return '255,213,79'
-    }
-  })()
+  const rgb = phaseRgb(type)
   const alpha = 0.04 + progress * 0.20
-  return `linear-gradient(to bottom, transparent, rgba(${rgb},${alpha.toFixed(3)})), ${OVERLAY_BASE_BG}`
+  return `linear-gradient(to bottom, transparent, rgba(${rgb},${alpha.toFixed(3)})), ${vars.color.overlayBg}`
 }
 
 // --- SVGアイコンコンポーネント ---
@@ -124,12 +120,12 @@ export function PomodoroTimerPanel({ session, config, orchestrator }: PomodoroTi
       </span>
 
       {/* pause/resume アイコン */}
-      <button className={styles.cornerIcon} onClick={handlePause}>
+      <button className={styles.cornerIcon} onClick={handlePause} data-testid="pomodoro-pause">
         {session.isRunning ? <PauseIcon /> : <ResumeIcon />}
       </button>
 
       {/* stop アイコン */}
-      <button className={styles.exitLink} onClick={handleStop}>
+      <button className={styles.exitLink} onClick={handleStop} data-testid="pomodoro-stop">
         <StopIcon />
       </button>
 
@@ -157,7 +153,7 @@ export function PomodoroTimerPanel({ session, config, orchestrator }: PomodoroTi
             <span className={`${styles.phaseLabel} ${styles.phaseLabelVariant[phase]}`}>
               {phaseLabel(phase)}
             </span>
-            <span className={styles.timerDisplay} style={{ color: colors.filled }}>
+            <span className={styles.timerDisplay} style={{ color: colors.filled }} data-testid="pomodoro-timer">
               {formatTime(session.remainingMs)}
             </span>
           </div>
