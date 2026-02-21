@@ -21,7 +21,8 @@ const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
   reaction: 'pointer',
   dragged: 'grabbing',
   pet: 'grab',
-  refuse: 'not-allowed'
+  refuse: 'not-allowed',
+  feeding: 'default'
 }
 
 export interface InteractionConfig {

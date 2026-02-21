@@ -146,21 +146,22 @@
 - 画面左下のキャベツアイコンボタンでfreeからfureaiに遷移
 - free ↔ fureai（blackout）、fureai → pomodoro / pomodoro → fureai は禁止
 
-### ふれあいモード Phase 2: 餌やり機能
-- 餌やりアイコンを表示し、既存項目「モデルに餌をあげる」機能を実行可能にする
-- 関連: 「モデルに餌をあげる」「キャラクターの表情・感情表現の拡張」
+### ~~ふれあいモード Phase 2: 餌やり機能~~ — 完了
+- キャベツ3Dオブジェクト（CabbageObject）のドラッグ＆ドロップによる餌やり
+- feeding状態（sitアニメ代用、3-5秒）追加、fureai-idleプリセットでfeeding→happy遷移
+- FeedingInteractionAdapter（キャベツD&D、距離判定、スナップバック）
+- FureaiCoordinatorにfeedCharacter()とFeedingAdapter活性化制御
+- HeartEffect（SVGハートパーティクル、floatUpアニメーション）
+- FeedingSuccessイベント（EventBus）でUI通知
 
 ### キャラクターの表情・感情表現の拡張
 - 現在の行動パターン（7状態）に加えて感情パラメータを追加
 - タイマー状態や操作に応じて感情が変化
 - 例: 長時間作業→疲れ顔、ドラッグしすぎ→怒り、休憩完了→元気
 
-### モデルに餌をあげる
-- キャラクター（イノシシ）に餌をあげるインタラクション機能
-- UIに餌ボタンを追加、またはドラッグ＆ドロップで餌を与える操作
-- 餌を与えると専用アニメーション（食べる動作）を再生
-- 餌やり後に感情変化（happy状態への遷移など）
-- BehaviorStateMachineに `feeding` 状態の追加を検討
+### ~~モデルに餌をあげる~~ — 完了（ふれあいモード Phase 2 で実装）
+- キャベツ3Dオブジェクトのドラッグ＆ドロップで餌やり
+- feeding状態（BehaviorStateMachine）→ happy遷移 → ハートエフェクト
 
 ### 環境シーンのバリエーション
 - 無限スクロール背景基盤（InfiniteScrollRenderer + EnvironmentChunk）は実装済み

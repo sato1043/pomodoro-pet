@@ -41,6 +41,7 @@ EventBus（UI/インフラ通知）:
   PomodoroAborted → TimerSfxBridge（exit音再生）
   PhaseCompleted(work/break)/PomodoroCompleted → NotificationBridge（バックグラウンド通知）
   PhaseCompleted(work/break/long-break)/PomodoroCompleted/PomodoroAborted → StatisticsBridge（統計記録）
+  FeedingSuccess → SceneFureai（ハートエフェクト発火）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
   BackgroundSettingsLoaded → main.ts（バックグラウンド設定適用）
@@ -58,9 +59,9 @@ EventBus（UI/インフラ通知）:
 
 ### 2. キャラクター
 - `Character` — 位置・状態管理
-- `BehaviorStateMachine` — 10状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替
-- `BehaviorPreset` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）。`fureai-idle`はautonomousからsleep遷移を除外したプリセット
-- `CharacterState` — 状態設定（アニメーション名、持続時間範囲、ループ有無）
+- `BehaviorStateMachine` — 11状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替。`InteractionKind`に`feed`を含む
+- `BehaviorPreset` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）。`fureai-idle`はautonomousからsleep遷移を除外+feeding→happy遷移を定義
+- `CharacterState` — 11状態設定（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse/feeding）。アニメーション名、持続時間範囲、ループ有無
 - `GestureRecognizer` — ドラッグ/撫でるジェスチャー判定
 
 ### 3. 環境
@@ -91,7 +92,7 @@ EventBus（UI/インフラ通知）:
 - `character/entities/Character.ts` — キャラクターエンティティ
 - `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（BehaviorPreset対応、fixedWanderDirection対応）
 - `character/value-objects/BehaviorPreset.ts` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）
-- `character/value-objects/CharacterState.ts` — 10状態定義+設定
+- `character/value-objects/CharacterState.ts` — 11状態定義+設定（feeding追加）
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
@@ -101,7 +102,7 @@ EventBus（UI/インフラ通知）:
 ### src/application/ — ユースケース
 - `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings/fureai）とAppSceneEvent型
 - `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro/enterFureai/exitFureai）。純粋な状態ホルダー（EventBus不要）
-- `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替を協調。enterFureai()でfureai-idleプリセット、exitFureai()でautonomousプリセット。PomodoroOrchestratorとは独立
+- `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替+餌やり制御を協調。enterFureai()でfureai-idleプリセット+FeedingAdapter活性化、exitFureai()でautonomousプリセット+FeedingAdapter非活性化。feedCharacter()でfeeding状態遷移。PomodoroOrchestratorとは独立
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
@@ -118,12 +119,14 @@ EventBus（UI/インフラ通知）:
 ### src/adapters/ — UIとThree.jsアダプター
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示。`FBXCharacterConfig`でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）/撫でる。`InteractionConfig`で状態別ホバーカーソルをカスタマイズ可能
+- `three/FeedingInteractionAdapter.ts` — 餌オブジェクト（キャベツ/リンゴ）のD&D餌やり操作。複数CabbageHandle[]対応。Z平面投影+NDCベースZ制御（べき乗カーブ）。ふれあいモード時カメラ後退。`FeedingSuccess`イベント発行。`isActive`フラグでふれあいモード中のみ動作
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout
 - `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+FureaiEntryButtonを束ねる
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
-- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInputを束ねる
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
+- `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+FreeTimerPanel
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計+×戻るボタン）
 - `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のキャベツSVGアイコン。createPortalでdocument.bodyに描画
@@ -137,12 +140,14 @@ EventBus（UI/インフラ通知）:
 - `ui/PromptInput.tsx` — プロンプト入力UI
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
 - `three/AnimationController.ts` — AnimationMixer管理、crossFade
 - `three/PlaceholderCharacter.ts` — プリミティブ人型キャラクター+8種アニメーション
+- `three/CabbageObject.ts` — プリミティブSphereGeometryキャベツ3Dオブジェクト。CabbageHandleインターフェースでposition/visible/reset操作
+- `three/AppleObject.ts` — プリミティブ形状リンゴ3Dオブジェクト。CabbageHandleインターフェースを共用。スケール0.15
 - `three/EnvironmentBuilder.ts` — 旧・単一シーン環境生成（InfiniteScrollRendererに置換済み）
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkSpecベース、中央帯回避配置、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）
@@ -165,12 +170,12 @@ EventBus（UI/インフラ通知）:
 - `domain/timer/PomodoroStateMachine.test.ts` — フェーズ遷移・tick・pause/reset・exitManually・セット進行・congrats・PhaseTimeTrigger
 - `domain/timer/CyclePlan.test.ts` — セット構造生成・congrats挿入・Sets=1/複数・cycleTotalMs
 - `domain/timer/TimerConfig.test.ts` — デフォルト値・バリデーション・parseDebugTimer書式パース
-- `domain/character/BehaviorStateMachine.test.ts` — 全10状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState
+- `domain/character/BehaviorStateMachine.test.ts` — 全11状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState・feedインタラクション・feeding→happy遷移チェーン
 - `domain/character/GestureRecognizer.test.ts` — ドラッグ/撫でるジェスチャー判定・drag vs pet判定・設定カスタマイズ
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai・全サイクル
-- `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行）
+- `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定

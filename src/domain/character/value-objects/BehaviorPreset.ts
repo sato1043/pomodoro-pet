@@ -118,6 +118,7 @@ const FUREAI_IDLE: BehaviorPreset = {
     reaction: 'idle',
     pet: 'idle',
     refuse: 'idle',
+    feeding: 'happy',
   },
   initialState: 'idle',
   scrollingStates: new Set<CharacterStateName>(),

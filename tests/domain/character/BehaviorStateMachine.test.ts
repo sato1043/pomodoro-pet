@@ -363,6 +363,68 @@ describe('BehaviorStateMachine', () => {
     })
   })
 
+  describe('fureai-idle プリセット', () => {
+    beforeEach(() => {
+      sm.applyPreset('fureai-idle')
+    })
+
+    it('idleで始まる', () => {
+      expect(sm.currentState).toBe('idle')
+    })
+
+    it('idle→wander→idleサイクル', () => {
+      const r1 = sm.transition({ type: 'timeout' })
+      expect(r1).toBe('wander')
+      const r2 = sm.transition({ type: 'timeout' })
+      expect(r2).toBe('idle')
+    })
+
+    it('インタラクションが許可される', () => {
+      expect(sm.isInteractionLocked()).toBe(false)
+    })
+
+    it('feedインタラクションでfeedingに遷移する', () => {
+      const result = sm.transition({ type: 'interaction', kind: 'feed' })
+      expect(result).toBe('feeding')
+    })
+
+    it('feedingからタイムアウトでhappyに遷移する', () => {
+      sm.transition({ type: 'interaction', kind: 'feed' })
+      const result = sm.transition({ type: 'timeout' })
+      expect(result).toBe('happy')
+    })
+
+    it('feeding→happy→idleの遷移チェーン', () => {
+      sm.transition({ type: 'interaction', kind: 'feed' })
+      expect(sm.currentState).toBe('feeding')
+      sm.transition({ type: 'timeout' }) // feeding -> happy
+      expect(sm.currentState).toBe('happy')
+      sm.transition({ type: 'timeout' }) // happy -> idle
+      expect(sm.currentState).toBe('idle')
+    })
+
+    it('feedingはtickでタイムアウトする', () => {
+      sm.transition({ type: 'interaction', kind: 'feed' })
+      sm.start()
+      const result = sm.tick(6000) // feedingのmaxDurationMs=5000ms超過
+      expect(result.stateChanged).toBe(true)
+      expect(result.newState).toBe('happy')
+    })
+  })
+
+  describe('feed InteractionKind（共通）', () => {
+    it('autonomousプリセットでfeedするとfeedingに遷移する', () => {
+      const result = sm.transition({ type: 'interaction', kind: 'feed' })
+      expect(result).toBe('feeding')
+    })
+
+    it('march-cycleプリセットでfeedするとrefuseになる（interactionLocked）', () => {
+      sm.applyPreset('march-cycle')
+      const result = sm.transition({ type: 'interaction', kind: 'feed' })
+      expect(result).toBe('refuse')
+    })
+  })
+
   describe('プロンプト遷移（共通）', () => {
     it('IDLEからプロンプトで任意の状態に遷移できる', () => {
       expect(sm.transition({ type: 'prompt', action: 'happy' })).toBe('happy')

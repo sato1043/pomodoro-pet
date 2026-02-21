@@ -26,6 +26,9 @@ import { createStatisticsService } from './application/statistics/StatisticsServ
 import { bridgeTimerToStatistics } from './application/statistics/StatisticsBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
+import { createCabbageObject } from './infrastructure/three/CabbageObject'
+import { createAppleObject } from './infrastructure/three/AppleObject'
+import { createFeedingInteractionAdapter, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 
@@ -166,9 +169,24 @@ async function main(): Promise<void> {
     bus, sceneManager, session, onBehaviorChange: switchPreset
   })
 
-  // FureaiCoordinator（ふれあいモードのシーン遷移+プリセット切替）
+  // キャベツ3Dオブジェクト + 餌やりインタラクション
+  const cabbageHandles = [
+    createAppleObject(scene, { x: 0.4, y: 0.05, z: 4.9 }),
+    createAppleObject(scene, { x: 0.15, y: 0.05, z: 5.0 }),
+    createCabbageObject(scene, { x: 0.3, y: 0.05, z: 4.5 }),
+    createAppleObject(scene, { x: 0.05, y: 0.05, z: 4.65 }),
+    createCabbageObject(scene, { x: -0.2, y: 0.05, z: 4.8 }),
+    createAppleObject(scene, { x: -0.3, y: 0.05, z: 4.5 }),
+    createAppleObject(scene, { x: -0.1, y: 0.05, z: 4.3 }),
+    createAppleObject(scene, { x: -0.35, y: 0.05, z: 4.2 }),
+  ]
+  const feedingAdapter: FeedingInteractionAdapter = createFeedingInteractionAdapter(
+    renderer, camera, cabbageHandles, charHandle, character, behaviorSM, bus
+  )
+
+  // FureaiCoordinator（ふれあいモードのシーン遷移+プリセット切替+餌やり制御）
   let fureaiCoordinator: FureaiCoordinator = createFureaiCoordinator({
-    bus, sceneManager, onBehaviorChange: switchPreset
+    bus, sceneManager, onBehaviorChange: switchPreset, behaviorSM, feedingAdapter
   })
 
   // React UIマウント
@@ -190,7 +208,7 @@ async function main(): Promise<void> {
       bus, sceneManager, session, onBehaviorChange: switchPreset
     })
     fureaiCoordinator = createFureaiCoordinator({
-      bus, sceneManager, onBehaviorChange: switchPreset
+      bus, sceneManager, onBehaviorChange: switchPreset, behaviorSM, feedingAdapter
     })
     renderReactUI()
   })

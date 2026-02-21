@@ -2,13 +2,14 @@
 
 ## 概要
 
-キャラクターとのインタラクションは3種類ある。
+キャラクターとのインタラクションは4種類ある。
 
-| インタラクション | ジェスチャー | キャラクター状態 |
-|---|---|---|
-| クリック | キャラクター上でクリック | reaction |
-| 摘まみ上げ | 押しながら上方向に移動 | dragged |
-| 撫でる | 押しながら左右にストローク | pet |
+| インタラクション | ジェスチャー | キャラクター状態 | 対象 |
+|---|---|---|---|
+| クリック | キャラクター上でクリック | reaction | キャラクター |
+| 摘まみ上げ | 押しながら上方向に移動 | dragged | キャラクター |
+| 撫でる | 押しながら左右にストローク | pet | キャラクター |
+| 餌やり | 餌（キャベツ/リンゴ）をキャラクター付近にD&D | feeding → happy | 餌オブジェクト |
 
 ポモドーロ作業中（wander+scrollingAllowed）は全インタラクションが拒否され、refuse状態に遷移する。
 
@@ -79,6 +80,7 @@ type InteractionKind =
   | 'click' | 'hover'
   | 'drag_start' | 'drag_end'
   | 'pet_start' | 'pet_end'
+  | 'feed'
 ```
 
 将来のインタラクション追加時はこの型にリテラルを追加する。
@@ -115,6 +117,7 @@ type InteractionKind =
 | idle/wander/sit/sleep/happy/reaction/pet | `pointer` |
 | dragged | `grabbing` |
 | refuse | `not-allowed` |
+| feeding | `default` |
 
 `isInteractionLocked()` が true のとき、マッピングに関わらず `refuse` 状態のカーソル（`not-allowed`）が適用される。
 
@@ -162,6 +165,56 @@ type InteractionMode = 'none' | 'pending' | 'drag' | 'pet'
 旧実装の `isDragging: boolean` から `interactionMode` に変更した。将来のインタラクション追加時はこの型にモードを追加する。
 
 clickイベントリスナーは削除し、mouseupのpendingパスがclick処理を担う。
+
+## 餌やりインタラクション設計（ふれあいモード Phase 2）
+
+### 概要
+
+ふれあいモード専用のインタラクション。キャベツ3Dオブジェクトをドラッグ＆ドロップでキャラクターに与える。キャラクターインタラクション（ThreeInteractionAdapter）とは独立した専用アダプター（FeedingInteractionAdapter）で実装。
+
+### 操作フロー
+
+```
+餌オブジェクト（キャベツ2個+リンゴ4個、キャラクター手前の地面に配置）
+  ↓ mousedown（Raycasterで餌にヒット）
+  餌がマウスに追従（Z平面投影でX追従 + NDCベースでZ制御 + 前進量に応じたリフト）
+  ↓ mouseup時にキャラクターとの距離判定
+  ├─ distance < 2.5 → feed成功: 餌非表示 → feeding状態 → タイムアウトでhappy → ハートエフェクト → 3秒後再出現
+  └─ distance >= 2.5 → ease-out cubicスナップバック（300ms）で元の位置に戻る
+```
+
+### 関連ソースファイル
+
+| ファイル | 役割 |
+|---|---|
+| `src/infrastructure/three/CabbageObject.ts` | キャベツ3Dオブジェクト生成（CabbageHandle） |
+| `src/infrastructure/three/AppleObject.ts` | リンゴ3Dオブジェクト生成（CabbageHandle共用） |
+| `src/adapters/three/FeedingInteractionAdapter.ts` | 餌D&D操作（複数CabbageHandle[]対応）、距離判定、カメラ切替、FeedingSuccessイベント発行 |
+| `src/adapters/ui/HeartEffect.tsx` | ハートパーティクルエフェクト |
+| `src/adapters/ui/styles/heart-effect.css.ts` | ハートCSSアニメーション |
+| `src/adapters/ui/SceneFureai.tsx` | FeedingSuccess購読→HeartEffect発火 |
+| `src/application/fureai/FureaiCoordinator.ts` | feedCharacter()、FeedingAdapter活性化制御 |
+
+### 状態遷移
+
+```
+feed InteractionKind → feeding状態（sitアニメ代用、3-5秒、loop=false）
+  → タイムアウトでhappy遷移（fureai-idleプリセットの遷移テーブル）
+  → タイムアウトでidle遷移
+```
+
+### 活性化制御
+
+`FeedingInteractionAdapter.isActive`フラグで動作を制御する。`FureaiCoordinator`がenterFureai/exitFureaiで`setActive(true/false)`を切り替える。非活性時はマウスイベントを無視し、キャベツを非表示にする。
+
+### 設計判断
+
+- **独立アダプター**: ThreeInteractionAdapterとの競合を避けるため、餌専用の独立アダプターとした。Raycasterの対象を餌オブジェクトに限定する
+- **複数餌対応**: `CabbageHandle[]`配列で複数の餌オブジェクトを管理。キャベツとリンゴは同じ`CabbageHandle`インターフェースを共用
+- **パースペクティブ補正ドラッグ**: Z平面投影でX追従（カーソル正確追従）、NDCのY差分にべき乗カーブ(1.3)でZ制御（手前緩やか→奥加速）、前進量に応じたリフト（最大0.85）
+- **ふれあいカメラ**: setActive時にカメラをz=5→7に後退+lookAtを1.4に下げ、退出時に復元
+- **EventBusパターン**: feed成功時のハートエフェクト通知はEventBus（`FeedingSuccess`イベント）で実装。CongratsPanel紙吹雪と同じパターン
+- **SVGハート**: WSL2で絵文字フォントが利用不可な場合があるため、インラインSVGでハートを描画
 
 ## 拡張ガイド
 

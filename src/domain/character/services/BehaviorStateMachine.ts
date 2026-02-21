@@ -8,6 +8,7 @@ export type InteractionKind =
   | 'click' | 'hover'
   | 'drag_start' | 'drag_end'
   | 'pet_start' | 'pet_end'
+  | 'feed'
 
 export type StateTrigger =
   | { type: 'timeout' }
@@ -154,6 +155,10 @@ export function createBehaviorStateMachine(
           }
           if (trigger.kind === 'pet_start') {
             enterState('pet')
+            return currentState
+          }
+          if (trigger.kind === 'feed') {
+            enterState('feeding')
             return currentState
           }
           // hover: 変化なし
