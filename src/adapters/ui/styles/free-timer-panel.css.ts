@@ -1,40 +1,6 @@
 import { style, globalStyle, keyframes } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
-// === Theme section ===
-
-export const themeSection = style({
-  marginBottom: 16,
-})
-
-export const themePresets = style({
-  display: 'flex',
-  gap: 6,
-  justifyContent: 'center',
-})
-
-export const themePreset = style({
-  background: vars.color.surfaceSubtle,
-  color: vars.color.textOnSurface,
-  border: `1px solid ${vars.color.borderLight}`,
-  borderRadius: 6,
-  padding: '6px 14px',
-  fontSize: 22,
-  cursor: 'pointer',
-  transition: 'all 0.2s',
-  selectors: {
-    '&:hover': {
-      background: vars.color.surfaceHover,
-    },
-  },
-})
-
-globalStyle(`${themePreset}.active`, {
-  background: vars.color.surfaceHover,
-  borderColor: vars.color.borderStrong,
-  color: vars.color.text,
-})
-
 // === Free mode container ===
 
 export const freeMode = style({

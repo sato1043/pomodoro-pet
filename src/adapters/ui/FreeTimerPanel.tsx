@@ -98,6 +98,40 @@ const SETS_OPTIONS = [1, 2, 3, 4]
 
 // --- SVGアイコン ---
 
+function SunIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="5" />
+      <line x1="12" y1="1" x2="12" y2="3" />
+      <line x1="12" y1="21" x2="12" y2="23" />
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+      <line x1="1" y1="12" x2="3" y2="12" />
+      <line x1="21" y1="12" x2="23" y2="12" />
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+    </svg>
+  )
+}
+
+function MoonIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  )
+}
+
+function MonitorIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
+      <line x1="8" y1="21" x2="16" y2="21" />
+      <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
 function MenuIcon(): JSX.Element {
   return (
     <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ display: 'block' }}>
@@ -159,6 +193,38 @@ function ButtonGroup({ name, options, selected, onChange }: {
           {v}
         </button>
       ))}
+    </div>
+  )
+}
+
+// --- テーマ設定 ---
+
+const THEME_ICONS: Record<ThemePreference, () => JSX.Element> = {
+  light: SunIcon,
+  dark: MoonIcon,
+  system: MonitorIcon,
+}
+
+function ThemeToggles({ value, onChange }: {
+  value: ThemePreference
+  onChange: (theme: ThemePreference) => void
+}): JSX.Element {
+  return (
+    <div className={styles.bgRow}>
+      <label className={styles.bgLabel}>Theme:</label>
+      {THEME_OPTIONS.map(opt => {
+        const Icon = THEME_ICONS[opt.value]
+        return (
+          <button
+            key={opt.value}
+            className={`${styles.bgToggle}${opt.value === value ? ' active' : ''}`}
+            onClick={() => onChange(opt.value)}
+            title={opt.label}
+          >
+            <Icon />
+          </button>
+        )
+      })}
     </div>
   )
 }
@@ -300,48 +366,28 @@ function FreeTimerSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.El
 interface FreeTimerSettingsProps {
   readonly settings: TimerSettings
   readonly onUpdate: (key: keyof TimerSettings, value: number) => void
-  readonly themePreference: ThemePreference
-  readonly onThemeChange: (theme: ThemePreference) => void
 }
 
-function FreeTimerSettings({
-  settings, onUpdate, themePreference, onThemeChange
-}: FreeTimerSettingsProps): JSX.Element {
+function FreeTimerSettings({ settings, onUpdate }: FreeTimerSettingsProps): JSX.Element {
   return (
-    <>
-      <div className={styles.settings}>
-        <div className={styles.settingsField}>
-          <label className={`${styles.label} ${styles.labelWork}`}>Work</label>
-          <ButtonGroup name="work" options={WORK_OPTIONS} selected={settings.work} onChange={v => onUpdate('work', v)} />
-        </div>
-        <div className={styles.settingsField}>
-          <label className={`${styles.label} ${styles.labelBreak}`}>Break</label>
-          <ButtonGroup name="break" options={BREAK_OPTIONS} selected={settings.break} onChange={v => onUpdate('break', v)} />
-        </div>
-        <div className={styles.settingsField}>
-          <label className={`${styles.label} ${styles.labelLongBreak}`}>Long Break</label>
-          <ButtonGroup name="long-break" options={LONG_BREAK_OPTIONS} selected={settings.longBreak} onChange={v => onUpdate('longBreak', v)} />
-        </div>
-        <div className={styles.settingsField}>
-          <label className={styles.label}>Sets</label>
-          <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => onUpdate('sets', v)} />
-        </div>
+    <div className={styles.settings}>
+      <div className={styles.settingsField}>
+        <label className={`${styles.label} ${styles.labelWork}`}>Work</label>
+        <ButtonGroup name="work" options={WORK_OPTIONS} selected={settings.work} onChange={v => onUpdate('work', v)} />
       </div>
-
-      <div className={styles.themeSection}>
-        <div className={styles.themePresets}>
-          {THEME_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className={`${styles.themePreset}${opt.value === themePreference ? ' active' : ''}`}
-              onClick={() => onThemeChange(opt.value)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <div className={styles.settingsField}>
+        <label className={`${styles.label} ${styles.labelBreak}`}>Break</label>
+        <ButtonGroup name="break" options={BREAK_OPTIONS} selected={settings.break} onChange={v => onUpdate('break', v)} />
       </div>
-    </>
+      <div className={styles.settingsField}>
+        <label className={`${styles.label} ${styles.labelLongBreak}`}>Long Break</label>
+        <ButtonGroup name="long-break" options={LONG_BREAK_OPTIONS} selected={settings.longBreak} onChange={v => onUpdate('longBreak', v)} />
+      </div>
+      <div className={styles.settingsField}>
+        <label className={styles.label}>Sets</label>
+        <ButtonGroup name="sets" options={SETS_OPTIONS} selected={settings.sets} onChange={v => onUpdate('sets', v)} />
+      </div>
+    </div>
   )
 }
 
@@ -396,8 +442,6 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
       <FreeTimerSettings
         settings={editor.settings}
         onUpdate={editor.updateSetting}
-        themePreference={themePreference}
-        onThemeChange={onThemeChange}
       />
       <VolumeControl
         audio={audio}
@@ -407,6 +451,7 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         forceUpdateKey={editor.volumeKey}
       />
       <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={editor.confirm}>Set</button>
+      <ThemeToggles value={themePreference} onChange={onThemeChange} />
       <BackgroundToggles
         audio={editor.backgroundAudio}
         notify={editor.backgroundNotify}

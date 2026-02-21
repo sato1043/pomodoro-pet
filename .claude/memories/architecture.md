@@ -114,7 +114,7 @@ EventBus（UI/インフラ通知）:
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/TimerOverlay.tsx` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelをモードに応じて切替。DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応
-- `ui/FreeTimerPanel.tsx` — freeモード。`editor.expanded`でFreeSummaryView（折りたたみ: タイムラインサマリー＋VolumeControl＋Start Pomodoro）とFreeSettingsEditor（展開: タイマー設定ボタングループ＋テーマ選択＋VolumeControl(プリセット付)＋Set確定＋バックグラウンド設定）を切替。Setボタン直下に「In Background: [🔊] [🔔]」アイコントグルを配置。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/FreeTimerPanel.tsx` — freeモード。`editor.expanded`でFreeSummaryView（折りたたみ: タイムラインサマリー＋VolumeControl＋Start Pomodoro）とFreeSettingsEditor（展開: タイマー設定ボタングループ＋VolumeControl(プリセット付)＋Set確定＋テーマ/バックグラウンド設定）を切替。Setボタン直下に「Theme: [☀] [☽] [🖥]」「In Background: [🔊] [🔔]」のアイコントグル行を配置。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
