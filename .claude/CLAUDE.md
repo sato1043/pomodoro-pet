@@ -58,7 +58,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 ### アプリケーション層 (`src/application/`)
 
 - `PomodoroOrchestrator` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック（onBehaviorChange）、EventBusはUI/インフラ通知のみ。CycleCompleted時に自動でexitPomodoro。`phaseToPreset()`でフェーズ→BehaviorPresetマッピング。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行（`PomodoroEvents.ts`で型定義）
-- `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoroがAppSceneEvent[]を返す
+- `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings/fureai）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoro/enterFureai/exitFureaiがAppSceneEvent[]を返す
+- `FureaiCoordinator` — ふれあいモードのシーン遷移+プリセット切替を協調。enterFureai()でfureai-idleプリセット、exitFureai()でautonomousプリセットに切替。PomodoroOrchestratorとは独立
 - `DisplayTransition` — 宣言的シーン遷移グラフ。`DisplayScene`型（AppScene+PhaseTypeの結合キー）、`DISPLAY_SCENE_GRAPH`定数（遷移ルールのテーブル）、`DisplayTransitionState`（テーブルルックアップによる状態管理）。`toDisplayScene()`変換ヘルパー
 - `AppSettingsService` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時の挙動を制御
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
@@ -75,9 +76,12 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoroを切替。シーン間遷移は常にblackout。`settings`AppSceneは`free`として扱う
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+PromptInputを束ねる
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout。`settings`AppSceneは`free`として扱う
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+FureaiEntryButtonを束ねる
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInputを束ねる
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計+×戻るボタン）
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のキャベツSVGアイコン。createPortalでdocument.bodyに描画
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + FreeTimerPanel
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ（`data-testid="overlay-pomodoro"`）。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有

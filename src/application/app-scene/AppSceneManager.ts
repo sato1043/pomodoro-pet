@@ -4,6 +4,8 @@ export interface AppSceneManager {
   readonly currentScene: AppScene
   enterPomodoro(): AppSceneEvent[]
   exitPomodoro(): AppSceneEvent[]
+  enterFureai(): AppSceneEvent[]
+  exitFureai(): AppSceneEvent[]
 }
 
 export function createAppSceneManager(): AppSceneManager {
@@ -24,6 +26,18 @@ export function createAppSceneManager(): AppSceneManager {
 
     exitPomodoro(): AppSceneEvent[] {
       if (currentScene !== 'pomodoro') return []
+      currentScene = 'free'
+      return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
+    },
+
+    enterFureai(): AppSceneEvent[] {
+      if (currentScene !== 'free') return []
+      currentScene = 'fureai'
+      return [{ type: 'AppSceneChanged', scene: 'fureai', timestamp: now() }]
+    },
+
+    exitFureai(): AppSceneEvent[] {
+      if (currentScene !== 'fureai') return []
       currentScene = 'free'
       return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
     }

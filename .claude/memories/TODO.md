@@ -138,11 +138,16 @@
 
 ## 優先度: 中
 
-### ふれあいモード
-- free / pomodoro と同格の独立したAppScene（free / pomodoro / fureai）として実装
-- タイマーオーバーレイはタイトルと同程度の大きさで時計のみ表示し、キャラクターとのふれあい空間を確保する
+### ~~ふれあいモード Phase 1: シーン枠組み~~ — 完了
+- free / pomodoro と同格の第3のAppScene `fureai` を追加
+- `FureaiCoordinator`（アプリケーション層）がシーン遷移+プリセット切替を協調
+- `fureai-idle` BehaviorPreset（autonomousからsleep遷移を除外）
+- コンパクトオーバーレイ（タイトル+時計+戻るボタン）でキャラクターとのふれあい空間を確保
+- 画面左下のキャベツアイコンボタンでfreeからfureaiに遷移
+- free ↔ fureai（blackout）、fureai → pomodoro / pomodoro → fureai は禁止
+
+### ふれあいモード Phase 2: 餌やり機能
 - 餌やりアイコンを表示し、既存項目「モデルに餌をあげる」機能を実行可能にする
-- AppSceneManager、DisplayTransitionへのシーン追加が必要（PomodoroOrchestratorはポモドーロサイクル専用のため変更不要）
 - 関連: 「モデルに餌をあげる」「キャラクターの表情・感情表現の拡張」
 
 ### キャラクターの表情・感情表現の拡張

@@ -13,9 +13,9 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 4層の階層的状態マシンでアプリケーション状態を管理する。
 
 ```
-Layer 1: AppScene          — free | pomodoro | settings
+Layer 1: AppScene          — free | pomodoro | settings | fureai
 Layer 2: PomodoroState     — work | break | long-break | congrats （+ running）
-Layer 3: CharacterBehavior — autonomous | march-cycle | rest-cycle | joyful-rest | celebrate
+Layer 3: CharacterBehavior — autonomous | march-cycle | rest-cycle | joyful-rest | celebrate | fureai-idle
 Layer 4: CharacterState    — idle | wander | march | sit | sleep | happy | ...
 ```
 
@@ -59,7 +59,7 @@ EventBus（UI/インフラ通知）:
 ### 2. キャラクター
 - `Character` — 位置・状態管理
 - `BehaviorStateMachine` — 10状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替
-- `BehaviorPreset` — 5種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）
+- `BehaviorPreset` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）。`fureai-idle`はautonomousからsleep遷移を除外したプリセット
 - `CharacterState` — 状態設定（アニメーション名、持続時間範囲、ループ有無）
 - `GestureRecognizer` — ドラッグ/撫でるジェスチャー判定
 
@@ -90,7 +90,7 @@ EventBus（UI/インフラ通知）:
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
 - `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（BehaviorPreset対応、fixedWanderDirection対応）
-- `character/value-objects/BehaviorPreset.ts` — 5種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate）
+- `character/value-objects/BehaviorPreset.ts` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）
 - `character/value-objects/CharacterState.ts` — 10状態定義+設定
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
@@ -99,8 +99,9 @@ EventBus（UI/インフラ通知）:
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
 ### src/application/ — ユースケース
-- `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings）とAppSceneEvent型
-- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro）。純粋な状態ホルダー（EventBus不要）
+- `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings/fureai）とAppSceneEvent型
+- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro/enterFureai/exitFureai）。純粋な状態ホルダー（EventBus不要）
+- `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替を協調。enterFureai()でfureai-idleプリセット、exitFureai()でautonomousプリセット。PomodoroOrchestratorとは独立
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
@@ -119,10 +120,13 @@ EventBus（UI/インフラ通知）:
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）/撫でる。`InteractionConfig`で状態別ホバーカーソルをカスタマイズ可能
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoroを切替。シーン間遷移は常にblackout
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+PromptInputを束ねる
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+FureaiEntryButtonを束ねる
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInputを束ねる
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+FreeTimerPanel
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計+×戻るボタン）
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のキャベツSVGアイコン。createPortalでdocument.bodyに描画
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
 - `ui/FreeTimerPanel.tsx` — freeモード。showStats/editor.expandedで3ビュー（StatsDrawer/FreeSettingsEditor/FreeSummaryView）を切替。FreeSummaryView右上にハンバーガーアイコン（設定展開）+チャートアイコン（統計表示）を縦並び配置。useSettingsEditorフックでスナップショット/復元を管理
@@ -133,7 +137,7 @@ EventBus（UI/インフラ通知）:
 - `ui/PromptInput.tsx` — プロンプト入力UI
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input, overlay, stats-drawer）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -161,11 +165,12 @@ EventBus（UI/インフラ通知）:
 - `domain/timer/PomodoroStateMachine.test.ts` — フェーズ遷移・tick・pause/reset・exitManually・セット進行・congrats・PhaseTimeTrigger
 - `domain/timer/CyclePlan.test.ts` — セット構造生成・congrats挿入・Sets=1/複数・cycleTotalMs
 - `domain/timer/TimerConfig.test.ts` — デフォルト値・バリデーション・parseDebugTimer書式パース
-- `domain/character/BehaviorStateMachine.test.ts` — 全10状態遷移・5プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState
+- `domain/character/BehaviorStateMachine.test.ts` — 全10状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState
 - `domain/character/GestureRecognizer.test.ts` — ドラッグ/撫でるジェスチャー判定・drag vs pet判定・設定カスタマイズ
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
-- `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro・全サイクル
+- `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai・全サイクル
+- `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行）
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定

@@ -4,16 +4,22 @@ import { useEventBusCallback } from './hooks/useEventBus'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
 import { SceneFree } from './SceneFree'
 import { ScenePomodoro } from './ScenePomodoro'
+import { SceneFureai } from './SceneFureai'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
 
-type ActiveScene = 'free' | 'pomodoro'
+type ActiveScene = 'free' | 'pomodoro' | 'fureai'
+
+function toActiveScene(scene: string): ActiveScene {
+  if (scene === 'pomodoro') return 'pomodoro'
+  if (scene === 'fureai') return 'fureai'
+  return 'free'
+}
 
 export function SceneRouter(): JSX.Element {
   const { bus, orchestrator } = useAppDeps()
 
   const [activeScene, setActiveScene] = useState<ActiveScene>(() => {
-    const current = orchestrator.sceneManager.currentScene
-    return current === 'pomodoro' ? 'pomodoro' : 'free'
+    return toActiveScene(orchestrator.sceneManager.currentScene)
   })
 
   const sceneTransitionRef = useRef<SceneTransitionRef>(null)
@@ -30,7 +36,7 @@ export function SceneRouter(): JSX.Element {
 
   useEventBusCallback<AppSceneEvent>(bus, 'AppSceneChanged', (event) => {
     if (event.type === 'AppSceneChanged') {
-      const next: ActiveScene = event.scene === 'pomodoro' ? 'pomodoro' : 'free'
+      const next = toActiveScene(event.scene)
       if (next !== activeScene) {
         switchScene(next)
       }
@@ -41,6 +47,7 @@ export function SceneRouter(): JSX.Element {
     <>
       {activeScene === 'free' && <SceneFree />}
       {activeScene === 'pomodoro' && <ScenePomodoro />}
+      {activeScene === 'fureai' && <SceneFureai />}
       <SceneTransition ref={sceneTransitionRef} />
     </>
   )

@@ -59,6 +59,58 @@ describe('AppSceneManager', () => {
     })
   })
 
+  describe('enterFureai', () => {
+    it('fureaiに遷移する', () => {
+      manager.enterFureai()
+      expect(manager.currentScene).toBe('fureai')
+    })
+
+    it('AppSceneChanged(fureai)イベントを返す', () => {
+      const events = manager.enterFureai()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'fureai' })
+      )
+    })
+
+    it('既にfureaiの時は空配列を返す', () => {
+      manager.enterFureai()
+      const events = manager.enterFureai()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('fureai')
+    })
+
+    it('pomodoroからは遷移できない', () => {
+      manager.enterPomodoro()
+      const events = manager.enterFureai()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('pomodoro')
+    })
+  })
+
+  describe('exitFureai', () => {
+    it('freeに遷移する', () => {
+      manager.enterFureai()
+      manager.exitFureai()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('AppSceneChanged(free)イベントを返す', () => {
+      manager.enterFureai()
+      const events = manager.exitFureai()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'free' })
+      )
+    })
+
+    it('fureai以外の時は空配列を返す', () => {
+      const events = manager.exitFureai()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('free')
+    })
+  })
+
   describe('状態遷移の全サイクル', () => {
     it('free → pomodoro → free の全遷移が正常に動作する', () => {
       expect(manager.currentScene).toBe('free')
@@ -68,6 +120,23 @@ describe('AppSceneManager', () => {
 
       manager.exitPomodoro()
       expect(manager.currentScene).toBe('free')
+    })
+
+    it('free → fureai → free の全遷移が正常に動作する', () => {
+      expect(manager.currentScene).toBe('free')
+
+      manager.enterFureai()
+      expect(manager.currentScene).toBe('fureai')
+
+      manager.exitFureai()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('fureaiからpomodoroへは直接遷移できない', () => {
+      manager.enterFureai()
+      const events = manager.enterPomodoro()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('fureai')
     })
   })
 })

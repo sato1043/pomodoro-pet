@@ -10,6 +10,7 @@ import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from '../three/ThreeCharacterAdapter'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
+import type { FureaiCoordinator } from '../../application/fureai/FureaiCoordinator'
 
 export interface AppDeps {
   readonly bus: EventBus
@@ -24,6 +25,7 @@ export interface AppDeps {
   readonly behaviorSM: BehaviorStateMachine
   readonly charHandle: ThreeCharacterHandle
   readonly statisticsService: StatisticsService
+  readonly fureaiCoordinator: FureaiCoordinator
 }
 
 const AppContext = createContext<AppDeps | null>(null)

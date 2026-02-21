@@ -3,46 +3,55 @@
  RUN  v2.1.9 /home/sato1043/projects/test1
       Coverage enabled with v8
 
- ✓ tests/application/app-scene/AppSceneManager.test.ts (8 tests) 16ms
- ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 35ms
- ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 22ms
- ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 54ms
- ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 83ms
- ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 36ms
- ✓ tests/application/settings/AppSettingsService.test.ts (17 tests) 88ms
- ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 56ms
- ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 166ms
- ✓ tests/domain/timer/PomodoroStateMachine.test.ts (53 tests) 157ms
- ✓ tests/domain/character/BehaviorStateMachine.test.ts (70 tests) 187ms
- ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 33ms
- ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 15ms
- ✓ tests/setup.test.ts (1 test) 7ms
- ✓ tests/domain/shared/EventBus.test.ts (4 tests) 25ms
+ ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 15ms
+ ✓ tests/application/app-scene/AppSceneManager.test.ts (17 tests) 24ms
+ ✓ tests/application/statistics/StatisticsBridge.test.ts (7 tests) 20ms
+ ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 18ms
+ ✓ tests/application/settings/AppSettingsService.test.ts (17 tests) 26ms
+ ✓ tests/application/statistics/StatisticsService.test.ts (12 tests) 28ms
+ ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 16ms
+ ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 46ms
+ ✓ tests/domain/timer/PomodoroStateMachine.test.ts (53 tests) 66ms
+ ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 78ms
+ ✓ tests/domain/character/BehaviorStateMachine.test.ts (70 tests) 62ms
+ ✓ tests/application/fureai/FureaiCoordinator.test.ts (9 tests) 19ms
+ ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 15ms
+ ✓ tests/domain/statistics/StatisticsTypes.test.ts (6 tests) 11ms
+ ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 12ms
+ ✓ tests/setup.test.ts (1 test) 5ms
+ ✓ tests/domain/shared/EventBus.test.ts (4 tests) 13ms
+ ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 10ms
+ ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 10ms
 
- Test Files  15 passed (15)
-      Tests  298 passed (298)
-   Start at  08:41:56
-   Duration  5.06s (transform 5.57s, setup 0ms, collect 7.70s, tests 980ms, environment 18ms, prepare 10.10s)
+ Test Files  19 passed (19)
+      Tests  341 passed (341)
+   Start at  19:12:05
+   Duration  1.98s (transform 1.67s, setup 0ms, collect 2.74s, tests 493ms, environment 10ms, prepare 3.75s)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   84.05 |    97.01 |   88.39 |   84.05 |                   
- ...tion/app-scene |   26.76 |      100 |     100 |   26.76 |                   
+All files          |   86.75 |    95.86 |   90.44 |   86.75 |                   
+ ...tion/app-scene |   38.15 |      100 |     100 |   38.15 |                   
   AppScene.ts      |       0 |        0 |       0 |       0 |                   
   ...eneManager.ts |     100 |      100 |     100 |     100 |                   
-  ...Transition.ts |       0 |      100 |     100 |       0 | 27-91             
+  ...Transition.ts |       0 |      100 |     100 |       0 | 27-85             
  ...tion/character |   55.26 |      100 |     100 |   55.26 |                   
   ...mptUseCase.ts |     100 |      100 |     100 |     100 |                   
   ...iorUseCase.ts |       0 |      100 |     100 |       0 | 6-25              
  ...on/environment |     100 |      100 |     100 |     100 |                   
   ScrollUseCase.ts |     100 |      100 |     100 |     100 |                   
+ ...ication/fureai |     100 |      100 |     100 |     100 |                   
+  ...oordinator.ts |     100 |      100 |     100 |     100 |                   
  ...n/notification |     100 |    78.57 |     100 |     100 |                   
   ...tionBridge.ts |     100 |    78.57 |     100 |     100 | 25,38-39          
  ...ation/settings |   47.68 |    84.61 |   55.55 |   47.68 |                   
   ...ngsService.ts |   47.68 |    83.33 |   52.94 |   47.68 | ...86-188,191-193 
   ...ingsEvents.ts |       0 |        0 |       0 |       0 |                   
+ ...ion/statistics |     100 |    86.36 |     100 |     100 |                   
+  ...ticsBridge.ts |     100 |    72.72 |     100 |     100 | 14,33,38          
+  ...icsService.ts |     100 |     90.9 |     100 |     100 | 16,38,54          
  application/timer |   99.48 |    96.66 |   78.94 |   99.48 |                   
   ...doroEvents.ts |       0 |        0 |       0 |       0 |                   
   ...chestrator.ts |   98.79 |    93.33 |   73.33 |   98.79 | 137               
@@ -52,7 +61,7 @@ All files          |   84.05 |    97.01 |   88.39 |   84.05 |
  ...acter/services |     100 |    98.68 |     100 |     100 |                   
   ...ateMachine.ts |     100 |      100 |     100 |     100 |                   
   ...Recognizer.ts |     100 |       96 |     100 |     100 | 48                
- .../value-objects |   91.89 |      100 |     100 |   91.89 |                   
+ .../value-objects |   92.96 |      100 |     100 |   92.96 |                   
   ...viorPreset.ts |     100 |      100 |     100 |     100 |                   
   ...acterState.ts |     100 |      100 |     100 |     100 |                   
   Position3D.ts    |       0 |      100 |     100 |       0 | 7-16              
@@ -61,6 +70,8 @@ All files          |   84.05 |    97.01 |   88.39 |   84.05 |
   SceneObject.ts   |       0 |        0 |       0 |       0 |                   
  domain/shared     |     100 |      100 |     100 |     100 |                   
   EventBus.ts      |     100 |      100 |     100 |     100 |                   
+ domain/statistics |     100 |      100 |     100 |     100 |                   
+  ...sticsTypes.ts |     100 |      100 |     100 |     100 |                   
  ...timer/entities |     100 |      100 |     100 |     100 |                   
   ...ateMachine.ts |     100 |      100 |     100 |     100 |                   
  ...n/timer/events |       0 |        0 |       0 |       0 |                   

@@ -25,6 +25,7 @@ import { bridgeTimerToNotification, type NotificationPort } from './application/
 import { createStatisticsService } from './application/statistics/StatisticsService'
 import { bridgeTimerToStatistics } from './application/statistics/StatisticsBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
+import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 
@@ -165,13 +166,18 @@ async function main(): Promise<void> {
     bus, sceneManager, session, onBehaviorChange: switchPreset
   })
 
+  // FureaiCoordinator（ふれあいモードのシーン遷移+プリセット切替）
+  let fureaiCoordinator: FureaiCoordinator = createFureaiCoordinator({
+    bus, sceneManager, onBehaviorChange: switchPreset
+  })
+
   // React UIマウント
   const appRoot: Root = createRoot(document.getElementById('app-root')!)
   function renderReactUI(): void {
     const deps: AppDeps = {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
-      character, behaviorSM, charHandle, statisticsService
+      character, behaviorSM, charHandle, statisticsService, fureaiCoordinator
     }
     appRoot.render(createElement(App, { deps }))
   }
@@ -182,6 +188,9 @@ async function main(): Promise<void> {
     session = createPomodoroStateMachine(event.config, { phaseTriggers: BREAK_BGM_TRIGGERS })
     orchestrator = createPomodoroOrchestrator({
       bus, sceneManager, session, onBehaviorChange: switchPreset
+    })
+    fureaiCoordinator = createFureaiCoordinator({
+      bus, sceneManager, onBehaviorChange: switchPreset
     })
     renderReactUI()
   })

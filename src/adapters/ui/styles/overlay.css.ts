@@ -31,3 +31,54 @@ export const title = style({
   color: vars.color.textSubtle,
   textAlign: 'left',
 })
+
+export const overlayCompact = style({
+  position: 'fixed',
+  top: 12,
+  left: 10,
+  right: 10,
+  background: vars.color.overlayBg,
+  color: vars.color.text,
+  borderRadius: 10,
+  padding: '8px 14px',
+  fontFamily: vars.font.family,
+  textAlign: 'left',
+  zIndex: 1000,
+  backdropFilter: 'blur(8px)',
+  userSelect: 'none',
+  pointerEvents: 'none',
+  transition: 'background 0.3s ease',
+  display: 'flex',
+  alignItems: 'center',
+  gap: 12,
+})
+
+export const compactTitle = style({
+  fontSize: 18,
+  fontWeight: 600,
+  color: vars.color.textSubtle,
+})
+
+export const compactClock = style({
+  fontSize: 13,
+  color: vars.color.textMuted,
+  fontVariantNumeric: 'tabular-nums',
+})
+
+export const compactCloseButton = style({
+  pointerEvents: 'auto',
+  background: 'none',
+  border: 'none',
+  color: vars.color.textSubtle,
+  cursor: 'pointer',
+  padding: 4,
+  marginLeft: 'auto',
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  borderRadius: 4,
+  transition: 'color 0.2s ease',
+  ':hover': {
+    color: vars.color.text,
+  },
+})

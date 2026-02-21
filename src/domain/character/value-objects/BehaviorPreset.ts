@@ -6,6 +6,7 @@ export type CharacterBehavior =
   | 'rest-cycle'
   | 'joyful-rest'
   | 'celebrate'
+  | 'fureai-idle'
 
 export interface DurationOverride {
   readonly minMs: number
@@ -106,6 +107,24 @@ const JOYFUL_REST: BehaviorPreset = {
   lockedState: null,
 }
 
+// fureai-idle: ふれあいモード中（idle→wander→idle、sleepなし）
+const FUREAI_IDLE: BehaviorPreset = {
+  name: 'fureai-idle',
+  transitions: {
+    idle: 'wander',
+    wander: 'idle',
+    sit: 'idle',
+    happy: 'idle',
+    reaction: 'idle',
+    pet: 'idle',
+    refuse: 'idle',
+  },
+  initialState: 'idle',
+  scrollingStates: new Set<CharacterStateName>(),
+  interactionLocked: false,
+  lockedState: null,
+}
+
 // celebrate: congrats時（happy固定）
 const CELEBRATE: BehaviorPreset = {
   name: 'celebrate',
@@ -122,4 +141,5 @@ export const BEHAVIOR_PRESETS: Record<CharacterBehavior, BehaviorPreset> = {
   'rest-cycle': REST_CYCLE,
   'joyful-rest': JOYFUL_REST,
   'celebrate': CELEBRATE,
+  'fureai-idle': FUREAI_IDLE,
 }

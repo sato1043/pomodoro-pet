@@ -57,7 +57,7 @@ export const DISPLAY_SCENE_GRAPH: Readonly<Record<DisplayScene, DisplaySceneNode
 // --- 変換ヘルパー ---
 
 export function toDisplayScene(scene: AppScene, phase: PhaseType | null): DisplayScene {
-  if (scene === 'free' || scene === 'settings') return 'free'
+  if (scene === 'free' || scene === 'settings' || scene === 'fureai') return 'free'
   if (phase === null) return 'pomodoro:work'
   return `pomodoro:${phase}` as DisplayScene
 }

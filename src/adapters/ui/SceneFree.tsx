@@ -1,11 +1,11 @@
 import { OverlayFree } from './OverlayFree'
-import { PromptInput } from './PromptInput'
+import { FureaiEntryButton } from './FureaiEntryButton'
 
 export function SceneFree(): JSX.Element {
   return (
     <>
       <OverlayFree />
-      <PromptInput />
+      <FureaiEntryButton />
     </>
   )
 }
