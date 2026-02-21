@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { createPortal } from 'react-dom'
 import type { DailyStats } from '../../domain/statistics/StatisticsTypes'
 import { todayKey, formatDateKey } from '../../domain/statistics/StatisticsTypes'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
@@ -403,7 +404,7 @@ export function StatsDrawer({ onClose }: StatsDrawerProps): JSX.Element {
   const weekSum = useMemo(() => getRecentSum(statisticsService, 7), [statisticsService])
   const monthSum = useMemo(() => getRecentSum(statisticsService, 30), [statisticsService])
 
-  return (
+  return createPortal(
     <div
       className={styles.drawer}
       style={{
@@ -428,6 +429,7 @@ export function StatsDrawer({ onClose }: StatsDrawerProps): JSX.Element {
       <CalendarHeatmap service={statisticsService} />
 
       <CumulativeChart service={statisticsService} />
-    </div>
+    </div>,
+    document.body
   )
 }

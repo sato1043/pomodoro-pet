@@ -10,7 +10,7 @@ export const overlay = style({
   background: vars.color.overlayBg,
   color: vars.color.text,
   borderRadius: 12,
-  padding: '56px 12px 28px 14px',
+  padding: '56px 12px 24px 14px',
   fontFamily: vars.font.family,
   textAlign: 'center',
   zIndex: 1000,
@@ -20,13 +20,16 @@ export const overlay = style({
   transition: 'background 0.3s ease',
 })
 
+export const overlayExpanded = style({
+  bottom: 172,
+})
+
 export const title = style({
   pointerEvents: 'auto',
   position: 'absolute',
-  top: 40,
+  top: 32,
   left: 16,
   transform: 'translateY(-50%)',
-  fontSize: 26,
   fontWeight: 600,
   color: vars.color.textSubtle,
   textAlign: 'left',

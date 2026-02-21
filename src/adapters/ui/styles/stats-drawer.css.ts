@@ -2,8 +2,21 @@ import { style, keyframes } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
 export const drawer = style({
+  position: 'fixed',
+  top: 20,
+  left: 10,
+  right: 10,
+  background: vars.color.overlayBg,
+  color: vars.color.text,
+  borderRadius: 12,
+  padding: '16px 14px 28px 14px',
+  fontFamily: vars.font.family,
+  textAlign: 'center',
+  zIndex: 1000,
+  backdropFilter: 'blur(8px)',
+  userSelect: 'none',
   pointerEvents: 'auto',
-  paddingTop: 8,
+  transition: 'background 0.3s ease',
 })
 
 export const closeBtn = style({
@@ -18,7 +31,7 @@ export const closeBtn = style({
   cursor: 'pointer',
   zIndex: 1001,
   transition: 'color 0.2s',
-  padding: '14px 0',
+  padding: '6px 0',
   lineHeight: '0',
   pointerEvents: 'auto',
   selectors: {

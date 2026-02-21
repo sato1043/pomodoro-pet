@@ -57,7 +57,7 @@ export const editorCloseToggle = style({
   cursor: 'pointer',
   zIndex: 1001,
   transition: 'color 0.2s',
-  padding: '14px 0',
+  padding: '6px 0',
   lineHeight: '0',
   pointerEvents: 'auto',
   selectors: {
@@ -71,7 +71,7 @@ export const editorCloseToggle = style({
 
 export const settingsSummary = style({
   marginTop: 16,
-  marginBottom: 16,
+  marginBottom: 0,
 })
 
 // === Settings grid ===
@@ -238,6 +238,9 @@ export const tlClock = style({
   fontVariantNumeric: 'tabular-nums',
   whiteSpace: 'nowrap',
   transform: 'scaleY(1.2)',
+  lineHeight: 0.9,
+  paddingBottom: 20,
+  paddingTop: 4,
 })
 
 export const tlAmpm = style({
@@ -385,6 +388,7 @@ export const btnConfirm = style({
   borderColor: vars.color.separator,
   fontSize: 26,
   padding: '14px 24px',
+  marginTop: 40,
   width: '100%',
   selectors: {
     '&:hover': {
@@ -394,15 +398,30 @@ export const btnConfirm = style({
 })
 
 export const btnPrimary = style({
-  background: `rgba(${vars.color.work}, 0.3)`,
-  borderColor: `rgba(${vars.color.work}, 0.5)`,
+  background: `rgb(${vars.color.work})`,
+  border: `2px solid rgb(${vars.color.work})`,
+  color: '#fff',
   fontSize: 33,
   padding: '20px 24px',
   marginTop: 0,
   width: '100%',
+  opacity: 1,
+  boxShadow: `0 2px 12px rgba(${vars.color.work}, 0.4)`,
+  transition: 'background 0.2s',
   selectors: {
-    '&:hover': {
-      background: `rgba(${vars.color.work}, 0.5)`,
+    '&:hover:not(:disabled)': {
+      background: `rgb(${vars.color.work})`,
     },
   },
+})
+
+// === Start Pomodoro button container (screen bottom) ===
+
+export const startButtonContainer = style({
+  position: 'fixed',
+  bottom: 76,
+  left: 10,
+  right: 10,
+  zIndex: 1000,
+  pointerEvents: 'auto',
 })

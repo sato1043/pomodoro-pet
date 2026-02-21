@@ -3,7 +3,7 @@ import { vars } from './theme.css'
 
 export const soundSection = style({
   marginTop: 16,
-  marginBottom: 24,
+  marginBottom: 0,
 })
 
 export const soundPresets = style({

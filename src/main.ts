@@ -28,7 +28,7 @@ import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './applica
 import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
 import { createCabbageObject } from './infrastructure/three/CabbageObject'
 import { createAppleObject } from './infrastructure/three/AppleObject'
-import { createFeedingInteractionAdapter, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
+import { createFeedingInteractionAdapter, DEFAULT_CAMERA, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 
@@ -53,8 +53,8 @@ function createScene(): {
     0.1,
     1000
   )
-  camera.position.set(0, 0.6, 5)
-  camera.lookAt(0, 1.8, 0)
+  camera.position.set(0, DEFAULT_CAMERA.posY, DEFAULT_CAMERA.posZ)
+  camera.lookAt(0, DEFAULT_CAMERA.lookAtY, 0)
 
   const renderer = new THREE.WebGLRenderer({ antialias: true })
   renderer.setSize(window.innerWidth, window.innerHeight)

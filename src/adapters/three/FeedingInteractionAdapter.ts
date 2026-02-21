@@ -23,7 +23,11 @@ const MIN_Y = 0.1
 const Z_RANGE = 8
 const Z_POWER = 1.3
 
-const FUREAI_CAMERA = { posZ: 7, lookAtY: 1.4 } as const
+/** freeモードのデフォルトカメラ設定。main.tsと共有 */
+export const DEFAULT_CAMERA = { posY: 0.6, posZ: 5, lookAtY: 1.6 } as const
+
+/** ふれあいモードのカメラ設定 */
+export const FUREAI_CAMERA = { posZ: 7, lookAtY: 1.4 } as const
 
 export function createFeedingInteractionAdapter(
   renderer: THREE.WebGLRenderer,
@@ -45,7 +49,7 @@ export function createFeedingInteractionAdapter(
   let snapBackAnimId = 0
 
   // カメラ復元用
-  let savedCameraPosZ = 0
+  let savedCameraPos = { x: 0, y: 0, z: 0 }
   let savedLookAtY = 0
 
   // ドラッグ状態
@@ -181,9 +185,9 @@ export function createFeedingInteractionAdapter(
     setActive(value: boolean): void {
       active = value
       if (value) {
-        savedCameraPosZ = camera.position.z
-        savedLookAtY = 1.8
-        camera.position.z = FUREAI_CAMERA.posZ
+        savedCameraPos = { x: camera.position.x, y: camera.position.y, z: camera.position.z }
+        savedLookAtY = DEFAULT_CAMERA.lookAtY
+        camera.position.set(savedCameraPos.x, savedCameraPos.y, FUREAI_CAMERA.posZ)
         camera.lookAt(0, FUREAI_CAMERA.lookAtY, 0)
         for (const handle of cabbageHandles) {
           handle.resetPosition()
@@ -192,7 +196,7 @@ export function createFeedingInteractionAdapter(
       } else {
         dragging = false
         dragTarget = null
-        camera.position.z = savedCameraPosZ
+        camera.position.set(savedCameraPos.x, savedCameraPos.y, savedCameraPos.z)
         camera.lookAt(0, savedLookAtY, 0)
         for (const handle of cabbageHandles) {
           handle.setVisible(false)

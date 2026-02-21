@@ -80,7 +80,7 @@ export const darkThemeClass = createTheme(vars, {
 
 export const lightThemeClass = createTheme(vars, {
   color: {
-    work: '46, 125, 50',
+    work: '56, 152, 60',
     break: '21, 101, 192',
     longBreak: '106, 27, 154',
     congrats: '230, 160, 0',
@@ -126,7 +126,7 @@ globalStyle(`.${darkThemeClass}`, {
 globalStyle(`.${lightThemeClass}`, {
   colorScheme: 'light',
   vars: {
-    '--theme-work-rgb': '46, 125, 50',
+    '--theme-work-rgb': '56, 152, 60',
     '--theme-heatmap-empty': 'rgba(0, 0, 0, 0.06)',
     '--theme-heatmap-today-stroke': 'rgba(0, 0, 0, 0.4)',
   },

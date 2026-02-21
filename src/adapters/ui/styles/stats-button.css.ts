@@ -1,10 +1,10 @@
 import { style } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
-export const entryButton = style({
+export const statsButton = style({
   position: 'fixed',
   bottom: 20,
-  left: 10,
+  left: 66,
   width: 48,
   height: 48,
   borderRadius: '50%',

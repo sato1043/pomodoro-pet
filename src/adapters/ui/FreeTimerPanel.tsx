@@ -10,7 +10,7 @@ import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
-import { StatsDrawer } from './StatsDrawer'
+import { SetButton } from './SetButton'
 import * as styles from './styles/free-timer-panel.css'
 
 // --- 純粋関数 ---
@@ -129,16 +129,6 @@ function MonitorIcon(): JSX.Element {
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
       <line x1="8" y1="21" x2="16" y2="21" />
       <line x1="12" y1="17" x2="12" y2="21" />
-    </svg>
-  )
-}
-
-function ChartIcon(): JSX.Element {
-  return (
-    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
-      <rect x="3" y="12" width="4" height="9" rx="1" />
-      <rect x="10" y="7" width="4" height="14" rx="1" />
-      <rect x="17" y="3" width="4" height="18" rx="1" />
     </svg>
   )
 }
@@ -408,19 +398,14 @@ interface FreeSummaryViewProps {
   readonly editor: SettingsEditorResult
   readonly audio: AudioAdapter
   readonly sfx: SfxPlayer | null
-  readonly onStart: () => void
-  readonly onShowStats: () => void
 }
 
-function FreeSummaryView({ editor, audio, sfx, onStart, onShowStats }: FreeSummaryViewProps): JSX.Element {
+function FreeSummaryView({ editor, audio, sfx }: FreeSummaryViewProps): JSX.Element {
   return (
     <>
       <div className={styles.topRightButtons}>
         <button className={styles.settingsToggle} onClick={editor.toggle}>
           <MenuIcon />
-        </button>
-        <button className={styles.statsToggle} onClick={onShowStats} data-testid="stats-toggle">
-          <ChartIcon />
         </button>
       </div>
       <FreeTimerSummary timerConfig={editor.currentTimerConfig} />
@@ -431,7 +416,6 @@ function FreeSummaryView({ editor, audio, sfx, onStart, onShowStats }: FreeSumma
         onSoundChange={editor.handleSoundChange}
         forceUpdateKey={editor.volumeKey}
       />
-      <button className={`${styles.btn} ${styles.btnPrimary}`} onClick={onStart}>Start Pomodoro</button>
     </>
   )
 }
@@ -466,7 +450,6 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         onSoundChange={editor.handleSoundChange}
         forceUpdateKey={editor.volumeKey}
       />
-      <button className={`${styles.btn} ${styles.btnConfirm}`} onClick={editor.confirm}>Set</button>
       <ThemeToggles value={themePreference} onChange={onThemeChange} />
       <BackgroundToggles
         audio={editor.backgroundAudio}
@@ -480,32 +463,36 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
 
 // --- メインコンポーネント ---
 
-export function FreeTimerPanel(): JSX.Element {
-  const { audio, sfx, orchestrator } = useAppDeps()
+interface FreeTimerPanelProps {
+  readonly onExpandedChange?: (expanded: boolean) => void
+}
+
+export function FreeTimerPanel({ onExpandedChange }: FreeTimerPanelProps): JSX.Element {
+  const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const editor = useSettingsEditor()
-  const [showStats, setShowStats] = useState(false)
+
+  useEffect(() => {
+    onExpandedChange?.(editor.expanded)
+  }, [editor.expanded, onExpandedChange])
 
   return (
     <div className={styles.freeMode}>
-      {showStats
-        ? <StatsDrawer onClose={() => setShowStats(false)} />
-        : editor.expanded
-          ? <FreeSettingsEditor
-              editor={editor}
-              audio={audio}
-              sfx={sfx}
-              themePreference={themePreference}
-              onThemeChange={setThemePreference}
-            />
-          : <FreeSummaryView
-              editor={editor}
-              audio={audio}
-              sfx={sfx}
-              onStart={() => orchestrator.startPomodoro()}
-              onShowStats={() => setShowStats(true)}
-            />
+      {editor.expanded
+        ? <FreeSettingsEditor
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
+          />
+        : <FreeSummaryView
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+          />
       }
+      {editor.expanded && <SetButton onClick={editor.confirm} />}
     </div>
   )
 }
