@@ -109,6 +109,47 @@ export const labelLongBreak = style({
   color: `rgb(${vars.color.longBreak})`,
 })
 
+// === Background section ===
+
+export const bgRow = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  gap: 8,
+  marginTop: 16,
+})
+
+export const bgLabel = style({
+  fontSize: 14,
+  color: vars.color.textMuted,
+})
+
+export const bgToggle = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  background: vars.color.surfaceSubtle,
+  color: vars.color.textMuted,
+  border: `1px solid ${vars.color.borderLight}`,
+  borderRadius: 6,
+  cursor: 'pointer',
+  transition: 'all 0.2s',
+  padding: 0,
+  selectors: {
+    '&:hover': {
+      background: vars.color.surfaceHover,
+    },
+  },
+})
+
+globalStyle(`${bgToggle}.active`, {
+  background: vars.color.surfaceHover,
+  borderColor: vars.color.borderStrong,
+  color: vars.color.text,
+})
+
 // === Config button group ===
 
 export const cfgGroup = style({

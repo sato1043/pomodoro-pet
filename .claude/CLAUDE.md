@@ -41,10 +41,10 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### Electron プロセス構成
 
-- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC）
-- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブAPI公開）
-- `src/main.ts` — レンダラープロセスのエントリポイント。全モジュールの組立とレンダリングループ
-- `src/electron.d.ts` — `window.electronAPI`の型定義（platform, loadSettings, saveSettings）
+- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ）。`__APP_ID__`（electron-vite define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
+- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブ/showNotification API公開）
+- `src/main.ts` — レンダラープロセスのエントリポイント。全モジュールの組立とレンダリングループ。blur/focusイベントでバックグラウンド検出、setInterval(1秒)でバックグラウンドタイマー継続
+- `src/electron.d.ts` — `window.electronAPI`の型定義（platform, loadSettings, saveSettings, showNotification）
 
 ### ドメイン層 (`src/domain/`)
 
@@ -60,11 +60,12 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `PomodoroOrchestrator` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック（onBehaviorChange）、EventBusはUI/インフラ通知のみ。CycleCompleted時に自動でexitPomodoro。`phaseToPreset()`でフェーズ→BehaviorPresetマッピング。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行（`PomodoroEvents.ts`で型定義）
 - `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoroがAppSceneEvent[]を返す
 - `DisplayTransition` — 宣言的シーン遷移グラフ。`DisplayScene`型（AppScene+PhaseTypeの結合キー）、`DISPLAY_SCENE_GRAPH`定数（遷移ルールのテーブル）、`DisplayTransitionState`（テーブルルックアップによる状態管理）。`toDisplayScene()`/`displaySceneToMode()`変換ヘルパー
-- `AppSettingsService` — タイマー設定＋サウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）
+- `AppSettingsService` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時の挙動を制御
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
-- `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能
+- `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
+- `NotificationBridge` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work/break)、PomodoroCompletedで通知。`NotificationPort`でElectron Notification APIを抽象化
 
 ### アダプター層 (`src/adapters/`)
 
@@ -76,7 +77,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/TimerOverlay.tsx` — モード遷移コーディネーター。FreeTimerPanel/PomodoroTimerPanel/CongratsPanelをモードに応じて切替。DisplayTransitionState+SceneTransitionによるシーントランジション（暗転フェード）管理。EventBus購読をmicrotaskコアレシングでrequestTransitionに集約
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応
-- `ui/FreeTimerPanel.tsx` — freeモード。`editor.expanded`でFreeSummaryView（折りたたみ: タイムラインサマリー＋VolumeControl＋Start Pomodoro）とFreeSettingsEditor（展開: タイマー設定ボタングループ＋テーマ選択＋VolumeControl(プリセット付)＋Set確定）を切替。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/FreeTimerPanel.tsx` — freeモード。`editor.expanded`でFreeSummaryView（折りたたみ: タイムラインサマリー＋VolumeControl＋Start Pomodoro）とFreeSettingsEditor（展開: タイマー設定ボタングループ＋テーマ選択＋VolumeControl(プリセット付)＋Set確定＋バックグラウンド設定）を切替。Setボタン直下に「In Background: [🔊] [🔔]」アイコントグル配置。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット。右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。FreeTimerPanelから利用
@@ -92,8 +93,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
-- `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）。ミュート時は`AudioContext.suspend()`でシステムリソースを解放、解除時に`resume()`で復帰
-- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。VolumeControl（ミュート操作UI）はFreeTimerPanelのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
+- `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）。ミュート時は`AudioContext.suspend()`でシステムリソースを解放、解除時に`resume()`で復帰。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートと独立管理）
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応。VolumeControl（ミュート操作UI）はFreeTimerPanelのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
 
 ## Static Assets
 
@@ -123,7 +124,18 @@ VITE_DEV_TOOLS=1
 VITE_DEV_PORT=3000
 ```
 
-`.env.development` は `.gitignore` に含まれるためコミットされない。
+Viteは`NODE_ENV`に応じてenvファイルを選択する:
+
+| コマンド | NODE_ENV | 読み込まれるenvファイル |
+|---|---|---|
+| `npm run dev` | development | `.env` + `.env.development` |
+| `npm run build` / `npm run package` | production | `.env` + `.env.production` |
+
+`VITE_*`変数はビルド時に`import.meta.env.VITE_*`へ静的埋め込みされる。パッケージ済みアプリの実行時にenvファイルは参照されない。
+
+`.env.production`に`VITE_DEBUG_TIMER`を記述すれば、パッケージビルドでもデバッグタイマーが有効になる。
+
+`.env.development`、`.env.production`、`.env.local` はすべて `.gitignore` に含まれるためコミットされない。
 
 ## Testing
 
@@ -194,3 +206,6 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - 設定ファイル保存先: `{userData}/settings.json`（Windowsなら`%APPDATA%/pomodoro-pet/settings.json`）
 - WSL2で音声を再生するには`libpulse0`が必要。WSLgのPulseServerソケット経由でWindows側に音声出力する
 - WSL2のPulseAudio環境ではWeb Audio APIのAudioNode生成・破棄を繰り返すとストリームリソースがリークし、音声が途切れる。約10分のアイドルで自動復旧する。`pkill -f pulseaudio`で即座にリセット可能。Windowsネイティブ実行では発生しない
+- `document.hasFocus()`はElectronで信頼できない（最小化してもtrueを返す場合がある）。バックグラウンド検出にはblur/focusイベントのフラグ管理を使用する
+- `requestAnimationFrame`はブラウザ/Electronのバックグラウンドタブで停止する。バックグラウンドでもタイマーを進めるにはsetIntervalを併用する
+- Windowsのトースト通知には`app.setAppUserModelId()`が必須。未設定だと通知が表示されない

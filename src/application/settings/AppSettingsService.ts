@@ -16,13 +16,20 @@ export interface SoundConfigInput {
   readonly isMuted: boolean
 }
 
+export interface BackgroundConfigInput {
+  readonly backgroundAudio: boolean
+  readonly backgroundNotify: boolean
+}
+
 export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
+  readonly backgroundConfig: BackgroundConfigInput
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
   updateThemeConfig(theme: ThemePreference): void
+  updateBackgroundConfig(input: BackgroundConfigInput): void
   resetToDefault(): void
 }
 
@@ -40,14 +47,20 @@ function loadStoredData(): Promise<Record<string, unknown> | null> {
   return window.electronAPI.loadSettings()
 }
 
-function saveAllToStorage(timer: TimerConfigInput, sound: SoundConfigInput, theme: ThemePreference): void {
+function saveAllToStorage(
+  timer: TimerConfigInput,
+  sound: SoundConfigInput,
+  theme: ThemePreference,
+  background: BackgroundConfigInput
+): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme })
+    window.electronAPI.saveSettings({ timer, sound, theme, background })
   }
 }
 
 const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMuted: false }
 const DEFAULT_THEME: ThemePreference = 'system'
+const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -57,6 +70,7 @@ export function createAppSettingsService(
   let currentConfig: TimerConfig = initialConfig ?? createDefaultConfig()
   let currentSound: SoundConfigInput = { ...DEFAULT_SOUND }
   let currentTheme: ThemePreference = DEFAULT_THEME
+  let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -85,9 +99,19 @@ export function createAppSettingsService(
     bus.publish(event.type, event)
   }
 
+  function publishBackgroundLoaded(background: BackgroundConfigInput): void {
+    const event: SettingsEvent = {
+      type: 'BackgroundSettingsLoaded',
+      background,
+      timestamp: Date.now()
+    }
+    bus.publish(event.type, event)
+  }
+
   return {
     get currentConfig() { return currentConfig },
     get themePreference() { return currentTheme },
+    get backgroundConfig() { return currentBackground },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
@@ -109,6 +133,18 @@ export function createAppSettingsService(
         ) {
           currentSound = { preset: s.preset, volume: s.volume, isMuted: s.isMuted }
           publishSoundLoaded(currentSound)
+        }
+      }
+
+      // バックグラウンド設定の復元
+      if (data.background) {
+        const bg = data.background as Record<string, unknown>
+        if (
+          typeof bg.backgroundAudio === 'boolean' &&
+          typeof bg.backgroundNotify === 'boolean'
+        ) {
+          currentBackground = { backgroundAudio: bg.backgroundAudio, backgroundNotify: bg.backgroundNotify }
+          publishBackgroundLoaded(currentBackground)
         }
       }
 
@@ -143,25 +179,31 @@ export function createAppSettingsService(
       )
       currentConfig = config
       publishSettingsChanged(config)
-      saveAllToStorage(input, currentSound, currentTheme)
+      saveAllToStorage(input, currentSound, currentTheme, currentBackground)
     },
 
     updateSoundConfig(input: SoundConfigInput): void {
       currentSound = input
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
     },
 
     updateThemeConfig(theme: ThemePreference): void {
       currentTheme = theme
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
+    },
+
+    updateBackgroundConfig(input: BackgroundConfigInput): void {
+      currentBackground = input
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
     },
 
     resetToDefault(): void {
       currentConfig = createDefaultConfig()
       currentSound = { ...DEFAULT_SOUND }
       currentTheme = DEFAULT_THEME
+      currentBackground = { ...DEFAULT_BACKGROUND }
       publishSettingsChanged(currentConfig)
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme)
+      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
     }
   }
 }

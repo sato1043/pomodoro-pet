@@ -1,9 +1,15 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, Notification } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
 
 // WSL2等でGPUプロセス初期化失敗時にソフトウェアWebGL(SwiftShader)へフォールバック
 app.commandLine.appendSwitch('enable-unsafe-swiftshader')
+
+// Windowsトースト通知に必須。ビルド時にpackage.jsonのbuild.appIdから埋め込まれる
+declare const __APP_ID__: string
+if (__APP_ID__) {
+  app.setAppUserModelId(__APP_ID__)
+}
 
 function getSettingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
@@ -30,6 +36,12 @@ ipcMain.handle('settings:load', () => {
 
 ipcMain.handle('settings:save', (_event, settings: Record<string, unknown>) => {
   saveSettings(settings)
+})
+
+ipcMain.handle('notification:show', (_event, options: { title: string; body: string }) => {
+  if (Notification.isSupported()) {
+    new Notification({ title: options.title, body: options.body }).show()
+  }
 })
 
 function createWindow(): void {

@@ -89,6 +89,77 @@ test('Setを押さずに閉じると設定がスナップショットから復�
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
+test('BG Audio/BG Notifyトグルの表示', async () => {
+  const { page } = app
+
+  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  // BG Audio/BG Notifyトグルが表示される
+  await expect(page.locator('[data-testid="bg-audio-toggle"]')).toBeVisible()
+  await expect(page.locator('[data-testid="bg-notify-toggle"]')).toBeVisible()
+
+  // 折りたたむ
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('BG Audioトグル操作でactive状態が切り替わる', async () => {
+  const { page } = app
+
+  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  const bgAudioToggle = page.locator('[data-testid="bg-audio-toggle"]')
+
+  // 初期状態: active（ON）
+  await expect(bgAudioToggle).toHaveClass(/active/)
+
+  // クリックでOFF
+  await bgAudioToggle.click()
+  await expect(bgAudioToggle).not.toHaveClass(/active/)
+
+  // 再クリックでON
+  await bgAudioToggle.click()
+  await expect(bgAudioToggle).toHaveClass(/active/)
+
+  // 折りたたむ（Setを押さずに閉じるとスナップショット復元）
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('BG設定のスナップショット復元', async () => {
+  const { page } = app
+
+  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  const bgNotifyToggle = page.locator('[data-testid="bg-notify-toggle"]')
+
+  // 初期: active（ON）
+  await expect(bgNotifyToggle).toHaveClass(/active/)
+
+  // OFFに変更
+  await bgNotifyToggle.click()
+  await expect(bgNotifyToggle).not.toHaveClass(/active/)
+
+  // Setを押さずに閉じる
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+
+  // 再度開くと復元されている（ON=active）
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+  await expect(bgNotifyToggle).toHaveClass(/active/)
+
+  // 後片付け: 閉じる
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
 test('「Set」ボタンで設定確定しパネルが閉じる', async () => {
   const { page } = app
 

@@ -43,6 +43,10 @@ export interface SettingsEditorResult {
   expanded: boolean
   volumeKey: number
   currentTimerConfig: TimerConfig
+  backgroundAudio: boolean
+  backgroundNotify: boolean
+  setBackgroundAudio(value: boolean): void
+  setBackgroundNotify(value: boolean): void
   toggle(): void
   confirm(): void
   updateSetting(key: keyof TimerSettings, value: number): void
@@ -56,12 +60,16 @@ export function useSettingsEditor(): SettingsEditorResult {
   const [settings, setSettings] = useState<TimerSettings>(() => settingsFromConfig(config))
   const [expanded, setExpanded] = useState(false)
   const [volumeKey, setVolumeKey] = useState(0)
+  const [backgroundAudio, setBackgroundAudio] = useState(() => settingsService.backgroundConfig.backgroundAudio)
+  const [backgroundNotify, setBackgroundNotify] = useState(() => settingsService.backgroundConfig.backgroundNotify)
   const snapshotRef = useRef<{
     settings: TimerSettings
     preset: string
     volume: number
     muted: boolean
     theme: ThemePreference
+    backgroundAudio: boolean
+    backgroundNotify: boolean
   } | null>(null)
   const confirmedRef = useRef(false)
 
@@ -82,6 +90,8 @@ export function useSettingsEditor(): SettingsEditorResult {
           volume: audio.volume,
           muted: audio.isMuted,
           theme: themePreference,
+          backgroundAudio,
+          backgroundNotify,
         }
         confirmedRef.current = false
       } else if (!confirmedRef.current && snapshotRef.current) {
@@ -94,11 +104,13 @@ export function useSettingsEditor(): SettingsEditorResult {
         sfx?.setVolume(snap.volume)
         sfx?.setMuted(snap.muted)
         setThemePreference(snap.theme)
+        setBackgroundAudio(snap.backgroundAudio)
+        setBackgroundNotify(snap.backgroundNotify)
         setVolumeKey(k => k + 1)
       }
       return !prev
     })
-  }, [settings, audio, sfx, themePreference, setThemePreference])
+  }, [settings, audio, sfx, themePreference, setThemePreference, backgroundAudio, backgroundNotify])
 
   const confirm = useCallback(() => {
     settingsService.updateTimerConfig({
@@ -113,9 +125,10 @@ export function useSettingsEditor(): SettingsEditorResult {
       isMuted: audio.isMuted,
     })
     settingsService.updateThemeConfig(themePreference)
+    settingsService.updateBackgroundConfig({ backgroundAudio, backgroundNotify })
     confirmedRef.current = true
     setExpanded(false)
-  }, [settings, settingsService, audio, themePreference])
+  }, [settings, settingsService, audio, themePreference, backgroundAudio, backgroundNotify])
 
   const handleSoundChange = useCallback(() => {
     if (!expanded) {
@@ -137,6 +150,10 @@ export function useSettingsEditor(): SettingsEditorResult {
     expanded,
     volumeKey,
     currentTimerConfig,
+    backgroundAudio,
+    backgroundNotify,
+    setBackgroundAudio,
+    setBackgroundNotify,
     toggle,
     confirm,
     updateSetting,

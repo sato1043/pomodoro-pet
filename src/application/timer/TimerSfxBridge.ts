@@ -56,11 +56,16 @@ export function bridgeTimerToSfx(
   bus: EventBus,
   sfx: SfxPlayer,
   config: Partial<TimerSfxConfig> = {},
-  audioControl?: AudioControl
+  audioControl?: AudioControl,
+  shouldPlayAudio?: () => boolean
 ): () => void {
   const cfg = { ...DEFAULT_CONFIG, ...config }
   let savedPreset: string | null = null
   let pendingWorkComplete = false
+
+  function canPlay(): boolean {
+    return !shouldPlayAudio || shouldPlayAudio()
+  }
 
   function restorePreset(): void {
     sfx.stop()
@@ -72,7 +77,6 @@ export function bridgeTimerToSfx(
 
   const unsubPhaseCompleted = bus.subscribe<TimerEvent>('PhaseCompleted', (event) => {
     if (event.type === 'PhaseCompleted' && event.phase === 'work') {
-      // 次のPhaseStartedで判定するため遅延（congrats→long-breakの場合はスキップ）
       pendingWorkComplete = true
     }
     if (event.type === 'PhaseCompleted' && (event.phase === 'break' || event.phase === 'long-break')) {
@@ -82,45 +86,41 @@ export function bridgeTimerToSfx(
 
   const unsubPhaseStarted = bus.subscribe<TimerEvent>('PhaseStarted', (event) => {
     if (event.type === 'PhaseStarted' && event.phase === 'work') {
-      sfx.play(cfg.workStartUrl, cfg.workStartGain).catch(() => {
-        // 再生失敗時は無視
-      })
+      if (canPlay()) {
+        sfx.play(cfg.workStartUrl, cfg.workStartGain).catch(() => {})
+      }
     }
     if (event.type === 'PhaseStarted' && event.phase === 'congrats') {
-      // congrats（→long-break）の場合はwork-completeをスキップしファンファーレのみ
       pendingWorkComplete = false
-      sfx.play(cfg.fanfareUrl, cfg.fanfareGain).catch(() => {
-        // 再生失敗時は無視
-      })
+      if (canPlay()) {
+        sfx.play(cfg.fanfareUrl, cfg.fanfareGain).catch(() => {})
+      }
     }
     if (event.type === 'PhaseStarted' && event.phase === 'break') {
-      // breakの場合はwork-completeを再生
       if (pendingWorkComplete) {
         pendingWorkComplete = false
-        sfx.play(cfg.workCompleteUrl, cfg.workCompleteGain).catch(() => {
-          // 再生失敗時は無視
-        })
+        if (canPlay()) {
+          sfx.play(cfg.workCompleteUrl, cfg.workCompleteGain).catch(() => {})
+        }
       }
     }
     if (event.type === 'PhaseStarted' && (event.phase === 'break' || event.phase === 'long-break')) {
-      sfx.play(cfg.breakStartUrl, cfg.breakStartGain).catch(() => {
-        // 再生失敗時は無視
-      })
-      if (audioControl) {
-        savedPreset = audioControl.currentPreset
-        audioControl.switchPreset('silence')
+      if (canPlay()) {
+        sfx.play(cfg.breakStartUrl, cfg.breakStartGain).catch(() => {})
+        if (audioControl) {
+          savedPreset = audioControl.currentPreset
+          audioControl.switchPreset('silence')
+        }
+        sfx.playLoop(cfg.breakChillUrl, CROSSFADE_MS, cfg.breakChillGain).catch(() => {})
       }
-      sfx.playLoop(cfg.breakChillUrl, CROSSFADE_MS, cfg.breakChillGain).catch(() => {
-        // 再生失敗時は無視
-      })
     }
   })
 
   const unsubTrigger = bus.subscribe<TimerEvent>('TriggerFired', (event) => {
     if (event.type === 'TriggerFired' && GETSET_TRIGGER_IDS.has(event.triggerId)) {
-      sfx.playLoop(cfg.breakGetsetUrl, CROSSFADE_MS, cfg.breakGetsetGain).catch(() => {
-        // 再生失敗時は無視（playLoopが内部でクロスフェード処理）
-      })
+      if (canPlay()) {
+        sfx.playLoop(cfg.breakGetsetUrl, CROSSFADE_MS, cfg.breakGetsetGain).catch(() => {})
+      }
     }
   })
 
@@ -138,7 +138,9 @@ export function bridgeTimerToSfx(
 
   const unsubAborted = bus.subscribe<PomodoroEvent>('PomodoroAborted', (event) => {
     if (event.type === 'PomodoroAborted') {
-      sfx.play(cfg.exitUrl, cfg.exitGain).catch(() => {})
+      if (canPlay()) {
+        sfx.play(cfg.exitUrl, cfg.exitGain).catch(() => {})
+      }
     }
   })
 

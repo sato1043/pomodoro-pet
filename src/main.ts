@@ -21,6 +21,7 @@ import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
 import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
 import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
 import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
+import { bridgeTimerToNotification, type NotificationPort } from './application/notification/NotificationBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
@@ -200,11 +201,74 @@ async function main(): Promise<void> {
   // インタラクション（ホバー、クリック、摘まみ上げ）
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle)
 
+  // フォーカス状態フラグ（document.hasFocus()はElectronで信頼できないためblur/focusで管理）
+  let windowFocused = document.hasFocus()
+
+  // バックグラウンド時のオーディオ再生判定
+  const shouldPlayAudio = (): boolean => {
+    if (!settingsService.backgroundConfig.backgroundAudio && !windowFocused) {
+      return false
+    }
+    return true
+  }
+
   // タイマーSFX（作業完了ファンファーレ + 休憩BGM — EventBusで通知を受ける）
   bridgeTimerToSfx(bus, sfxPlayer, {
     breakChillGain: 0.25,
     breakGetsetGain: 0.25
-  }, audio)
+  }, audio, shouldPlayAudio)
+
+  // システム通知（バックグラウンド時のフェーズ完了通知）
+  const notificationPort: NotificationPort = {
+    show: (title, body) => { window.electronAPI?.showNotification(title, body) }
+  }
+  bridgeTimerToNotification(
+    bus,
+    notificationPort,
+    () => settingsService.backgroundConfig.backgroundNotify,
+    () => windowFocused
+  )
+
+  // バックグラウンド時のタイマー継続とオーディオ制御
+  // rAFはバックグラウンドで停止するため、setIntervalでタイマーを進める
+  let bgInterval: ReturnType<typeof setInterval> | null = null
+  let bgLastTick = 0
+
+  window.addEventListener('blur', () => {
+    windowFocused = false
+    if (!settingsService.backgroundConfig.backgroundAudio) {
+      audio.setBackgroundMuted(true)
+      sfxPlayer.setBackgroundMuted(true)
+    }
+    // バックグラウンドでもタイマーを1秒ごとに進める
+    bgLastTick = Date.now()
+    bgInterval = setInterval(() => {
+      if (!orchestrator.isRunning) return
+      const now = Date.now()
+      const deltaMs = now - bgLastTick
+      bgLastTick = now
+      orchestrator.tick(deltaMs)
+    }, 1000)
+  })
+  window.addEventListener('focus', () => {
+    // バックグラウンドタイマーを停止
+    if (bgInterval !== null) {
+      // 最後のinterval〜focus間の端数を処理（windowFocused=falseのまま）
+      if (orchestrator.isRunning) {
+        const remainMs = Date.now() - bgLastTick
+        if (remainMs > 0) {
+          orchestrator.tick(remainMs)
+        }
+      }
+      clearInterval(bgInterval)
+      bgInterval = null
+      clock.getDelta() // rAFの溜まったdeltaを消費（二重tick防止）
+    }
+
+    windowFocused = true
+    audio.setBackgroundMuted(false)
+    sfxPlayer.setBackgroundMuted(false)
+  })
 
   // レンダリングループ
   const clock = new THREE.Clock()

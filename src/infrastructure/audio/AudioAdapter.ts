@@ -7,6 +7,7 @@ export interface AudioAdapter {
   switchPreset(preset: SoundPreset): void
   setVolume(volume: number): void
   toggleMute(): void
+  setBackgroundMuted(muted: boolean): void
   resume(): Promise<void>
   dispose(): void
 }
@@ -20,6 +21,7 @@ export function createAudioAdapter(): AudioAdapter {
   let currentPreset: SoundPreset = 'silence'
   let volume = 0
   let isMuted = true
+  let backgroundMuted = false
 
   function ensureContext(): { ctx: AudioContext; masterGain: GainNode } {
     if (!ctx) {
@@ -29,6 +31,26 @@ export function createAudioAdapter(): AudioAdapter {
       masterGain.connect(ctx.destination)
     }
     return { ctx, masterGain: masterGain! }
+  }
+
+  function updateSuspendState(): void {
+    if (!ctx) return
+    if (isMuted || backgroundMuted) {
+      if (masterGain) {
+        masterGain.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
+      }
+      if (ctx.state === 'running') {
+        ctx.suspend()
+      }
+    } else {
+      if (ctx.state === 'suspended') {
+        ctx.resume().then(() => {
+          if (masterGain && ctx) {
+            masterGain.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.1)
+          }
+        })
+      }
+    }
   }
 
   function stopActiveNodes(): void {
@@ -59,8 +81,8 @@ export function createAudioAdapter(): AudioAdapter {
         activeNodes = config.build(audioCtx, gain)
       }
 
-      // ミュート中はノード生成後にAudioContextを休止し、システムリソースを解放する
-      if (isMuted && audioCtx.state === 'running') {
+      // ミュート中またはバックグラウンドミュート中はAudioContextを休止し、システムリソースを解放する
+      if ((isMuted || backgroundMuted) && audioCtx.state === 'running') {
         audioCtx.suspend()
       }
     },
@@ -74,23 +96,17 @@ export function createAudioAdapter(): AudioAdapter {
 
     toggleMute(): void {
       isMuted = !isMuted
-      if (!ctx) return
+      updateSuspendState()
+    },
 
-      if (isMuted) {
-        masterGain!.gain.setTargetAtTime(0, ctx.currentTime, 0.1)
-        ctx.suspend()
-      } else {
-        ctx.resume().then(() => {
-          if (masterGain && ctx) {
-            masterGain.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.1)
-          }
-        })
-      }
+    setBackgroundMuted(muted: boolean): void {
+      backgroundMuted = muted
+      updateSuspendState()
     },
 
     async resume(): Promise<void> {
-      // ミュート中はautoplay policy解除でもAudioContextを復帰させない
-      if (ctx && ctx.state === 'suspended' && !isMuted) {
+      // ミュート中またはバックグラウンドミュート中はautoplay policy解除でもAudioContextを復帰させない
+      if (ctx && ctx.state === 'suspended' && !isMuted && !backgroundMuted) {
         await ctx.resume()
       }
     },

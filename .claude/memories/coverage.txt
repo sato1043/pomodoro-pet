@@ -3,31 +3,32 @@
  RUN  v2.1.9 /home/sato1043/projects/test1
       Coverage enabled with v8
 
- ✓ tests/application/app-scene/AppSceneManager.test.ts (8 tests) 23ms
- ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 21ms
- ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 36ms
- ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 22ms
- ✓ tests/application/settings/AppSettingsService.test.ts (13 tests) 52ms
- ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 34ms
- ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 36ms
- ✓ tests/application/timer/TimerSfxBridge.test.ts (33 tests) 127ms
- ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 136ms
- ✓ tests/domain/timer/PomodoroStateMachine.test.ts (53 tests) 152ms
- ✓ tests/domain/character/BehaviorStateMachine.test.ts (70 tests) 140ms
- ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 28ms
- ✓ tests/domain/shared/EventBus.test.ts (4 tests) 22ms
+ ✓ tests/application/app-scene/AppSceneManager.test.ts (8 tests) 16ms
+ ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 35ms
+ ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 22ms
+ ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 54ms
+ ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 83ms
+ ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 36ms
+ ✓ tests/application/settings/AppSettingsService.test.ts (17 tests) 88ms
+ ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 56ms
+ ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 166ms
+ ✓ tests/domain/timer/PomodoroStateMachine.test.ts (53 tests) 157ms
+ ✓ tests/domain/character/BehaviorStateMachine.test.ts (70 tests) 187ms
+ ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 33ms
+ ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 15ms
  ✓ tests/setup.test.ts (1 test) 7ms
+ ✓ tests/domain/shared/EventBus.test.ts (4 tests) 25ms
 
- Test Files  14 passed (14)
-      Tests  280 passed (280)
-   Start at  09:08:20
-   Duration  3.17s (transform 2.25s, setup 0ms, collect 3.88s, tests 835ms, environment 11ms, prepare 6.14s)
+ Test Files  15 passed (15)
+      Tests  298 passed (298)
+   Start at  08:41:56
+   Duration  5.06s (transform 5.57s, setup 0ms, collect 7.70s, tests 980ms, environment 18ms, prepare 10.10s)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
 -------------------|---------|----------|---------|---------|-------------------
-All files          |    84.6 |    97.84 |   88.67 |    84.6 |                   
+All files          |   84.05 |    97.01 |   88.39 |   84.05 |                   
  ...tion/app-scene |   26.76 |      100 |     100 |   26.76 |                   
   AppScene.ts      |       0 |        0 |       0 |       0 |                   
   ...eneManager.ts |     100 |      100 |     100 |     100 |                   
@@ -37,10 +38,12 @@ All files          |    84.6 |    97.84 |   88.67 |    84.6 |
   ...iorUseCase.ts |       0 |      100 |     100 |       0 | 6-25              
  ...on/environment |     100 |      100 |     100 |     100 |                   
   ScrollUseCase.ts |     100 |      100 |     100 |     100 |                   
- ...ation/settings |   48.33 |    81.81 |   53.33 |   48.33 |                   
-  ...ngsService.ts |   48.33 |       80 |      50 |   48.33 | ...50-152,155-157 
+ ...n/notification |     100 |    78.57 |     100 |     100 |                   
+  ...tionBridge.ts |     100 |    78.57 |     100 |     100 | 25,38-39          
+ ...ation/settings |   47.68 |    84.61 |   55.55 |   47.68 |                   
+  ...ngsService.ts |   47.68 |    83.33 |   52.94 |   47.68 | ...86-188,191-193 
   ...ingsEvents.ts |       0 |        0 |       0 |       0 |                   
- application/timer |   99.45 |    96.22 |   77.77 |   99.45 |                   
+ application/timer |   99.48 |    96.66 |   78.94 |   99.48 |                   
   ...doroEvents.ts |       0 |        0 |       0 |       0 |                   
   ...chestrator.ts |   98.79 |    93.33 |   73.33 |   98.79 | 137               
   ...rSfxBridge.ts |     100 |      100 |     100 |     100 |                   

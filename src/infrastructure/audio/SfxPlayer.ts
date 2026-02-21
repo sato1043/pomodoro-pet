@@ -11,6 +11,7 @@ export interface SfxPlayer {
   stop(): void
   setVolume(volume: number): void
   setMuted(muted: boolean): void
+  setBackgroundMuted(bgMuted: boolean): void
   dispose(): void
 }
 
@@ -30,6 +31,7 @@ export function createSfxPlayer(): SfxPlayer {
   let gainNode: GainNode | null = null
   let volume = 0.8
   let muted = false
+  let backgroundMuted = false
   const bufferCache = new Map<string, AudioBuffer>()
 
   // Simple loop (crossfadeMs = 0)
@@ -146,7 +148,7 @@ export function createSfxPlayer(): SfxPlayer {
 
   return {
     async play(url: string, gain = 1.0): Promise<void> {
-      if (muted) return
+      if (muted || backgroundMuted) return
 
       const { ctx: audioCtx, gainNode: masterGain } = ensureContext()
       if (audioCtx.state === 'suspended') {
@@ -167,7 +169,7 @@ export function createSfxPlayer(): SfxPlayer {
     },
 
     async playLoop(url: string, crossfadeMs = 0, gain = 1.0): Promise<void> {
-      if (muted) return
+      if (muted || backgroundMuted) return
 
       const { ctx: audioCtx, gainNode: masterGain } = ensureContext()
       if (audioCtx.state === 'suspended') {
@@ -230,7 +232,27 @@ export function createSfxPlayer(): SfxPlayer {
           gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05)
         }
         ctx.suspend()
-      } else {
+      } else if (!backgroundMuted) {
+        ctx.resume().then(() => {
+          if (gainNode && ctx) {
+            gainNode.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.05)
+          }
+        })
+      }
+    },
+
+    setBackgroundMuted(bgMuted: boolean): void {
+      backgroundMuted = bgMuted
+      if (!ctx) return
+
+      if (backgroundMuted) {
+        stopSimpleLoop()
+        stopCrossfadeLoop()
+        if (gainNode) {
+          gainNode.gain.setTargetAtTime(0, ctx.currentTime, 0.05)
+        }
+        ctx.suspend()
+      } else if (!muted) {
         ctx.resume().then(() => {
           if (gainNode && ctx) {
             gainNode.gain.setTargetAtTime(volume * MAX_GAIN, ctx.currentTime, 0.05)

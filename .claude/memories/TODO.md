@@ -116,10 +116,17 @@
 - PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 - フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
-### 通知機能
-- フェーズ完了時にシステム通知を発行
-- Electron `Notification` API使用
-- 音声通知（ベル音等）も併用
+### ~~通知機能~~ — 完了
+- バックグラウンド時にElectron `Notification` APIでシステム通知を発行（フォアグラウンド時は発行しない）
+- BG Audio（バックグラウンドオーディオ）とBG Notify（バックグラウンド通知）の2つの独立設定で挙動を制御
+- `NotificationBridge`（アプリケーション層）がEventBus購読→通知発行判定。`NotificationPort`でElectron APIを抽象化
+- `TimerSfxBridge`に`shouldPlayAudio`コールバック追加でバックグラウンド時のオーディオ抑制
+- `AudioAdapter`/`SfxPlayer`に`setBackgroundMuted()`追加（ユーザーミュートと独立管理）
+- blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）
+- バックグラウンド時はsetInterval(1秒)でタイマー継続（rAFはバックグラウンドで停止するため）
+- FreeTimerPanelのSetボタン直下に「In Background: [🔊] [🔔]」アイコントグルを配置
+- `app.setAppUserModelId()`を`__APP_ID__`（electron-vite define埋め込み）で設定（Windows通知に必須）
+- 設定はsettings.jsonに永続化（`background.backgroundAudio`/`background.backgroundNotify`）
 
 ### 統計・履歴
 - 完了したポモドーロ数を日/週/月で記録

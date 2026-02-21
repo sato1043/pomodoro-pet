@@ -5,5 +5,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadSettings: (): Promise<Record<string, unknown> | null> =>
     ipcRenderer.invoke('settings:load'),
   saveSettings: (settings: Record<string, unknown>): Promise<void> =>
-    ipcRenderer.invoke('settings:save', settings)
+    ipcRenderer.invoke('settings:save', settings),
+  showNotification: (title: string, body: string): Promise<void> =>
+    ipcRenderer.invoke('notification:show', { title, body })
 })

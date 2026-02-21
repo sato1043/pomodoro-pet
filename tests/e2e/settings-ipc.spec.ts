@@ -72,6 +72,79 @@ test('設定変更がsettings.jsonに永続化される', async () => {
   await electronApp.close()
 })
 
+test('showNotification APIがレンダラーで利用可能', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const hasShowNotification = await page.evaluate(() => {
+    return typeof (window as any).electronAPI.showNotification === 'function'
+  })
+  expect(hasShowNotification).toBe(true)
+
+  await electronApp.close()
+})
+
+test('BG設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // 展開
+  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  await toggleBtn.click()
+  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  // BG Audio OFF（トグルクリック）
+  const bgAudioToggle = page.locator('[data-testid="bg-audio-toggle"]')
+  await bgAudioToggle.click()
+
+  // Set確定
+  await page.getByRole('button', { name: 'Set' }).click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page.waitForTimeout(500)
+
+  const settingsPath = join(userDataPath, 'settings.json')
+  expect(existsSync(settingsPath)).toBe(true)
+
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.background?.backgroundAudio).toBe(false)
+  expect(savedSettings.background?.backgroundNotify).toBe(true)
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にBG設定が復元される', async () => {
+  // 1回目: BG Notify OFFにして保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  const toggleBtn1 = page1.locator('button').filter({ has: page1.locator('svg') }).first()
+  await toggleBtn1.click()
+  await expect(page1.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  const bgNotifyToggle = page1.locator('[data-testid="bg-notify-toggle"]')
+  await bgNotifyToggle.click()
+
+  await page1.getByRole('button', { name: 'Set' }).click()
+  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動して設定が復元されているか確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  const toggleBtn2 = page2.locator('button').filter({ has: page2.locator('svg') }).first()
+  await toggleBtn2.click()
+  await expect(page2.getByRole('button', { name: 'Set' })).toBeVisible()
+  await page2.waitForTimeout(500)
+
+  // BG Notifyのトグルがactive無し（OFF）であることを確認
+  const bgNotifyToggle2 = page2.locator('[data-testid="bg-notify-toggle"]')
+  const classes = await bgNotifyToggle2.getAttribute('class')
+  expect(classes).not.toContain('active')
+
+  await app2.close()
+})
+
 test('アプリ再起動後にテーマ設定が復元される', async () => {
   // VITE_DEBUG_TIMER有効時はタイマー設定の復元がスキップされるため、
   // テーマ設定で永続化・復元を検証する

@@ -151,6 +151,49 @@ describe('AppSettingsService', () => {
     })
   })
 
+  describe('backgroundConfig', () => {
+    it('初期状態でbackgroundAudio=true, backgroundNotify=true', () => {
+      expect(service.backgroundConfig).toEqual({
+        backgroundAudio: true,
+        backgroundNotify: true,
+      })
+    })
+
+    it('updateBackgroundConfigで値が変更される', () => {
+      service.updateBackgroundConfig({
+        backgroundAudio: false,
+        backgroundNotify: true,
+      })
+      expect(service.backgroundConfig).toEqual({
+        backgroundAudio: false,
+        backgroundNotify: true,
+      })
+    })
+
+    it('updateBackgroundConfigで両方をfalseにできる', () => {
+      service.updateBackgroundConfig({
+        backgroundAudio: false,
+        backgroundNotify: false,
+      })
+      expect(service.backgroundConfig).toEqual({
+        backgroundAudio: false,
+        backgroundNotify: false,
+      })
+    })
+
+    it('resetToDefaultでデフォルト値に戻す', () => {
+      service.updateBackgroundConfig({
+        backgroundAudio: false,
+        backgroundNotify: false,
+      })
+      service.resetToDefault()
+      expect(service.backgroundConfig).toEqual({
+        backgroundAudio: true,
+        backgroundNotify: true,
+      })
+    })
+  })
+
   describe('resetToDefault', () => {
     it('デフォルト値に戻す', () => {
       service.updateTimerConfig({

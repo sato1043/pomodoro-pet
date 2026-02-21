@@ -532,6 +532,86 @@ describe('TimerSfxBridge', () => {
       expect(sfx.playCalls).not.toContain('./audio/pomodoro-exit.mp3')
     })
 
+    it('shouldPlayAudio未指定 → 後方互換で全て再生される', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-start.mp3', 1.0)
+    })
+
+    it('shouldPlayAudio=false → SFX/BGMを再生しない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl, () => false)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      bus.publish<TimerEvent>('PhaseCompleted', {
+        type: 'PhaseCompleted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalled()
+      expect(sfx.playLoop).not.toHaveBeenCalled()
+      expect(audioCtl.presetHistory).not.toContain('silence')
+    })
+
+    it('shouldPlayAudio=false → TriggerFiredでもBGM切替しない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl, () => false)
+
+      bus.publish<TimerEvent>('TriggerFired', {
+        type: 'TriggerFired',
+        triggerId: 'break-getset',
+        phase: 'break',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.playLoop).not.toHaveBeenCalled()
+    })
+
+    it('shouldPlayAudio=false → PomodoroAbortedでもexit音を再生しない', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl, () => false)
+
+      bus.publish<PomodoroEvent>('PomodoroAborted', {
+        type: 'PomodoroAborted',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).not.toHaveBeenCalled()
+    })
+
+    it('shouldPlayAudio=false → 停止系(restorePreset)は常に実行される', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl, () => false)
+
+      bus.publish<TimerEvent>('TimerReset', { type: 'TimerReset' })
+
+      expect(sfx.stop).toHaveBeenCalled()
+    })
+
+    it('shouldPlayAudio=true → SFX再生する', () => {
+      bridgeTimerToSfx(bus, sfx, {}, audioCtl, () => true)
+
+      bus.publish<TimerEvent>('PhaseStarted', {
+        type: 'PhaseStarted',
+        phase: 'work',
+        timestamp: Date.now()
+      })
+
+      expect(sfx.play).toHaveBeenCalledWith('./audio/work-start.mp3', 1.0)
+    })
+
     it('カスタムgain指定 → 各再生に反映される', () => {
       bridgeTimerToSfx(bus, sfx, {
         workStartGain: 0.6,
