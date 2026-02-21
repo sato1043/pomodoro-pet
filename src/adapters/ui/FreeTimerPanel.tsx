@@ -10,6 +10,7 @@ import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
+import { StatsDrawer } from './StatsDrawer'
 import * as styles from './styles/free-timer-panel.css'
 
 // --- 純粋関数 ---
@@ -128,6 +129,16 @@ function MonitorIcon(): JSX.Element {
       <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
       <line x1="8" y1="21" x2="16" y2="21" />
       <line x1="12" y1="17" x2="12" y2="21" />
+    </svg>
+  )
+}
+
+function ChartIcon(): JSX.Element {
+  return (
+    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }}>
+      <rect x="3" y="12" width="4" height="9" rx="1" />
+      <rect x="10" y="7" width="4" height="14" rx="1" />
+      <rect x="17" y="3" width="4" height="18" rx="1" />
     </svg>
   )
 }
@@ -398,14 +409,20 @@ interface FreeSummaryViewProps {
   readonly audio: AudioAdapter
   readonly sfx: SfxPlayer | null
   readonly onStart: () => void
+  readonly onShowStats: () => void
 }
 
-function FreeSummaryView({ editor, audio, sfx, onStart }: FreeSummaryViewProps): JSX.Element {
+function FreeSummaryView({ editor, audio, sfx, onStart, onShowStats }: FreeSummaryViewProps): JSX.Element {
   return (
     <>
-      <button className={styles.settingsToggle} onClick={editor.toggle}>
-        <MenuIcon />
-      </button>
+      <div className={styles.topRightButtons}>
+        <button className={styles.settingsToggle} onClick={editor.toggle}>
+          <MenuIcon />
+        </button>
+        <button className={styles.statsToggle} onClick={onShowStats} data-testid="stats-toggle">
+          <ChartIcon />
+        </button>
+      </div>
       <FreeTimerSummary timerConfig={editor.currentTimerConfig} />
       <VolumeControl
         audio={audio}
@@ -433,9 +450,8 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
   return (
     <>
       <button
-        className={styles.settingsToggle}
+        className={styles.editorCloseToggle}
         onClick={editor.toggle}
-        style={{ transform: 'translateY(-2px)' }}
       >
         <CloseIcon />
       </button>
@@ -468,23 +484,27 @@ export function FreeTimerPanel(): JSX.Element {
   const { audio, sfx, orchestrator } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const editor = useSettingsEditor()
+  const [showStats, setShowStats] = useState(false)
 
   return (
     <div className={styles.freeMode}>
-      {editor.expanded
-        ? <FreeSettingsEditor
-            editor={editor}
-            audio={audio}
-            sfx={sfx}
-            themePreference={themePreference}
-            onThemeChange={setThemePreference}
-          />
-        : <FreeSummaryView
-            editor={editor}
-            audio={audio}
-            sfx={sfx}
-            onStart={() => orchestrator.startPomodoro()}
-          />
+      {showStats
+        ? <StatsDrawer onClose={() => setShowStats(false)} />
+        : editor.expanded
+          ? <FreeSettingsEditor
+              editor={editor}
+              audio={audio}
+              sfx={sfx}
+              themePreference={themePreference}
+              onThemeChange={setThemePreference}
+            />
+          : <FreeSummaryView
+              editor={editor}
+              audio={audio}
+              sfx={sfx}
+              onStart={() => orchestrator.startPomodoro()}
+              onShowStats={() => setShowStats(true)}
+            />
       }
     </div>
   )

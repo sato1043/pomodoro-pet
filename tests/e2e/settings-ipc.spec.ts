@@ -145,6 +145,22 @@ test('アプリ再起動後にBG設定が復元される', async () => {
   await app2.close()
 })
 
+test('statistics APIがレンダラーで利用可能', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const hasLoadStatistics = await page.evaluate(() => {
+    return typeof (window as any).electronAPI.loadStatistics === 'function'
+  })
+  expect(hasLoadStatistics).toBe(true)
+
+  const hasSaveStatistics = await page.evaluate(() => {
+    return typeof (window as any).electronAPI.saveStatistics === 'function'
+  })
+  expect(hasSaveStatistics).toBe(true)
+
+  await electronApp.close()
+})
+
 test('アプリ再起動後にテーマ設定が復元される', async () => {
   // VITE_DEBUG_TIMER有効時はタイマー設定の復元がスキップされるため、
   // テーマ設定で永続化・復元を検証する

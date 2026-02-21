@@ -9,6 +9,7 @@ import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import type { Character } from '../../domain/character/entities/Character'
 import type { BehaviorStateMachine } from '../../domain/character/services/BehaviorStateMachine'
 import type { ThreeCharacterHandle } from '../three/ThreeCharacterAdapter'
+import type { StatisticsService } from '../../application/statistics/StatisticsService'
 
 export interface AppDeps {
   readonly bus: EventBus
@@ -22,6 +23,7 @@ export interface AppDeps {
   readonly character: Character
   readonly behaviorSM: BehaviorStateMachine
   readonly charHandle: ThreeCharacterHandle
+  readonly statisticsService: StatisticsService
 }
 
 const AppContext = createContext<AppDeps | null>(null)

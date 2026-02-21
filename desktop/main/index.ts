@@ -15,6 +15,10 @@ function getSettingsPath(): string {
   return join(app.getPath('userData'), 'settings.json')
 }
 
+function getStatisticsPath(): string {
+  return join(app.getPath('userData'), 'statistics.json')
+}
+
 function loadSettings(): Record<string, unknown> | null {
   try {
     const data = readFileSync(getSettingsPath(), 'utf-8')
@@ -30,12 +34,35 @@ function saveSettings(settings: Record<string, unknown>): void {
   writeFileSync(getSettingsPath(), JSON.stringify(settings, null, 2), 'utf-8')
 }
 
+function loadStatistics(): Record<string, unknown> | null {
+  try {
+    const data = readFileSync(getStatisticsPath(), 'utf-8')
+    return JSON.parse(data)
+  } catch {
+    return null
+  }
+}
+
+function saveStatistics(data: Record<string, unknown>): void {
+  const dir = app.getPath('userData')
+  mkdirSync(dir, { recursive: true })
+  writeFileSync(getStatisticsPath(), JSON.stringify(data, null, 2), 'utf-8')
+}
+
 ipcMain.handle('settings:load', () => {
   return loadSettings()
 })
 
 ipcMain.handle('settings:save', (_event, settings: Record<string, unknown>) => {
   saveSettings(settings)
+})
+
+ipcMain.handle('statistics:load', () => {
+  return loadStatistics()
+})
+
+ipcMain.handle('statistics:save', (_event, data: Record<string, unknown>) => {
+  saveStatistics(data)
 })
 
 ipcMain.handle('notification:show', (_event, options: { title: string; body: string }) => {

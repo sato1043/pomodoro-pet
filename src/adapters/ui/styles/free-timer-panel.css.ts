@@ -7,9 +7,45 @@ export const freeMode = style({
   pointerEvents: 'auto',
 })
 
+// === Top-right button container ===
+
+export const topRightButtons = style({
+  position: 'absolute',
+  top: 8,
+  right: 8,
+  display: 'flex',
+  flexDirection: 'column',
+  alignItems: 'center',
+  zIndex: 1001,
+  pointerEvents: 'auto',
+})
+
 // === Settings toggle button ===
 
-export const settingsToggle = style({
+const iconButton = style({
+  borderRadius: '50%',
+  border: 'none',
+  background: 'transparent',
+  appearance: 'none',
+  color: vars.color.textFaint,
+  cursor: 'pointer',
+  transition: 'color 0.2s',
+  padding: '6px 0',
+  lineHeight: '0',
+  pointerEvents: 'auto',
+  selectors: {
+    '&:hover': {
+      color: vars.color.textOnSurface,
+    },
+  },
+})
+
+export const settingsToggle = iconButton
+
+export const statsToggle = iconButton
+
+/** FreeSettingsEditorのCloseボタン（absoluteで右上配置） */
+export const editorCloseToggle = style({
   position: 'absolute',
   top: 8,
   right: 8,

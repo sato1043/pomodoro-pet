@@ -128,10 +128,13 @@
 - `app.setAppUserModelId()`を`__APP_ID__`（electron-vite define埋め込み）で設定（Windows通知に必須）
 - 設定はsettings.jsonに永続化（`background.backgroundAudio`/`background.backgroundNotify`）
 
-### 統計・履歴
-- 完了したポモドーロ数を日/週/月で記録
-- LocalStorageまたはファイルベースで永続化
-- 簡易グラフ表示
+### ~~統計・履歴~~ — 完了
+- フェーズ単位で日次集計（DailyStats: work/break完了数、累計時間、サイクル完了/中断数）
+- `{userData}/statistics.json`にファイルベース永続化（settings.jsonとは別ファイル）
+- Electron IPC（`statistics:load`/`statistics:save`）→ preload contextBridge → renderer
+- `StatisticsService`（アプリケーション層）がCRUD+永続化。`StatisticsBridge`がEventBus購読→統計記録
+- `StatsDrawer`（UIアダプター層）: サマリー3カード（Today/7Days/30Days）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間折れ線グラフ（SVG、最終点に脈動アニメーション付き）
+- FreeTimerPanel右上にチャートアイコンで統計ドロワーを切替表示
 
 ## 優先度: 中
 

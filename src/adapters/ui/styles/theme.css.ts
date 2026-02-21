@@ -115,8 +115,19 @@ export const lightThemeClass = createTheme(vars, {
 // テーマクラスが適用された要素の基本スタイル
 globalStyle(`.${darkThemeClass}`, {
   colorScheme: 'dark',
+  // ヒートマップ用CSS変数（SVG内のfillで参照）
+  vars: {
+    '--theme-work-rgb': '76, 175, 80',
+    '--theme-heatmap-empty': 'rgba(255, 255, 255, 0.08)',
+    '--theme-heatmap-today-stroke': 'rgba(255, 255, 255, 0.6)',
+  },
 })
 
 globalStyle(`.${lightThemeClass}`, {
   colorScheme: 'light',
+  vars: {
+    '--theme-work-rgb': '46, 125, 50',
+    '--theme-heatmap-empty': 'rgba(0, 0, 0, 0.06)',
+    '--theme-heatmap-today-stroke': 'rgba(0, 0, 0, 0.4)',
+  },
 })

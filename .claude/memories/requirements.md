@@ -286,7 +286,32 @@ AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態�
 #### 11.2 画面サイズ
 - iPhoneと同じ縦横比（390×844、iPhone 15相当）
 
-### 12. 環境映像 — 未実装（nice-to-have）
+### 12. 統計・履歴 — 実装済
+
+#### 12.1 データモデル
+- `DailyStats`型で日次集計: completedCycles、abortedCycles、workPhasesCompleted、breakPhasesCompleted、totalWorkMs、totalBreakMs
+- `StatisticsData`型: `Record<'YYYY-MM-DD', DailyStats>`
+
+#### 12.2 記録タイミング
+- `PhaseCompleted(work)` → workPhasesCompleted++、totalWorkMs += config.workDurationMs
+- `PhaseCompleted(break)` → breakPhasesCompleted++、totalBreakMs += config.breakDurationMs
+- `PhaseCompleted(long-break)` → breakPhasesCompleted++、totalBreakMs += config.longBreakDurationMs
+- `PomodoroCompleted` → completedCycles++
+- `PomodoroAborted` → abortedCycles++
+- `PhaseCompleted(congrats)` → スキップ（内部遷移）
+
+#### 12.3 永続化
+- `{userData}/statistics.json`（settings.jsonとは別ファイル）
+- Electron IPC（`statistics:load`/`statistics:save`）→ preload contextBridge → renderer
+- 更新ごとに即座にsave（イベント頻度が低いためdebounce不要）
+
+#### 12.4 統計ドロワーUI（StatsDrawer）
+- FreeTimerPanel右上のチャートアイコン（棒グラフ型SVG）から表示切替
+- サマリー3カード: Today / 7 Days / 30 Days（work完了数 + 累計時間）
+- 13週カレンダーヒートマップ（SVGベース、7行×13列、work完了数5段階、テーマ対応）
+- 累計(work+break)時間の折れ線グラフ（SVGベース、軸+線のみ、最終点に放射状グラデーション脈動アニメーション+累計分数表示）
+
+### 13. 環境映像 — 未実装（nice-to-have）
 
 ## 非機能要件
 - プラットフォーム: Windows

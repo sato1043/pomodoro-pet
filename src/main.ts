@@ -22,6 +22,8 @@ import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
 import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
 import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
 import { bridgeTimerToNotification, type NotificationPort } from './application/notification/NotificationBridge'
+import { createStatisticsService } from './application/statistics/StatisticsService'
+import { bridgeTimerToStatistics } from './application/statistics/StatisticsBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
@@ -120,6 +122,9 @@ async function main(): Promise<void> {
   // アプリケーション設定
   const settingsService = createAppSettingsService(bus, initialConfig, isDebugTimer)
 
+  // 統計サービス
+  const statisticsService = createStatisticsService()
+
   // 環境音
   const audio = createAudioAdapter()
 
@@ -166,7 +171,7 @@ async function main(): Promise<void> {
     const deps: AppDeps = {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
-      character, behaviorSM, charHandle
+      character, behaviorSM, charHandle, statisticsService
     }
     appRoot.render(createElement(App, { deps }))
   }
@@ -192,8 +197,14 @@ async function main(): Promise<void> {
     renderReactUI()
   })
 
+  // 統計ブリッジ（EventBus購読→統計記録）
+  bridgeTimerToStatistics(bus, statisticsService, () => settingsService.currentConfig)
+
   // 保存済み設定の復元（購読登録後に実行）
   await settingsService.loadFromStorage()
+
+  // 保存済み統計データの復元
+  await statisticsService.loadFromStorage()
 
   // 初回React UIレンダリング
   renderReactUI()
