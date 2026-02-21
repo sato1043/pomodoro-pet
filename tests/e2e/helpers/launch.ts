@@ -20,7 +20,7 @@ export async function launchApp(): Promise<AppContext> {
 
   const page = await electronApp.firstWindow()
   // DOMのReact UIがマウントされるまで待機
-  await page.waitForSelector('#timer-overlay', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="overlay-free"]', { timeout: 15_000 })
 
   return { electronApp, page }
 }

@@ -152,7 +152,7 @@ AppSceneManager                PomodoroStateMachine
 ```
 PomodoroStateMachine: 最終work完了 → PhaseStarted(congrats)
   ├→ PomodoroOrchestrator: celebrate プリセット（直接コールバック）
-  ├→ TimerOverlay: switchToMode('congrats') — 祝福UI表示（EventBus経由）
+  ├→ OverlayPomodoro: congratsモードに切替 — 祝福UI表示（EventBus経由）
   └→ TimerSfxBridge: サイクル完了ファンファーレ再生（EventBus経由）
 
 PomodoroStateMachine: congrats完了（5秒後） → PhaseStarted(long-break/break)
@@ -175,7 +175,7 @@ AppSceneManager: exitPomodoro()
   ↓
 AppSceneChanged(free) 発行
   ├→ main.ts: resetTimer()
-  ├→ TimerOverlay: switchToMode('free')
+  ├→ SceneRouter: SceneFreeに切替（EventBus経由）
   └→ TimerCharacterBridge: autonomous プリセット
 ```
 

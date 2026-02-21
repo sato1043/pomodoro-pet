@@ -148,7 +148,7 @@ export function createAppSettingsService(
         }
       }
 
-      // タイマー設定の復元（SettingsChanged発行でTimerOverlay再作成。この時点でAudioAdapterは既に更新済み）
+      // タイマー設定の復元（SettingsChanged発行でUI再作成。この時点でAudioAdapterは既に更新済み）
       // デバッグタイマー有効時はデバッグ値を優先し、保存済みタイマー設定をスキップ
       if (data.timer && !debugTimer) {
         const t = data.timer as Record<string, unknown>

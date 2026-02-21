@@ -37,27 +37,26 @@ type DisplayScene = 'free' | 'pomodoro:work' | 'pomodoro:break' | 'pomodoro:long
   → 暗転レンダリング（DOM操作のみ）
 ```
 
-## microtaskコアレシング
+## イベント分離によるトランジション管理
 
-startPomodoro()は同期的にAppSceneChangedとPhaseStartedを連続発火する。queueMicrotaskで1回のflushにまとめることで、二重トランジションを防ぐ。
-
-```
-AppSceneChanged(pomodoro) → pendingTarget = 'pomodoro:work'
-PhaseStarted(work)        → pendingTarget = 'pomodoro:work' (同値上書き)
-→ microtask: 1回だけflush → blackout 1回
-```
+startPomodoro()は同期的にAppSceneChangedとPhaseStartedを連続発火する。SceneRouter（AppSceneChanged購読）とOverlayPomodoro（PhaseStarted購読）がそれぞれ独立したコンポーネントで処理するため、microtaskコアレシングは不要。startPomodoro時のblackout midpoint内でScenePomodoroがマウントされ、OverlayPomodoroはuseState初期化で正しいフェーズを取得する。
 
 ## ファイル構成
 
 ```
-新規:
+アプリケーション層:
   src/application/app-scene/DisplayTransition.ts  — 型 + グラフ定数 + 状態クラス
-  src/adapters/ui/SceneTransition.ts              — 暗転レンダリング（DOM）
 
-変更:
-  src/adapters/ui/TimerOverlay.ts                 — requestTransition + EventBus購読置換
+アダプター層:
+  src/adapters/ui/SceneRouter.tsx       — AppSceneChanged購読 + シーン間blackout
+  src/adapters/ui/OverlayPomodoro.tsx   — PhaseStarted購読 + イントラ・ポモドーロblackout
+  src/adapters/ui/SceneTransition.tsx   — 暗転レンダリング（DOM）
 ```
+
+## SceneTransitionの2インスタンス共存
+
+SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれSceneTransitionを所有する。両方ともportalでdocument.bodyに描画される（z-index: 10000）。同時発火しない設計: SceneRouterはAppSceneChanged時、OverlayPomodoroはPhaseStarted時に発火する。
 
 ## 全画面暗転
 
-TimerOverlayだけでなく3Dシーン・キャラクターも含む全画面を覆う。`z-index: 10000`。
+SceneTransitionは3Dシーン・キャラクターも含む全画面を覆う。`z-index: 10000`。

@@ -15,7 +15,7 @@ async function launchFresh(): Promise<{ electronApp: ElectronApplication; page: 
     },
   })
   const page = await electronApp.firstWindow()
-  await page.waitForSelector('#timer-overlay', { timeout: 15_000 })
+  await page.waitForSelector('[data-testid="overlay-free"]', { timeout: 15_000 })
   return { electronApp, page }
 }
 

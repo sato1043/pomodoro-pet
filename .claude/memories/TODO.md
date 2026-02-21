@@ -19,14 +19,14 @@
 - SceneConfig（進行方向+スクロール設定）とChunkSpec（チャンク仕様）を導入
 
 ### ~~タイマー設定カスタマイズUI~~ — 完了
-- TimerOverlayのfreeモードにボタングループで設定（Work [25/50/90], Break [5/10/15], Long Break [15/30/60], Sets [1/2/3/4]）
-- サウンド設定（プリセットボタン＋10段階ボリュームインジケーター＋SVGミュートボタン）もTimerOverlayに統合
+- OverlayFreeのfreeモードにボタングループで設定（Work [25/50/90], Break [5/10/15], Long Break [15/30/60], Sets [1/2/3/4]）
+- サウンド設定（プリセットボタン＋10段階ボリュームインジケーター＋SVGミュートボタン）もOverlayFreeに統合
 - ☰/×トグルで設定行を畳み、タイムラインサマリー（CyclePlanベース横棒グラフ＋AM/PM時刻＋合計時間）に切替
 - デフォルト折りたたみ。展開時はSetボタンで確定（スナップショット/リストア）
 - 折りたたみ時のボリューム/ミュート変更は即時保存
 - SettingsPanelはギアアイコン→モーダルでEnvironment設定（スタブ）のみ → React化時に削除済み
 - `AppSettingsService`が分→ms変換＋バリデーション＋`SettingsChanged`/`SoundSettingsLoaded`イベント発行
-- `SettingsChanged`購読でsession再作成→TimerOverlay再構築のフロー実装
+- `SettingsChanged`購読でsession再作成→UI再構築のフロー実装
 - pomodoroモード中はギアアイコン・トグルボタン非表示
 - `parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定をパース
 
@@ -35,7 +35,7 @@
 - PomodoroSessionがCyclePlanをインデックス走査する方式に変更
 - Sets=1はBreak、Sets>1の最終セットはLong Break
 - デフォルトSets=1に変更
-- TimerOverlayのタイムラインサマリーもCyclePlanを利用
+- OverlayFreeのタイムラインサマリーもCyclePlanを利用
 
 ### ~~設定永続化~~ — 完了
 - タイマー設定＋サウンド設定を`{userData}/settings.json`にJSON永続化
@@ -46,7 +46,7 @@
 ### ~~SFX通知音（ファンファーレ・テストサウンド）~~ — 完了
 - `SfxPlayer`（インフラ層）: MP3ワンショット再生。fetch+decodeAudioData+バッファキャッシュ
 - `TimerSfxBridge`（アプリケーション層）: PhaseCompleted(work)でwork完了音、AppModeChanged(congrats)でファンファーレを再生。`TimerSfxConfig`で各URLを個別指定可能
-- `VolumeControl`（アダプター層）: TimerOverlayからボリューム関連UIを共通コンポーネント化。ボリューム変更/ミュート解除時にテストサウンド(`/audio/test.mp3`)を再生
+- `VolumeControl`（アダプター層）: ボリューム関連UIを共通コンポーネント化。ボリューム変更/ミュート解除時にテストサウンド(`/audio/test.mp3`)を再生
 - MP3ファイルは`assets/audio/`に配置（Vite publicDir経由で`/audio/`としてアクセス）
 - `work-complete.mp3`は未配置（配置すればwork完了時に再生される）
 
@@ -94,7 +94,7 @@
 - `DisplayScene`型（AppScene+PhaseTypeの結合キー）で5つの表示シーンを定義
 - `DisplayTransitionState`によるテーブルルックアップで遷移効果を解決
 - `SceneTransition`による全画面暗転オーバレイ（350ms フェードアウト→モード切替→350ms フェードイン）
-- microtaskコアレシングで同期バッチイベント（AppSceneChanged+PhaseStarted）を1回のトランジションに集約
+- SceneRouter（AppSceneChanged購読）とOverlayPomodoro（PhaseStarted購読）のコンポーネント分離により、同期バッチイベントを自然に処理
 - free→pomodoro、break/long-break→work、congrats→free: blackout。work→break/long-break/congrats: immediate（暗転なし）
 - 将来拡張: `TransitionEffect`にcrossfade/wipe追加、`TransitionRule`にaudioフィールド追加で映像+音声統合管理
 - 詳細: [scene-transition-design.md](scene-transition-design.md)
@@ -102,7 +102,7 @@
 ### ~~UI層のReact化~~ — 完了
 - 全UIコンポーネントを命令型DOM操作（`.ts`）からReact JSX（`.tsx`）に移行
 - `App.tsx`/`AppContext.tsx`（依存注入）/`useEventBus` hookを新規追加
-- CSSを`timer-overlay.css`に分離
+- CSSを`overlay.css.ts`に分離
 - `createPortal`でdocument.bodyにポータル化（旧DOM構造を再現）
 - 全テキスト文字アイコン（☰⚙×等）をインラインSVGコンポーネントに統一
 - `dangerouslySetInnerHTML`を排除（Reactイベント委譲の不具合を解消）
@@ -112,7 +112,7 @@
 ### ~~ReactコンポーネントのCSS方式改善 — vanilla-extract導入~~ — 完了
 - `@vanilla-extract/css` + `@vanilla-extract/vite-plugin` を導入
 - `theme.css.ts`にテーマコントラクト定義（`createThemeContract`）、ライト/ダークテーマ値を定義
-- 全7コンポーネントを個別`.css.ts`ファイルに移行（timer-overlay, free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input）
+- 全7コンポーネントを個別`.css.ts`ファイルに移行（overlay, free-timer-panel, pomodoro-timer-panel, congrats-panel, scene-transition, volume-control, prompt-input）
 - PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 - フェーズカラー等の動的スタイルはCSS変数（`vars`）経由でテーマ連動
 
@@ -137,6 +137,13 @@
 - FreeTimerPanel右上にチャートアイコンで統計ドロワーを切替表示
 
 ## 優先度: 中
+
+### ふれあいモード
+- free / pomodoro と同格の独立したAppScene（free / pomodoro / fureai）として実装
+- タイマーオーバーレイはタイトルと同程度の大きさで時計のみ表示し、キャラクターとのふれあい空間を確保する
+- 餌やりアイコンを表示し、既存項目「モデルに餌をあげる」機能を実行可能にする
+- AppSceneManager、DisplayTransitionへのシーン追加が必要（PomodoroOrchestratorはポモドーロサイクル専用のため変更不要）
+- 関連: 「モデルに餌をあげる」「キャラクターの表情・感情表現の拡張」
 
 ### キャラクターの表情・感情表現の拡張
 - 現在の行動パターン（7状態）に加えて感情パラメータを追加

@@ -492,7 +492,7 @@ interface AppSceneManager {
 PomodoroSession → EventBus → TimerCharacterBridge → BehaviorStateMachine.setScrollingAllowed()
                                                    → BehaviorStateMachine.lockState()
                 → EventBus → AppModeManager → EventBus → subscribeAppModeToSession
-                                                       → TimerOverlay.switchToMode()
+                                                       → SceneRouter/OverlayPomodoro
                                                        → TimerSfxBridge
 ```
 
@@ -502,10 +502,10 @@ PomodoroSession → EventBus → TimerCharacterBridge → BehaviorStateMachine.s
 
 ```
 AppSceneManager
-  ├── onSceneChanged → EventBus → UI切替（TimerOverlay）
+  ├── onSceneChanged → EventBus → UI切替（SceneRouter）
   └── pomodoro進入時 → PomodoroStateMachineを起動
         ├── onPhaseChanged → BehaviorPreset切替 → BehaviorStateMachine.applyPreset()
-        ├── onPhaseChanged → EventBus → UI更新（TimerOverlay）
+        ├── onPhaseChanged → EventBus → UI更新（OverlayPomodoro）
         ├── onPhaseChanged → EventBus → SFX再生（TimerSfxBridge）
         ├── onTriggerFired → EventBus → 演出処理
         ├── onPaused → BehaviorPreset切替（autonomous）
@@ -513,7 +513,7 @@ AppSceneManager
         └── onCongratsCompleted → AppSceneManager.exitPomodoro()
 ```
 
-状態管理の中核は直接的なコールバック（または関数呼び出し）で連動する。EventBusはUI層（TimerOverlay）やインフラ層（SfxPlayer）への疎結合通知に限定する。
+状態管理の中核は直接的なコールバック（または関数呼び出し）で連動する。EventBusはUI層（SceneRouter/OverlayPomodoro）やインフラ層（SfxPlayer）への疎結合通知に限定する。
 
 ## 移行戦略
 
@@ -536,7 +536,7 @@ AppSceneManager
 - `PhaseType`に`congrats`追加
 - `AppModeManager`から`congrats`を除去（completeCycle/dismissCongrats廃止）
 - `TimerSfxBridge`: PhaseStarted(congrats)でファンファーレ再生に変更
-- `TimerOverlay`: PhaseStarted(congrats)でcongratsモード表示
+- `OverlayPomodoro`: PhaseStarted(congrats)でcongratsモード表示
 
 **未実施（Phase 2計画にあったが延期）:**
 - PhaseTimeTrigger（`TriggerFired`イベント追加）
@@ -564,7 +564,7 @@ AppSceneManager
 - `TimerCharacterBridge`: 廃止。ロジックはPomodoroOrchestratorの直接コールバックに移行
 - `TimerUseCases`: 廃止。PomodoroOrchestratorが同等機能を提供
 - `main.ts`: subscribeAppSceneToSession削除。PomodoroOrchestrator生成に置換
-- EventBus: UI/インフラ通知（TimerOverlay, SettingsPanel, TimerSfxBridge）のみに限定
+- EventBus: UI/インフラ通知（SceneRouter/OverlayPomodoro, TimerSfxBridge）のみに限定
 
 ## 現行コードとの対応表
 
@@ -621,7 +621,7 @@ AppSceneManager
 ### EventBusの役割
 
 - 状態管理の中核からは除外
-- UI層（TimerOverlay）、インフラ層（SfxPlayer）への疎結合通知に限定
+- UI層（SceneRouter/OverlayPomodoro）、インフラ層（SfxPlayer）への疎結合通知に限定
 - 階層間の連動はコールバック/関数呼び出しで直接接続
 
 ### CyclePlan
@@ -640,4 +640,4 @@ AppSceneManager
 1. **settings状態の具体的な設計**: 現在はモーダル。独立シーンにする場合の遷移ルールとUI設計。→ 将来検討
 2. **congratsのdurationMsの設定可能性**: 現在5秒固定。TimerConfigに含めるか、ハードコードで十分か
 3. **PhaseTimeTriggerの登録API**: PomodoroStateMachineのコンストラクタに渡すか、後から追加可能にするか
-4. **pause中のタイマーUI表示**: pause中にTimerOverlayをどう表示するか（現行維持 or 変更）
+4. **pause中のタイマーUI表示**: pause中にOverlayPomodoroをどう表示するか（現行維持 or 変更）

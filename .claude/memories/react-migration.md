@@ -33,7 +33,7 @@ UI層は命令型DOM操作（`.ts`）で実装されていた。以下の問題�
 
 ### 現状の課題
 
-- 単一の`timer-overlay.css`にグローバルセレクタで全スタイルを定義
+- 単一の`timer-overlay.css`（現`overlay.css.ts`）にグローバルセレクタで全スタイルを定義
 - PromptInputはインラインスタイルのみで、`::placeholder`・`:focus`・`:hover`等の擬似クラスが欠落
 - ダークモード導入を予定しており、テーマ管理の仕組みが必要
 
@@ -94,6 +94,6 @@ UI層は命令型DOM操作（`.ts`）で実装されていた。以下の問題�
 1. `@vanilla-extract/css` + `@vanilla-extract/vite-plugin` を導入
 2. テーマコントラクト定義（`theme.css.ts`）: カラー・スペーシング・フォント等
 3. ライトテーマ・ダークテーマの値を定義
-4. `timer-overlay.css`をコンポーネント別の`.css.ts`に段階的に移行
+4. `timer-overlay.css`（現`overlay.css.ts`）をコンポーネント別の`.css.ts`に段階的に移行
 5. PromptInputのインラインスタイルを`.css.ts`に移行（擬似クラス対応）
 6. 動的スタイル（フェーズカラー・プログレス等）は`createVar()` + `assignInlineVars()`で対応

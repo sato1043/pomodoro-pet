@@ -62,12 +62,6 @@ export function toDisplayScene(scene: AppScene, phase: PhaseType | null): Displa
   return `pomodoro:${phase}` as DisplayScene
 }
 
-export function displaySceneToMode(ds: DisplayScene): 'free' | 'pomodoro' | 'congrats' {
-  if (ds === 'free') return 'free'
-  if (ds === 'pomodoro:congrats') return 'congrats'
-  return 'pomodoro'
-}
-
 // --- 状態クラス ---
 
 export interface DisplayTransitionState {

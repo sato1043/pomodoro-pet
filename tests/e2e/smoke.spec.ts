@@ -17,12 +17,8 @@ test('アプリが起動しウィンドウが表示される', async () => {
 })
 
 test('タイトル「Pomodoro Pet」がオーバーレイに表示される', async () => {
-  const titleEl = app.page.locator('#timer-overlay .timer-overlay-title')
-  // vanilla-extractではclass名が動的なため、テキスト内容で検索する
-  const titleByText = app.page.getByText('Pomodoro Pet', { exact: false }).first()
-  const isVisible = await titleEl.isVisible().catch(() => false)
-    || await titleByText.isVisible().catch(() => false)
-  expect(isVisible).toBe(true)
+  const titleByText = app.page.locator('[data-testid="overlay-free"]').getByText('Pomodoro Pet', { exact: false }).first()
+  await expect(titleByText).toBeVisible()
 })
 
 test('「Start Pomodoro」ボタンが存在する', async () => {

@@ -244,8 +244,8 @@ AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態�
 - `playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)
 - forwardRef+useImperativeHandleで親からの呼び出しに対応
 
-#### 8.4 microtaskコアレシング
-- 同期バッチイベント（AppSceneChanged+PhaseStarted）をmicrotaskで集約し、1回のトランジションに統合
+#### 8.4 イベント分離
+- SceneRouter（AppSceneChanged購読）とOverlayPomodoro（PhaseStarted購読）がそれぞれ独立したコンポーネントで処理するため、同期バッチイベントは自然に分離される
 
 ### 9. タイマー設定カスタマイズ — 実装済
 
@@ -322,5 +322,5 @@ AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態�
 - ドメイン層は純粋関数/オブジェクトで構成、Three.jsやDOMに依存しない
 - TypeScript strict mode
 - UI層はReact 19で実装。`AppContext`による依存注入、`useEventBus`フックでEventBus購読
-- CSS: 現在は`timer-overlay.css`にグローバルセレクタ。vanilla-extractへの移行を計画中
+- CSS: vanilla-extract（`.css.ts`）でコンポーネント別にスコープ化。OverlayFree/OverlayPomodoro共用の`overlay.css.ts`
 - テスト: Vitest v2、ドメイン層・アプリケーション層に集中
