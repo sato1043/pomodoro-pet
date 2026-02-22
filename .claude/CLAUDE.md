@@ -206,6 +206,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [source-code-licensing.md](.claude/memories/source-code-licensing.md) — ソースコードライセンス選定（PolyForm Noncommercial 1.0.0の調査・採用理由）
 - [distribution-plan.md](.claude/memories/distribution-plan.md) — 有料配布方式（itch.io「Direct to you」モード・価格・税務・手数料試算）
 - [character-animation-mapping.md](.claude/memories/character-animation-mapping.md) — キャラクター状態とFBXアニメーションの対応表
+- [e2e-coverage-gaps.md](.claude/memories/e2e-coverage-gaps.md) — E2Eテストカバレッジ分析（カバー済み/未カバー/テスト不可能の分類）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 
