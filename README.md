@@ -3,6 +3,8 @@ pomodoro-pet v0.1.0
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 
+> 🤖 This project is built entirely through **Vibe Coding** with [Claude Code](https://docs.anthropic.com/en/docs/claude-code) (Anthropic CLI).
+
 ## Screenshots
 
 | Home | Config |
