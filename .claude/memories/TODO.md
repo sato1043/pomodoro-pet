@@ -136,6 +136,61 @@
 - `StatsDrawer`（UIアダプター層）: サマリー3カード（Today/7Days/30Days）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間折れ線グラフ（SVG、最終点に脈動アニメーション付き）
 - FreeTimerPanel右上にチャートアイコンで統計ドロワーを切替表示
 
+## 優先度: リリースに必須
+
+### About画面の作成
+- `licenses/THIRD_PARTY_LICENSES.txt`の内容を表示（npmパッケージ+購入素材クレジット）
+- プロジェクトライセンス（PolyForm Noncommercial 1.0.0）の表示
+- バージョン情報
+- 必要ならプライバシーポリシー
+
+### EULA（End User License Agreement）の策定
+- 配布形態: GitHub Releasesで有料バイナリ配布
+- 準拠法: 日本法
+- NSISインストーラーにEULA表示を組み込む（electron-builderの`nsis.license`オプション）
+- 含めるべき内容:
+  - ライセンス付与（個人・非商用の利用権）
+  - 禁止事項（逆コンパイル、素材抽出・再利用、再配布、商用利用）
+  - 知的財産権（ソフトウェア・素材の著作権帰属）
+  - 免責事項（現状有姿、損害賠償上限）
+  - 返金ポリシー
+  - 契約終了条件（違反時のライセンス終了）
+  - 準拠法・管轄裁判所
+- PolyForm Noncommercialとの関係整理（ソースコードのライセンスとバイナリ配布のライセンスは別）
+
+### 有料配布方式の設計
+- GitHub Releasesには決済機能がないため、別途決済手段が必要
+- 決済プラットフォーム候補: Gumroad、Paddle、Stripe（自前）、itch.io、BOOTH等
+- 検討事項:
+  - 決済→ダウンロードリンク提供のフロー
+  - ライセンスキー方式の有無（キーなし買い切り vs キー認証）
+  - アップデート提供方法（electron-updaterとの統合）
+  - 価格設定・通貨（JPY/USD）
+  - 返金ポリシー
+
+### 配布準備（技術面）
+- 正しい `build.appId` / `AppUserModelId` の取得と設定
+- コード署名証明書の取得・設定
+- 自動アップデート（electron-updater）の導入検討
+- インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
+
+### 素材ライセンス整理・配布方式の決定（残項目）
+- ~~全購入素材のライセンス条項を確認し一覧化する~~ — 完了（asset-licensing-distribution.md）
+- ~~各素材の「バイナリ同梱配布」可否を確定する~~ — 完了
+- ~~THIRD_PARTY_LICENSESファイル・クレジット表記を整備する~~ — 完了（`npm run licenses`で自動生成）
+- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
+- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
+- EULA策定 → 上記「EULA策定」を参照
+- 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
+
+### Steam連携
+- `steamworks.js` パッケージを追加
+- Steamworks開発者登録（$100 USD/タイトル）
+- AppID取得後、`desktop/main/index.ts` で初期化
+- 実績（Achievement）の設計と実装
+  - 例: 初回ポモドーロ完了、10サイクル達成、全環境音を試す、等
+- Steam Overlay有効化: `require('steamworks.js').electronEnableSteamOverlay()`
+
 ## 優先度: 中
 
 ### ~~ふれあいモード Phase 1: シーン枠組み~~ — 完了
@@ -203,26 +258,7 @@
 - 「ちょっと疲れた」→sleep、「元気出して」→happy のような曖昧な入力に対応
 - コスト・レイテンシ・オフライン対応のトレードオフを検討
 
-### About画面の作成
-- `licenses/THIRD_PARTY_LICENSES.txt`の内容を表示（npmパッケージ+購入素材クレジット）
-- プロジェクトライセンス（PolyForm Noncommercial 1.0.0）の表示
-- バージョン情報
-- 必要ならプライバシーポリシー
-
-### EULA（End User License Agreement）の策定
-- ストア配布時にエンドユーザーに提示する利用規約
-- 含まれる素材の抽出・再利用の禁止を明記
-- PolyForm Noncommercialとの関係整理（ソースコードのライセンスとバイナリ配布のライセンスは別）
-
 ## 優先度: 低
-
-### Steam連携
-- `steamworks.js` パッケージを追加
-- Steamworks開発者登録（$100 USD/タイトル）
-- AppID取得後、`desktop/main/index.ts` で初期化
-- 実績（Achievement）の設計と実装
-  - 例: 初回ポモドーロ完了、10サイクル達成、全環境音を試す、等
-- Steam Overlay有効化: `require('steamworks.js').electronEnableSteamOverlay()`
 
 ### ~~キーボードショートカット~~ — 不採用
 - Space: Start/Pause トグル
@@ -248,17 +284,3 @@
 - メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
 - リスク: preloadとの境界整理、electron-viteのESM出力の安定性
 
-### 配布準備
-- 正しい `build.appId` / `AppUserModelId` の取得と設定
-- コード署名証明書の取得・設定
-- 自動アップデート（electron-updater）の導入検討
-- インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
-
-### 素材ライセンス整理・配布方式の決定
-- ~~全購入素材のライセンス条項を確認し一覧化する~~ — 完了（asset-licensing-distribution.md）
-- ~~各素材の「バイナリ同梱配布」可否を確定する~~ — 完了
-- ~~THIRD_PARTY_LICENSESファイル・クレジット表記を整備する~~ — 完了（`npm run licenses`で自動生成）
-- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
-- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
-- EULA策定 → 上記「EULA策定」を参照
-- 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
