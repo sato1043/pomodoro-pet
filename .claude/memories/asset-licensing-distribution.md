@@ -126,11 +126,52 @@ assets/  ← private repoへのsubmodule
 
 ## 5. 本プロジェクトの素材一覧
 
+### 5.1 BGM（ElevenLabs Music — 既成音源ダウンロード）
+
+提供元: [ElevenLabs](https://elevenlabs.io/) (Starterプラン)
+著作権者: 原著作者（Merlin Network / Kobalt経由のアーティスト・レーベル）
+ライセンス: [ElevenLabs Music Terms](https://elevenlabs.io/music-terms)
+バイナリ配布: 可（end product組込み。standalone配布は禁止）
+用途制限: Starterプランでは independent interactive media として許可。
+          広告・企業案件・映画/TV・オフライン商用・公共再生・物理メディアは不許可
+
+| ファイル | 用途 |
+|---|---|
+| `break-chill.mp3` | break/long-break中のBGMループ |
+| `break-getset.mp3` | break終了30秒前のBGMクロスフェード |
+
+### 5.2 効果音（ElevenLabs Sound Effects — 既成音源ダウンロード）
+
+提供元: [ElevenLabs](https://elevenlabs.io/) (Starterプラン)
+著作権者: ElevenLabsまたは原著作者
+ライセンス: [ElevenLabs Service-Specific Terms](https://elevenlabs.io/service-specific-terms)
+バイナリ配布: 可（end product組込み。standalone配布は禁止）
+
+| ファイル | 用途 |
+|---|---|
+| `break-start.mp3` | break開始音 |
+| `pomodoro-exit.mp3` | ポモドーロ手動中断音 |
+| `test.mp3` | 音量テスト用 |
+| `work-complete.mp3` | work完了音 |
+| `work-start.mp3` | work開始音 |
+
+### 5.3 効果音（ElevenLabs Sound Effects — AI生成）
+
+提供元: [ElevenLabs](https://elevenlabs.io/) (Starterプラン)
+著作権者: ユーザー保持（ElevenLabs ToSに基づく。非独占的）
+ライセンス: [ElevenLabs Service-Specific Terms](https://elevenlabs.io/service-specific-terms)
+バイナリ配布: 可（end product組込み。standalone配布は禁止）
+備考: AI生成のため、同一または類似のOutputが他ユーザーにも生成される可能性がある
+
+| ファイル | 用途 |
+|---|---|
+| `fanfare.mp3` | サイクル完了ファンファーレ |
+
+### 5.4 3Dモデル・テクスチャ
+
 | 素材 | 用途 | 著作権者 | ライセンス | バイナリ配布可否 | 備考 |
 |---|---|---|---|---|---|
 | (要記入) | FBXモデル | (要記入) | (要記入) | (要確認) | |
 | (要記入) | テクスチャ | (要記入) | (要記入) | (要確認) | |
-| (要記入) | BGM | (要記入) | (要記入) | (要確認) | |
-| (要記入) | 効果音 | (要記入) | (要記入) | (要確認) | |
 
 → 各素材について購入元のライセンスページURLを控えておくこと。
