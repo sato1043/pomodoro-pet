@@ -13,8 +13,10 @@ import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from
 import { VolumeControl } from './VolumeControl'
 import { SetButton } from './SetButton'
 import { OverlayTitle } from './OverlayTitle'
+import { AboutContent } from './AboutContent'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
+import * as aboutStyles from './styles/about.css'
 
 // --- 純粋関数 ---
 
@@ -433,9 +435,10 @@ interface FreeSettingsEditorProps {
   readonly sfx: SfxPlayer | null
   readonly themePreference: ThemePreference
   readonly onThemeChange: (theme: ThemePreference) => void
+  readonly onAboutClick: () => void
 }
 
-function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange }: FreeSettingsEditorProps): JSX.Element {
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick }: FreeSettingsEditorProps): JSX.Element {
   return (
     <>
       <FreeTimerSettings
@@ -456,6 +459,9 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         onAudioChange={editor.setBackgroundAudio}
         onNotifyChange={editor.setBackgroundNotify}
       />
+      <div className={aboutStyles.aboutLink}>
+        <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
+      </div>
     </>
   )
 }
@@ -472,10 +478,15 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
   const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const editor = useSettingsEditor()
+  const [showAbout, setShowAbout] = useState(false)
 
   useEffect(() => {
     onExpandedChange?.(editor.expanded)
   }, [editor.expanded, onExpandedChange])
+
+  useEffect(() => {
+    if (!editor.expanded) setShowAbout(false)
+  }, [editor.expanded])
 
   useEffect(() => {
     onToggleRef?.(editor.toggle)
@@ -485,25 +496,31 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
     ? `${overlayStyles.overlay} ${overlayStyles.overlayExpanded}`
     : overlayStyles.overlay
 
+  const renderContent = (): JSX.Element => {
+    if (!editor.expanded) {
+      return <FreeSummaryView editor={editor} audio={audio} sfx={sfx} />
+    }
+    if (showAbout) {
+      return <AboutContent onBack={() => setShowAbout(false)} />
+    }
+    return (
+      <FreeSettingsEditor
+        editor={editor}
+        audio={audio}
+        sfx={sfx}
+        themePreference={themePreference}
+        onThemeChange={setThemePreference}
+        onAboutClick={() => setShowAbout(true)}
+      />
+    )
+  }
+
   return createPortal(
     <div data-testid="overlay-free" className={className}>
       <OverlayTitle />
       <div className={styles.freeMode}>
-        {editor.expanded
-          ? <FreeSettingsEditor
-              editor={editor}
-              audio={audio}
-              sfx={sfx}
-              themePreference={themePreference}
-              onThemeChange={setThemePreference}
-            />
-          : <FreeSummaryView
-              editor={editor}
-              audio={audio}
-              sfx={sfx}
-            />
-        }
-        {editor.expanded && <SetButton onClick={editor.confirm} />}
+        {renderContent()}
+        {editor.expanded && !showAbout && <SetButton onClick={editor.confirm} />}
       </div>
     </div>,
     document.body

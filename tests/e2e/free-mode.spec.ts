@@ -207,3 +207,33 @@ test('settings-closeクリックでset-buttonが非表示になる', async () =>
   await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
 })
+
+test('About画面の表示と設定パネルへの復帰', async () => {
+  const { page } = app
+
+  // 設定パネルを展開
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // Aboutリンクが表示される
+  await expect(page.locator('[data-testid="about-link"]')).toBeVisible()
+
+  // Aboutリンクをクリック → About画面表示
+  await page.locator('[data-testid="about-link"]').click()
+  await expect(page.locator('[data-testid="about-content"]')).toBeVisible()
+
+  // バージョン情報が含まれる
+  await expect(page.locator('[data-testid="about-content"]')).toContainText('Version')
+
+  // SetボタンはAbout画面では非表示
+  await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
+
+  // ← BackクリックでFreeSettingsEditorに戻る
+  await page.locator('[data-testid="about-back"]').click()
+  await expect(page.locator('[data-testid="about-content"]')).not.toBeVisible()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // 後片付け: 閉じる
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})

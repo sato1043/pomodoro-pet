@@ -1,6 +1,7 @@
 import { app, BrowserWindow, ipcMain, Notification } from 'electron'
 import { join } from 'path'
 import { readFileSync, writeFileSync, mkdirSync } from 'fs'
+import { readFile } from 'fs/promises'
 
 // WSL2等でGPUプロセス初期化失敗時にソフトウェアWebGL(SwiftShader)へフォールバック
 app.commandLine.appendSwitch('enable-unsafe-swiftshader')
@@ -69,6 +70,20 @@ ipcMain.handle('notification:show', (_event, options: { title: string; body: str
   if (Notification.isSupported()) {
     new Notification({ title: options.title, body: options.body }).show()
   }
+})
+
+ipcMain.handle('about:load', async () => {
+  const isDev = !app.isPackaged
+  const licensePath = isDev
+    ? join(__dirname, '../../licenses/THIRD_PARTY_LICENSES.txt')
+    : join(process.resourcesPath, 'licenses/THIRD_PARTY_LICENSES.txt')
+  let licensesText = ''
+  try {
+    licensesText = await readFile(licensePath, 'utf-8')
+  } catch {
+    // ファイルが見つからない場合は空文字
+  }
+  return { version: app.getVersion(), licensesText }
 })
 
 function createWindow(): void {

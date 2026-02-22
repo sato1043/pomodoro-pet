@@ -42,8 +42,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### Electron プロセス構成
 
-- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ）。`__APP_ID__`（electron-vite define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
-- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブ/showNotification API公開）
+- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`about:load` IPCハンドラ）。`__APP_ID__`（electron-vite define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
+- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブ/showNotification/loadAbout API公開）
 - `src/main.ts` — レンダラープロセスのエントリポイント。全モジュールの組立とレンダリングループ。blur/focusイベントでバックグラウンド検出、setInterval(1秒)でバックグラウンドタイマー継続
 - `src/electron.d.ts` — `window.electronAPI`の型定義（platform, loadSettings, saveSettings, showNotification）
 
@@ -88,7 +88,8 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `ui/WeatherButton.tsx` — 天気パネル表示ボタン。画面左下の雲SVGアイコン（`bottom: 168`）。createPortalでdocument.bodyに描画
 - `ui/WeatherCloseButton.tsx` — 天気パネルからの戻るボタン。←矢印アイコン。WeatherButtonと同位置（`bottom: 168`、`z-index: 1010`でパネルより上）
 - `ui/WeatherPanel.tsx` — 天気設定パネル。コンパクトフローティングUI（`bottom: 110, left: 66`）。天気タイプ（sunny/cloudy/rainy/snowy）+雲量（0-5の6段階セグメント+リセットボタン）+時間帯（morning/day/evening/night/auto）をアイコンボタンで切替。ドラフトstate方式でプレビュー（EventBus発行のみ、永続化なし）、Setボタンで確定、閉じるとスナップショット復元。パネル表示中はカメラをふれあいモード位置に後退+キャラクターmarch-cycleプリセット
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + 日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditorを切替）。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。バージョン情報（IPC経由で`app.getVersion()`）、プロジェクトライセンス（PolyForm Noncommercial 1.0.0）、サードパーティライセンス（THIRD_PARTY_LICENSES.txtをスクロール可能なpre表示）。`onBack`コールバックで設定パネルに戻る
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + 日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。useSettingsEditorフックでスナップショット/復元を管理。showAboutステートで設定パネル内のAbout表示を制御
 - `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）。createPortalでdocument.bodyに描画
 - `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル。設定パネル展開時に表示
 - `ui/BackButton.tsx` — 統計パネルからの戻るボタン。StartPomodoroButtonと同位置、キャンセル色（overlayBg）
@@ -197,6 +198,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [react-migration.md](.claude/memories/react-migration.md) — React移行の経緯・効果・CSS方式選定（vanilla-extract採用理由）
 - [asset-licensing-distribution.md](.claude/memories/asset-licensing-distribution.md) — 素材ライセンスと配布方式（購入素材の法的整理・リポジトリ構成）
 - [source-code-licensing.md](.claude/memories/source-code-licensing.md) — ソースコードライセンス選定（PolyForm Noncommercial 1.0.0の調査・採用理由）
+- [distribution-plan.md](.claude/memories/distribution-plan.md) — 有料配布方式（itch.io「Direct to you」モード・価格・税務・手数料試算）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 

@@ -81,8 +81,8 @@ EventBus（UI/インフラ通知）:
 ## ファイルマップ
 
 ### desktop/ — Electronプロセス
-- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`statistics:load`/`statistics:save` IPCハンドラ）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
-- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics公開）
+- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`statistics:load`/`statistics:save` IPCハンドラ、`about:load` IPCハンドラ）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
+- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout公開）
 
 ### src/domain/ — ドメインモデル
 - `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応）
@@ -131,7 +131,8 @@ EventBus（UI/インフラ通知）:
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditorを切替）。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
 - `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
 - `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置
@@ -171,7 +172,7 @@ EventBus（UI/インフラ通知）:
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化
-- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics）
+- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout）
 - `index.html` — HTMLエントリ
 
 ### tests/

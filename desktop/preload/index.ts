@@ -11,5 +11,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   loadStatistics: (): Promise<Record<string, unknown> | null> =>
     ipcRenderer.invoke('statistics:load'),
   saveStatistics: (data: Record<string, unknown>): Promise<void> =>
-    ipcRenderer.invoke('statistics:save', data)
+    ipcRenderer.invoke('statistics:save', data),
+  loadAbout: (): Promise<{ version: string; licensesText: string }> =>
+    ipcRenderer.invoke('about:load')
 })
