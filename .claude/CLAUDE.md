@@ -16,6 +16,7 @@ npm run test:e2e     # Playwright E2Eテスト（xvfb-run + デバッグタイ�
 npm run test:e2e:headed  # E2Eテスト（GUI表示あり、Windows/GUI環境用）
 npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe起動
 npm run icon         # build/icon.pngからマルチサイズICO生成（要ImageMagick）
+npm run licenses     # THIRD_PARTY_LICENSES.txt生成（npmライセンス+ASSET_CREDITS.txt結合）
 ```
 
 WSL2で必要なシステムパッケージ:

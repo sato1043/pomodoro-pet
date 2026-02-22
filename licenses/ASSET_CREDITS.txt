@@ -1,0 +1,14 @@
+
+-----------
+
+The following asset may be included in this product:
+
+ - Wildboar 3D Model & Animations
+
+  Provider: downraindc3d (https://downraindc3d.itch.io/wildboar)
+  License: Commercial/Personal use allowed. Modification allowed.
+           Redistribution and resale prohibited.
+  Note: Extraction or reuse of this asset is not permitted.
+
+-----------
+

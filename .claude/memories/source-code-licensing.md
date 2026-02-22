@@ -418,10 +418,11 @@ CLAには主に2つの類型がある:
 
 ### ストア配布時のライセンス表記
 
-ストアでの配布時には以下が必要になる可能性がある:
-- アプリ内About画面でのライセンス表記
-- EULA（End User License Agreement）の策定
-- `THIRD_PARTY_LICENSES` への依存パッケージのライセンス記載
+| 項目 | 状態 | 備考 |
+|---|---|---|
+| `THIRD_PARTY_LICENSES` への依存パッケージのライセンス記載 | 完了 | `npm run licenses`で自動生成。`licenses/`ディレクトリに配置。`extraResources`でバイナリ同梱 |
+| アプリ内About画面でのライセンス表記 | 未着手 | TODO.md「About画面の作成」に記載 |
+| EULA（End User License Agreement）の策定 | 未着手 | TODO.md「EULA策定」に記載 |
 
 ---
 

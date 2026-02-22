@@ -204,9 +204,15 @@
 - コスト・レイテンシ・オフライン対応のトレードオフを検討
 
 ### About画面の作成
-- ライセンス表記
-- 利用規約
+- `licenses/THIRD_PARTY_LICENSES.txt`の内容を表示（npmパッケージ+購入素材クレジット）
+- プロジェクトライセンス（PolyForm Noncommercial 1.0.0）の表示
+- バージョン情報
 - 必要ならプライバシーポリシー
+
+### EULA（End User License Agreement）の策定
+- ストア配布時にエンドユーザーに提示する利用規約
+- 含まれる素材の抽出・再利用の禁止を明記
+- PolyForm Noncommercialとの関係整理（ソースコードのライセンスとバイナリ配布のライセンスは別）
 
 ## 優先度: 低
 
@@ -249,9 +255,10 @@
 - インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
 
 ### 素材ライセンス整理・配布方式の決定
-- 全購入素材のライセンス条項を確認し一覧化する
-- 各素材の「バイナリ同梱配布」可否を確定する
+- ~~全購入素材のライセンス条項を確認し一覧化する~~ — 完了（asset-licensing-distribution.md）
+- ~~各素材の「バイナリ同梱配布」可否を確定する~~ — 完了
+- ~~THIRD_PARTY_LICENSESファイル・クレジット表記を整備する~~ — 完了（`npm run licenses`で自動生成）
 - GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
 - プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
-- THIRD_PARTY_LICENSESファイル・EULA・クレジット表記を整備する
+- EULA策定 → 上記「EULA策定」を参照
 - 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)

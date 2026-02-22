@@ -10,8 +10,8 @@
     "build": "npm run clean:zone && electron-vite build",
     "preview": "electron-vite preview",
     "clean:zone": "find assets -name '*Zone.Identifier' -delete 2>/dev/null; true",
-    "package": "npm run clean:zone && electron-vite build && electron-builder --win",
-    "package:dir": "npm run clean:zone && electron-vite build && electron-builder --win --dir",
+    "package": "npm run licenses && npm run clean:zone && electron-vite build && electron-builder --win",
+    "package:dir": "npm run licenses && npm run clean:zone && electron-vite build && electron-builder --win --dir",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage 2>&1 | tee .claude/memories/coverage.txt",
@@ -19,7 +19,7 @@
     "test:e2e:headed": "VITE_DEBUG_TIMER=3/2/3/2 electron-vite build && npx playwright test",
     "deploy:local": "rm -rf /mnt/c/temp/pomodoro-pet && mkdir -p /mnt/c/temp/pomodoro-pet && cp -r release/win-unpacked/* /mnt/c/temp/pomodoro-pet/ && cmd.exe /c 'C:\\temp\\pomodoro-pet\\Pomodoro Pet.exe'",
     "icon": "convert build/icon.png \\( +clone -resize 256x256 -sharpen 0x0.5 \\) \\( +clone -resize 128x128 -sharpen 0x0.8 \\) \\( +clone -resize 64x64 -sharpen 0x1.0 \\) \\( +clone -resize 48x48 -sharpen 0x1.2 \\) \\( +clone -resize 32x32 -sharpen 0x1.5 \\) \\( +clone -resize 16x16 -sharpen 0x2.0 \\) -delete 0 build/icon.ico",
-    "licenses": "generate-license-file --input package.json --output THIRD_PARTY_LICENSES.txt --eol lf"
+    "licenses": "generate-license-file --input package.json --output licenses/THIRD_PARTY_LICENSES.txt --eol lf --overwrite && cat licenses/ASSET_CREDITS.txt licenses/THIRD_PARTY_LICENSES.txt > licenses/THIRD_PARTY_LICENSES.tmp && mv licenses/THIRD_PARTY_LICENSES.tmp licenses/THIRD_PARTY_LICENSES.txt"
   },
   "build": {
     "appId": "com.pomodoro-pet.app",
@@ -31,7 +31,7 @@
       "out/**/*"
     ],
     "extraResources": [
-      "THIRD_PARTY_LICENSES.txt"
+      "licenses/THIRD_PARTY_LICENSES.txt"
     ],
     "win": {
       "icon": "build/icon.ico",
