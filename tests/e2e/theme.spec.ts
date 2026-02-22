@@ -15,9 +15,8 @@ test('テーマ切替でcolorSchemeが即座に反映される', async () => {
   const { page } = app
 
   // 展開
-  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
-  await toggleBtn.click()
-  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
   // Lightをクリック → colorSchemeがlightになる
   await page.getByRole('button', { name: 'Light' }).click()
@@ -35,7 +34,7 @@ test('テーマ切替でcolorSchemeが即座に反映される', async () => {
 
   // Systemに戻してSetで確定（後片付け）
   await page.getByRole('button', { name: 'System' }).click()
-  await page.getByRole('button', { name: 'Set' }).click()
+  await page.locator('[data-testid="set-button"]').click()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
@@ -48,9 +47,8 @@ test('テーマ変更をSetを押さずに閉じるとスナップショット�
   )
 
   // 展開
-  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
-  await toggleBtn.click()
-  await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
   // テーマを変更（初期がdarkならLight、それ以外ならDark）
   const targetTheme = initialScheme === 'dark' ? 'Light' : 'Dark'
@@ -63,8 +61,8 @@ test('テーマ変更をSetを押さずに閉じるとスナップショット�
   )
   expect(changedScheme).toBe(targetScheme)
 
-  // Setを押さずに閉じる
-  await toggleBtn.click()
+  // Setを押さずにsettings-closeで閉じる
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 
   // テーマが復元されていることを確認
