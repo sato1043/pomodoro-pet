@@ -142,7 +142,6 @@
 - ~~`licenses/THIRD_PARTY_LICENSES.txt`の内容を表示（npmパッケージ+購入素材クレジット）~~
 - ~~プロジェクトライセンス（PolyForm Noncommercial 1.0.0）の表示~~
 - ~~バージョン情報~~
-- 必要ならプライバシーポリシー（未実装）
 
 ### EULA（End User License Agreement）の策定
 - 配布形態: itch.io + NSISインストーラーで有料バイナリ配布
@@ -166,15 +165,12 @@
 - 正しい `build.appId` / `AppUserModelId` の取得と設定
 - コード署名証明書の取得・設定
 - 自動アップデート（electron-updater）の導入検討
+  - 導入時にプライバシーポリシーが必要になる（更新チェックでサーバーへHTTPリクエスト→IPアドレスが記録されうる）
 - インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
-
-### 素材ライセンス整理・配布方式の決定（残項目）
-- ~~全購入素材のライセンス条項を確認し一覧化する~~ — 完了（asset-licensing-distribution.md）
-- ~~各素材の「バイナリ同梱配布」可否を確定する~~ — 完了
-- ~~THIRD_PARTY_LICENSESファイル・クレジット表記を整備する~~ — 完了（`npm run licenses`で自動生成）
 - GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
 - プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
-- EULA策定 → 上記「EULA策定」を参照
+
+### ~~素材ライセンス整理・配布方式の決定~~ — 完了
 - 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
 
 
