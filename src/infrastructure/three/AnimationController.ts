@@ -4,7 +4,7 @@ const FADE_DURATION = 0.3
 
 export interface AnimationController {
   addClip(name: string, clip: THREE.AnimationClip): void
-  play(name: string, loop: boolean): void
+  play(name: string, loop: boolean, speed?: number): void
   stop(): void
   update(deltaTime: number): void
   readonly currentClipName: string | null
@@ -27,12 +27,13 @@ export function createAnimationController(
       actions.set(name, action)
     },
 
-    play(name: string, loop: boolean): void {
+    play(name: string, loop: boolean, speed?: number): void {
       const nextAction = actions.get(name)
       if (!nextAction) return
 
       nextAction.setLoop(loop ? THREE.LoopRepeat : THREE.LoopOnce, loop ? Infinity : 1)
       nextAction.clampWhenFinished = !loop
+      nextAction.timeScale = speed ?? 1.0
 
       if (currentAction && currentAction !== nextAction) {
         nextAction.reset()

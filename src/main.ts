@@ -12,7 +12,11 @@ import type { SettingsEvent } from './application/settings/SettingsEvents'
 import { createCharacter } from './domain/character/entities/Character'
 import { createThreeCharacter, type ThreeCharacterHandle, type FBXCharacterConfig } from './adapters/three/ThreeCharacterAdapter'
 import { createBehaviorStateMachine } from './domain/character/services/BehaviorStateMachine'
-import { updateBehavior } from './application/character/UpdateBehaviorUseCase'
+import { updateBehavior, type UpdateBehaviorOptions } from './application/character/UpdateBehaviorUseCase'
+import { createEnrichedAnimationResolver } from './domain/character/services/EnrichedAnimationResolver'
+import { createEmotionService, type EmotionService } from './application/character/EmotionService'
+import { createInteractionTracker, type InteractionTracker } from './domain/character/services/InteractionTracker'
+import type { PomodoroEvent } from './application/timer/PomodoroEvents'
 import { createInteractionAdapter } from './adapters/three/ThreeInteractionAdapter'
 import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/environment/value-objects/SceneConfig'
 import { createScrollManager } from './application/environment/ScrollUseCase'
@@ -197,6 +201,11 @@ async function main(): Promise<void> {
       wave: './models/ms07_Attack_01.FBX',
       pet: './models/ms07_Jump.FBX',
       refuse: './models/ms07_Attack_01.FBX',
+      run: './models/ms07_Run.FBX',
+      attack2: './models/ms07_Attack_02.FBX',
+      damage1: './models/ms07_Damage_01.FBX',
+      damage2: './models/ms07_Damage_02.FBX',
+      getUp: './models/ms07_GetUp.FBX',
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)
@@ -229,6 +238,41 @@ async function main(): Promise<void> {
   const feedingAdapter: FeedingInteractionAdapter = createFeedingInteractionAdapter(
     renderer, camera, cabbageHandles, charHandle, character, behaviorSM, bus
   )
+
+  // EmotionService（感情パラメータ管理）
+  const emotionService: EmotionService = createEmotionService(settingsService.emotionConfig.affinity)
+
+  // InteractionTracker（クリック回数・餌やり回数追跡）
+  const interactionTracker: InteractionTracker = createInteractionTracker()
+
+  // 感情イベント購読（ポモドーロ完了/中断、餌やり成功）
+  bus.subscribe<PomodoroEvent>('PomodoroCompleted', () => {
+    emotionService.applyEvent({ type: 'pomodoro_completed' })
+    settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+  })
+  bus.subscribe<PomodoroEvent>('PomodoroAborted', () => {
+    emotionService.applyEvent({ type: 'pomodoro_aborted' })
+    settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+  })
+  bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
+    emotionService.applyEvent({ type: 'fed' })
+    interactionTracker.recordFeeding()
+    settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+  })
+
+  // AnimationResolver（コンテキスト依存のアニメーション選択）
+  const resolveAnimation = createEnrichedAnimationResolver()
+  const behaviorOptions: UpdateBehaviorOptions = {
+    resolveAnimation,
+    getPhaseProgress: () => session.isRunning ? session.phaseProgress : 0,
+    getEmotion: () => emotionService.state,
+    getInteraction: () => interactionTracker.history,
+    getTimeOfDay: () => resolveTimeOfDay(new Date().getHours()),
+    getTodayCompletedCycles: () => {
+      const today = new Date().toISOString().slice(0, 10)
+      return statisticsService.getDailyStats(today).completedCycles
+    },
+  }
 
   // FureaiCoordinator（ふれあいモードのシーン遷移+プリセット切替+餌やり制御）
   let fureaiCoordinator: FureaiCoordinator = createFureaiCoordinator({
@@ -303,6 +347,9 @@ async function main(): Promise<void> {
   // 保存済み設定の復元（購読登録後に実行）
   await settingsService.loadFromStorage()
 
+  // EmotionServiceのaffinity復元（loadFromStorage後に実行）
+  emotionService.loadAffinity(settingsService.emotionConfig.affinity)
+
   // 保存済み統計データの復元
   await statisticsService.loadFromStorage()
 
@@ -313,7 +360,9 @@ async function main(): Promise<void> {
   renderReactUI()
 
   // インタラクション（ホバー、クリック、摘まみ上げ）
-  createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle)
+  createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle, {
+    onClickInteraction: () => interactionTracker.recordClick(),
+  })
 
   // フォーカス状態フラグ（document.hasFocus()はElectronで信頼できないためblur/focusで管理）
   let windowFocused = document.hasFocus()
@@ -418,6 +467,16 @@ async function main(): Promise<void> {
     }
   })
 
+  // デバッグインジケーター（VITE_DEBUG_TIMER有効時のみ）
+  // E2Eテストがアニメーション状態・感情パラメータを検証するためのDOM要素
+  const debugIndicator = isDebugTimer ? (() => {
+    const el = document.createElement('div')
+    el.id = 'debug-animation-state'
+    el.style.display = 'none'
+    document.body.appendChild(el)
+    return el
+  })() : null
+
   // レンダリングループ
   const clock = new THREE.Clock()
   const animate = (): void => {
@@ -429,15 +488,35 @@ async function main(): Promise<void> {
       orchestrator.tick(deltaMs)
     }
 
+    // 感情パラメータの自然変化
+    const isWorkPhase = orchestrator.isRunning && session.currentPhase.type === 'work'
+    emotionService.tick(deltaMs, isWorkPhase)
+
+    // インタラクション追跡の時間更新
+    interactionTracker.tick(deltaMs)
+
     updateBehavior(
       character, behaviorSM, charHandle, deltaMs,
-      scrollManager, (state) => scrollRenderer.update(state)
+      scrollManager, (state) => scrollRenderer.update(state),
+      behaviorOptions
     )
     rainEffect.update(deltaMs)
     snowEffect.update(deltaMs)
     cloudEffect.update(deltaMs)
     charHandle.update(delta)
     renderer.render(scene, camera)
+
+    // デバッグインジケーター更新
+    if (debugIndicator) {
+      debugIndicator.dataset.clipName = charHandle.animationController.currentClipName ?? ''
+      debugIndicator.dataset.state = behaviorSM.currentState
+      debugIndicator.dataset.previousState = behaviorSM.previousState ?? ''
+      debugIndicator.dataset.presetName = behaviorSM.currentPreset
+      debugIndicator.dataset.phaseProgress = String(session.isRunning ? session.phaseProgress : 0)
+      debugIndicator.dataset.emotion = JSON.stringify(emotionService.state)
+      debugIndicator.dataset.recentClicks = String(interactionTracker.history.recentClicks)
+      debugIndicator.dataset.totalFeedingsToday = String(interactionTracker.history.totalFeedingsToday)
+    }
   }
   animate()
 }

@@ -154,5 +154,65 @@ function createPlaceholderAnimations(): Map<string, THREE.AnimationClip> {
     )
   ]))
 
+  // run: walkより速い上下揺れ（0.6秒周期）
+  clips.set('run', new THREE.AnimationClip('run', 0.6, [
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.15, 0.3, 0.45, 0.6],
+      [0, 0.05, 0, 0.05, 0]
+    )
+  ]))
+
+  // attack2: 前方に突進+戻り（0.8秒）
+  clips.set('attack2', new THREE.AnimationClip('attack2', 0.8, [
+    new THREE.NumberKeyframeTrack(
+      '.position[z]',
+      [0, 0.25, 0.5, 0.8],
+      [0, 0.3, 0.15, 0]
+    ),
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.25, 0.5, 0.8],
+      [0, 0.05, 0, 0]
+    )
+  ]))
+
+  // damage1: 横に小さくよろめく（1.0秒）
+  clips.set('damage1', new THREE.AnimationClip('damage1', 1.0, [
+    new THREE.NumberKeyframeTrack(
+      '.position[x]',
+      [0, 0.15, 0.35, 0.6, 0.8, 1.0],
+      [0, 0.1, -0.08, 0.05, -0.03, 0]
+    ),
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.15, 0.35, 0.6, 0.8, 1.0],
+      [0, 0.03, 0, 0.02, 0, 0]
+    )
+  ]))
+
+  // damage2: 後ろに大きくのけぞる（1.5秒）
+  clips.set('damage2', new THREE.AnimationClip('damage2', 1.5, [
+    new THREE.NumberKeyframeTrack(
+      '.position[z]',
+      [0, 0.3, 0.6, 1.0, 1.5],
+      [0, -0.25, -0.15, -0.05, 0]
+    ),
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.3, 0.6, 1.0, 1.5],
+      [0, 0.08, 0.04, 0, 0]
+    )
+  ]))
+
+  // getUp: 下から上に起き上がる（1.0秒）
+  clips.set('getUp', new THREE.AnimationClip('getUp', 1.0, [
+    new THREE.NumberKeyframeTrack(
+      '.position[y]',
+      [0, 0.3, 0.6, 0.8, 1.0],
+      [-0.2, -0.15, -0.05, 0.03, 0]
+    )
+  ]))
+
   return clips
 }

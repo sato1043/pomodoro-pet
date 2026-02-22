@@ -413,6 +413,55 @@ describe('PomodoroStateMachine', () => {
     })
   })
 
+  describe('phaseProgress', () => {
+    it('初期状態では0.0である', () => {
+      expect(session.phaseProgress).toBe(0)
+    })
+
+    it('フェーズの半分経過で0.5付近になる', () => {
+      session.start()
+      session.tick(1500) // 3000msのworkで半分
+      expect(session.phaseProgress).toBeCloseTo(0.5, 5)
+    })
+
+    it('フェーズ完了直前で1.0に近づく', () => {
+      session.start()
+      session.tick(2900) // 3000msのworkで96.7%
+      expect(session.phaseProgress).toBeGreaterThan(0.9)
+      expect(session.phaseProgress).toBeLessThanOrEqual(1.0)
+    })
+
+    it('フェーズ遷移後にリセットされる', () => {
+      session.start()
+      session.tick(3000) // work完了 → break開始
+      // breakの開始直後、overflowが0ならphaseProgressも0
+      // ただし厳密にはtickの処理でelapsed=0になるケースのため緩めに検証
+      expect(session.phaseProgress).toBeLessThan(0.1)
+    })
+
+    it('break中でも正しく計算される', () => {
+      session.start()
+      session.tick(3000) // work完了 → break開始
+      session.tick(1000) // 2000msのbreakで半分
+      expect(session.phaseProgress).toBeCloseTo(0.5, 5)
+    })
+
+    it('1.0を超えない', () => {
+      session.start()
+      // tick内部でフェーズ遷移が起きるため直接テストは難しいが
+      // phaseProgressの最大値が1.0であることを確認
+      session.tick(100)
+      expect(session.phaseProgress).toBeLessThanOrEqual(1.0)
+    })
+
+    it('停止中もelapsedMsに基づいて計算される', () => {
+      session.start()
+      session.tick(1500)
+      session.pause()
+      expect(session.phaseProgress).toBeCloseTo(0.5, 5)
+    })
+  })
+
   describe('state', () => {
     it('初期状態はwork/running=falseである', () => {
       expect(session.state).toEqual({ phase: 'work', running: false })

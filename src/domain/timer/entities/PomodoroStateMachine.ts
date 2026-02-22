@@ -22,6 +22,7 @@ export interface PomodoroStateMachine {
   readonly isRunning: boolean
   readonly elapsedMs: number
   readonly remainingMs: number
+  readonly phaseProgress: number
   readonly completedCycles: number
   readonly currentSet: number
   readonly totalSets: number
@@ -151,6 +152,11 @@ export function createPomodoroStateMachine(
     get isRunning() { return isRunning },
     get elapsedMs() { return elapsedMs },
     get remainingMs() { return currentCyclePhase().durationMs - elapsedMs },
+    get phaseProgress() {
+      const duration = currentCyclePhase().durationMs
+      if (duration <= 0) return 1.0
+      return Math.min(elapsedMs / duration, 1.0)
+    },
     get completedCycles() { return completedCycles },
     get currentSet() { return currentCyclePhase().setNumber },
     get totalSets() { return config.setsPerCycle },

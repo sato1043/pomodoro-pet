@@ -27,6 +27,7 @@ const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
 
 export interface InteractionConfig {
   readonly hoverCursors?: HoverCursors
+  readonly onClickInteraction?: () => void
 }
 
 const MAX_LIFT_HEIGHT = 3
@@ -198,6 +199,7 @@ export function createInteractionAdapter(
       gestureRecognizer.finalize()
       interactionMode = 'none'
       canvas.style.cursor = isHovering ? resolveHoverCursor() : 'default'
+      config?.onClickInteraction?.()
       stateMachine.transition({ type: 'interaction', kind: 'click' })
       character.setState('reaction')
       charHandle.playState('reaction')

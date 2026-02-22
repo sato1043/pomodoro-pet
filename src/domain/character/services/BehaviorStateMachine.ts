@@ -23,12 +23,13 @@ export interface StateTickResult {
 
 export interface BehaviorStateMachine {
   readonly currentState: CharacterStateName
+  readonly previousState: CharacterStateName | null
   readonly currentPreset: CharacterBehavior
   isInteractionLocked(): boolean
   isScrollingState(): boolean
   applyPreset(presetName: CharacterBehavior): void
   transition(trigger: StateTrigger): CharacterStateName
-  tick(deltaMs: number): StateTickResult
+  tick(deltaMs: number, phaseProgress?: number): StateTickResult
   start(): void
   keepAlive(): void
 }
@@ -46,6 +47,7 @@ export function createBehaviorStateMachine(
 ): BehaviorStateMachine {
   let preset: BehaviorPreset = BEHAVIOR_PRESETS['autonomous']
   let currentState: CharacterStateName = 'idle'
+  let previousState: CharacterStateName | null = null
   let elapsedMs = 0
   let currentDurationMs = randomDuration(currentState)
   let wanderTarget: Position3D | null = null
@@ -69,6 +71,7 @@ export function createBehaviorStateMachine(
   }
 
   function enterState(state: CharacterStateName): void {
+    previousState = currentState
     currentState = state
     elapsedMs = 0
     currentDurationMs = randomDuration(state)
@@ -98,6 +101,7 @@ export function createBehaviorStateMachine(
 
   return {
     get currentState() { return currentState },
+    get previousState() { return previousState },
     get currentPreset() { return preset.name },
 
     isInteractionLocked(): boolean {
@@ -167,7 +171,7 @@ export function createBehaviorStateMachine(
       }
     },
 
-    tick(deltaMs: number): StateTickResult {
+    tick(deltaMs: number, phaseProgress?: number): StateTickResult {
       elapsedMs += deltaMs
 
       // dragged状態はタイムアウトしない
@@ -184,9 +188,10 @@ export function createBehaviorStateMachine(
         }
       }
 
-      // march中はfixedDir方向に前進する
+      // march中はfixedDir方向に前進する（phaseProgress連動で加速）
       if (currentState === 'march') {
-        const speed = 1.5 // units/sec
+        const progress = phaseProgress ?? 0
+        const speed = 1.5 + progress * 1.0 // 1.5→2.5へ加速
         const moveDist = speed * (deltaMs / 1000)
         if (fixedDir) {
           return {

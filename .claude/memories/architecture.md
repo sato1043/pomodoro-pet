@@ -41,7 +41,8 @@ EventBus（UI/インフラ通知）:
   PomodoroAborted → TimerSfxBridge（exit音再生）
   PhaseCompleted(work/break)/PomodoroCompleted → NotificationBridge（バックグラウンド通知）
   PhaseCompleted(work/break/long-break)/PomodoroCompleted/PomodoroAborted → StatisticsBridge（統計記録）
-  FeedingSuccess → SceneFureai（ハートエフェクト発火）
+  FeedingSuccess → SceneFureai（ハートエフェクト発火）、main.ts（EmotionService fed + InteractionTracker recordFeeding）
+  PomodoroCompleted/PomodoroAborted → main.ts（EmotionService pomodoro_completed/pomodoro_aborted）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
   BackgroundSettingsLoaded → main.ts（バックグラウンド設定適用）
@@ -59,10 +60,14 @@ EventBus（UI/インフラ通知）:
 
 ### 2. キャラクター
 - `Character` — 位置・状態管理
-- `BehaviorStateMachine` — 11状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替。`InteractionKind`に`feed`を含む
+- `BehaviorStateMachine` — 11状態のステートマシン。BehaviorPresetで宣言的に振る舞いを制御。`applyPreset()`で遷移テーブル・スクロール・インタラクションロックを一括切替。`InteractionKind`に`feed`を含む。`previousState`で直前の状態を追跡。`tick(deltaMs, phaseProgress?)`でmarch速度をphaseProgressに連動（1.5→2.5加速）
 - `BehaviorPreset` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）。`durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）。`fureai-idle`はautonomousからsleep遷移を除外+feeding→happy遷移を定義
 - `CharacterState` — 11状態設定（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse/feeding）。アニメーション名、持続時間範囲、ループ有無
 - `GestureRecognizer` — ドラッグ/撫でるジェスチャー判定
+- `AnimationResolver` — コンテキスト依存アニメーション選択のインターフェース。`AnimationContext`（state/previousState/presetName/phaseProgress/emotion/interaction/timeOfDay/todayCompletedCycles）→`AnimationSelection`（clipName/loop/speed）。`createDefaultAnimationResolver()`はSTATE_CONFIGS準拠のフォールバック
+- `EnrichedAnimationResolver` — 16ルールのアニメーション選択。march終盤run/march中盤速め/疲労歩き/満腹拒否/食べ過ぎ拒否/連打怒り/苛立ち/夜眠そう/生産的happy/リアクション変種/拒否変種/起き上がり/祝賀走り/なつきhappy。ルールはファクトリ関数で個別生成（テスト容易性のためrandom関数を注入可能）
+- `InteractionTracker` — クリック回数（3秒スライディングウィンドウ）と餌やり回数の追跡。`InteractionHistory`型で`recentClicks`/`totalFeedingsToday`を公開
+- `EmotionState` — 感情パラメータ値オブジェクト（satisfaction/fatigue/affinity、各0.0〜1.0）。`applyEmotionEvent()`でイベント効果を適用、`tickEmotion()`で自然変化（work中fatigue増加、非work時回復・satisfaction減衰、affinity緩やか減衰）。affinityのみ永続化
 
 ### 3. 環境
 - `SceneConfig` — 進行方向、スクロール速度、状態別スクロール有無
@@ -85,16 +90,20 @@ EventBus（UI/インフラ通知）:
 - `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout公開）
 
 ### src/domain/ — ドメインモデル
-- `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応）
+- `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応、phaseProgressゲッター）
 - `timer/value-objects/CyclePlan.ts` — フェーズ順列生成（buildCyclePlan, cycleTotalMs, CONGRATS_DURATION_MS）
 - `timer/value-objects/TimerPhase.ts` — work/break/long-break/congratsフェーズ
 - `timer/value-objects/PhaseTrigger.ts` — PhaseTimeTrigger型定義（TriggerTiming, PhaseTriggerSpec, PhaseTriggerMap）
 - `timer/value-objects/TimerConfig.ts` — 設定（デフォルト25分/5分/15分長時間休憩/1セット）。`parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定（`work/break/long-break/sets`）をパース
 - `timer/events/TimerEvents.ts` — イベント型定義
 - `character/entities/Character.ts` — キャラクターエンティティ
-- `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（BehaviorPreset対応、fixedWanderDirection対応）
+- `character/services/BehaviorStateMachine.ts` — 行動AIステートマシン（BehaviorPreset対応、fixedWanderDirection対応、previousState追跡、phaseProgress連動march速度）
+- `character/services/AnimationResolver.ts` — AnimationContext/AnimationSelection/AnimationResolverFnインターフェース、createDefaultAnimationResolver
+- `character/services/EnrichedAnimationResolver.ts` — 16ルールのコンテキスト依存アニメーション選択（ファクトリ関数方式、random注入可能）
+- `character/services/InteractionTracker.ts` — クリック回数（3秒ウィンドウ）・餌やり回数追跡。InteractionHistory型
 - `character/value-objects/BehaviorPreset.ts` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）
 - `character/value-objects/CharacterState.ts` — 11状態定義+設定（feeding追加）
+- `character/value-objects/EmotionState.ts` — EmotionState値オブジェクト（satisfaction/fatigue/affinity）。applyEmotionEvent()、tickEmotion()純粋関数
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
@@ -113,7 +122,8 @@ EventBus（UI/インフラ通知）:
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
 - `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
-- `character/UpdateBehaviorUseCase.ts` — 毎フレームtick（StateMachine遷移 + ScrollManager経由で背景スクロール制御）
+- `character/UpdateBehaviorUseCase.ts` — 毎フレームtick。StateMachine遷移 + AnimationResolver経由のアニメーション選択 + ScrollManager経由で背景スクロール制御。`UpdateBehaviorOptions`でリゾルバ・phaseProgress・emotion・interaction・timeOfDay・todayCompletedCyclesを注入
+- `character/EmotionService.ts` — 感情パラメータ管理サービス。tick(deltaMs, isWorking)で自然変化、applyEvent()でイベント適用、loadAffinity()で永続化値復元
 - `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
 - `notification/NotificationBridge.ts` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work)→「休憩の時間」、PhaseCompleted(break)→「作業の時間」、PomodoroCompleted→「サイクル完了！」。long-break/congratsはスキップ。`NotificationPort`インターフェースでElectron Notification APIを抽象化
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
@@ -154,8 +164,8 @@ EventBus（UI/インフラ通知）:
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
-- `three/AnimationController.ts` — AnimationMixer管理、crossFade
-- `three/PlaceholderCharacter.ts` — プリミティブ人型キャラクター+8種アニメーション
+- `three/AnimationController.ts` — AnimationMixer管理、crossFade、play()にspeed引数対応
+- `three/PlaceholderCharacter.ts` — プリミティブ人型キャラクター+13種アニメーション（既存8種+run/attack2/damage1/damage2/getUp）
 - `three/CabbageObject.ts` — プリミティブSphereGeometryキャベツ3Dオブジェクト。CabbageHandleインターフェースでposition/visible/reset操作
 - `three/AppleObject.ts` — プリミティブ形状リンゴ3Dオブジェクト。CabbageHandleインターフェースを共用。スケール0.15
 - `three/EnvironmentBuilder.ts` — 旧・単一シーン環境生成（InfiniteScrollRendererに置換済み）
@@ -183,8 +193,12 @@ EventBus（UI/インフラ通知）:
 - `domain/timer/PomodoroStateMachine.test.ts` — フェーズ遷移・tick・pause/reset・exitManually・セット進行・congrats・PhaseTimeTrigger
 - `domain/timer/CyclePlan.test.ts` — セット構造生成・congrats挿入・Sets=1/複数・cycleTotalMs
 - `domain/timer/TimerConfig.test.ts` — デフォルト値・バリデーション・parseDebugTimer書式パース
-- `domain/character/BehaviorStateMachine.test.ts` — 全11状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState・feedインタラクション・feeding→happy遷移チェーン
+- `domain/character/BehaviorStateMachine.test.ts` — 全11状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState・feedインタラクション・feeding→happy遷移チェーン・previousState追跡・march速度phaseProgress連動
 - `domain/character/GestureRecognizer.test.ts` — ドラッグ/撫でるジェスチャー判定・drag vs pet判定・設定カスタマイズ
+- `domain/character/AnimationResolver.test.ts` — デフォルトリゾルバが全11状態でSTATE_CONFIGS準拠を検証
+- `domain/character/EnrichedAnimationResolver.test.ts` — 全16ルールの個別テスト+統合テスト（優先順位・感情ルール・リアクションルール）
+- `domain/character/EmotionState.test.ts` — createDefaultEmotionState・applyEmotionEvent全4イベント・tickEmotion自然変化・クランプ
+- `domain/character/InteractionTracker.test.ts` — クリック記録・3秒ウィンドウ除去・餌やり記録・resetDaily
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
 - `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
 - `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
@@ -210,3 +224,8 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
 - `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元・showNotification API確認・BG設定永続化/復元・statistics API確認・天気設定永続化/再起動復元
 - `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather非活性・時間帯切替・スナップショット復元・Stats/Weather排他表示
+- `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
+- `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
+- `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰
+- `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元
+- `e2e/animation-state.spec.ts` — デバッグインジケーター経由のアニメーション状態・感情パラメータ・プリセット切替・phaseProgress検証

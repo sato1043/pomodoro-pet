@@ -223,11 +223,11 @@ describe('BehaviorStateMachine', () => {
       expect(result).toBe('idle')
     })
 
-    it('fixedDir指定時、marchのmovementDeltaが固定方向になる', () => {
+    it('fixedDir指定時、marchのmovementDeltaが固定方向になる（phaseProgress=0で速度1.5）', () => {
       const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
       fixed.applyPreset('march-cycle')
       fixed.start()
-      const result = fixed.tick(1000)
+      const result = fixed.tick(1000, 0)
       expect(result.movementDelta).toBeDefined()
       expect(result.movementDelta!.x).toBeCloseTo(0, 5)
       expect(result.movementDelta!.z).toBeCloseTo(1.5, 5)
@@ -237,9 +237,36 @@ describe('BehaviorStateMachine', () => {
       const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 1, z: 0 } })
       fixed.applyPreset('march-cycle')
       fixed.start()
-      const result = fixed.tick(1000)
+      const result = fixed.tick(1000, 0)
       expect(result.movementDelta!.x).toBeCloseTo(1.5, 5)
       expect(result.movementDelta!.z).toBeCloseTo(0, 5)
+    })
+
+    it('phaseProgress=1.0で速度が2.5になる', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.applyPreset('march-cycle')
+      fixed.start()
+      const result = fixed.tick(1000, 1.0)
+      expect(result.movementDelta).toBeDefined()
+      expect(result.movementDelta!.z).toBeCloseTo(2.5, 5)
+    })
+
+    it('phaseProgress=0.5で速度が2.0になる', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.applyPreset('march-cycle')
+      fixed.start()
+      const result = fixed.tick(1000, 0.5)
+      expect(result.movementDelta).toBeDefined()
+      expect(result.movementDelta!.z).toBeCloseTo(2.0, 5)
+    })
+
+    it('phaseProgress省略時はデフォルト速度1.5になる', () => {
+      const fixed = createBehaviorStateMachine({ fixedWanderDirection: { x: 0, z: 1 } })
+      fixed.applyPreset('march-cycle')
+      fixed.start()
+      const result = fixed.tick(1000)
+      expect(result.movementDelta).toBeDefined()
+      expect(result.movementDelta!.z).toBeCloseTo(1.5, 5)
     })
 
     it('fixedDir未指定時はmovementDeltaが返されない', () => {
@@ -530,6 +557,51 @@ describe('BehaviorStateMachine', () => {
       // さらに2.5秒経過。リセット後なので2.5秒 < 最小3秒でタイムアウトしない
       const result = sm.tick(2500)
       expect(result.stateChanged).toBe(false)
+    })
+  })
+
+  describe('previousState', () => {
+    it('初期状態ではnullである', () => {
+      expect(sm.previousState).toBeNull()
+    })
+
+    it('状態遷移後に前の状態を保持する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      expect(sm.previousState).toBe('idle')
+      expect(sm.currentState).toBe('wander')
+    })
+
+    it('連続遷移で直前の状態を追跡する', () => {
+      sm.transition({ type: 'timeout' }) // idle -> wander
+      sm.transition({ type: 'timeout' }) // wander -> sit
+      expect(sm.previousState).toBe('wander')
+      expect(sm.currentState).toBe('sit')
+    })
+
+    it('applyPresetでもpreviousStateが更新される', () => {
+      sm.applyPreset('march-cycle')
+      expect(sm.previousState).toBe('idle')
+      expect(sm.currentState).toBe('march')
+    })
+
+    it('tickによるタイムアウト遷移でもpreviousStateが更新される', () => {
+      sm.start()
+      sm.tick(16000) // idle -> wander (maxDuration=15000超過)
+      expect(sm.previousState).toBe('idle')
+    })
+
+    it('sleep→idleの遷移でpreviousState=sleepになる', () => {
+      sm.transition({ type: 'prompt', action: 'sleep' })
+      expect(sm.currentState).toBe('sleep')
+      sm.transition({ type: 'timeout' }) // sleep -> idle
+      expect(sm.previousState).toBe('sleep')
+      expect(sm.currentState).toBe('idle')
+    })
+
+    it('インタラクション遷移でもpreviousStateが更新される', () => {
+      sm.transition({ type: 'interaction', kind: 'click' }) // idle -> reaction
+      expect(sm.previousState).toBe('idle')
+      expect(sm.currentState).toBe('reaction')
     })
   })
 

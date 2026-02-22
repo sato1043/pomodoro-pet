@@ -2,6 +2,7 @@ import * as THREE from 'three'
 import type { Character } from '../../domain/character/entities/Character'
 import type { CharacterStateName } from '../../domain/character/value-objects/CharacterState'
 import { STATE_CONFIGS } from '../../domain/character/value-objects/CharacterState'
+import type { AnimationSelection } from '../../domain/character/services/AnimationResolver'
 import { createAnimationController, type AnimationController } from '../../infrastructure/three/AnimationController'
 import { loadFBXModel, loadFBXAnimation } from '../../infrastructure/three/FBXModelLoader'
 import { createPlaceholderCharacter } from '../../infrastructure/three/PlaceholderCharacter'
@@ -10,6 +11,7 @@ export interface ThreeCharacterHandle {
   readonly object3D: THREE.Group
   readonly animationController: AnimationController
   playState(state: CharacterStateName): void
+  playAnimation(selection: AnimationSelection): void
   update(deltaTime: number): void
   setPosition(x: number, y: number, z: number): void
 }
@@ -100,6 +102,10 @@ export async function createThreeCharacter(
       animCtrl.play(config.animationClip, config.loop)
     },
 
+    playAnimation(selection: AnimationSelection): void {
+      animCtrl.play(selection.clipName, selection.loop, selection.speed)
+    },
+
     update(deltaTime: number): void {
       animCtrl.update(deltaTime)
     },
@@ -135,6 +141,10 @@ function buildPlaceholder(
     playState(state: CharacterStateName): void {
       const config = STATE_CONFIGS[state]
       animCtrl.play(config.animationClip, config.loop)
+    },
+
+    playAnimation(selection: AnimationSelection): void {
+      animCtrl.play(selection.clipName, selection.loop, selection.speed)
     },
 
     update(deltaTime: number): void {

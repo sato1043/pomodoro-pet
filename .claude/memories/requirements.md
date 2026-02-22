@@ -345,7 +345,40 @@ AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態�
 - `{userData}/settings.json`のweatherフィールドに保存・復元
 - cloudDensityLevelも永続化
 
-### 14. 環境映像 — 未実装（nice-to-have）
+### 14. キャラクター表情・感情表現 — 実装済
+
+#### 14.1 AnimationResolverシステム
+- コンテキスト依存のアニメーション選択基盤（`AnimationContext`→`AnimationSelection`）
+- デフォルトリゾルバ（STATE_CONFIGS準拠）とEnrichedAnimationResolver（16ルール）の2段構成
+- 未使用FBX5本（Run/Attack_02/Damage_01/Damage_02/GetUp）を読み込み登録
+- PlaceholderCharacterにも5クリップのフォールバックアニメーション追加
+
+#### 14.2 フェーズ連動アニメーション
+- work中盤（phaseProgress 0.3〜0.7）: walkアニメーションをspeed=1.2で再生
+- work終盤（phaseProgress > 0.7）: runアニメーションに切替
+- march移動速度もphaseProgressに連動（1.5→2.5 units/sec）
+- sleep→idle遷移時にgetUpアニメーション再生
+- congrats時にランダム30%で走り喜び（run speed=1.2）
+
+#### 14.3 感情パラメータシステム
+- 3パラメータ: satisfaction（満足度）、fatigue（疲労度）、affinity（親密度）
+- イベント効果: 餌やり(+satisfaction, +affinity)、撫でる(+affinity)、ポモドーロ完了(+satisfaction, -fatigue)、ポモドーロ中断(-satisfaction)
+- 自然変化: work中にfatigue増加、非work時にfatigue回復・satisfaction緩やか減衰、affinity常時微減
+- affinityのみsettings.jsonに永続化
+- fatigue > 0.8でmarch速度が0.8に減速（疲れ歩き）
+- affinity > 0.7でランダム15%のidle→happyアニメーション（なつき表現）
+- satisfaction > 0.9でfeeding時にattack2アニメーション（満腹拒否）
+
+#### 14.4 リアクション多様化
+- クリック連打（3秒以内3回）→damage1（苛立ち）
+- クリック連打（3秒以内5回）→damage2（怒り）
+- 夜間＋高affinity→sleepアニメーション（眠そう）
+- 当日3サイクル以上完了→happyアニメーション（ご機嫌）
+- 餌やり5回以上→attack2（もういらない）
+- reactionのランダム50%でattack2バリエーション
+- refuseのランダム50%でdamage2バリエーション
+
+### 15. 環境映像 — 未実装（nice-to-have）
 
 ## 非機能要件
 - プラットフォーム: Windows

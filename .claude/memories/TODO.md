@@ -184,10 +184,15 @@
 - HeartEffect（SVGハートパーティクル、floatUpアニメーション）
 - FeedingSuccessイベント（EventBus）でUI通知
 
-### キャラクターの表情・感情表現の拡張
-- 現在の行動パターン（7状態）に加えて感情パラメータを追加
-- タイマー状態や操作に応じて感情が変化
-- 例: 長時間作業→疲れ顔、ドラッグしすぎ→怒り、休憩完了→元気
+### ~~キャラクターの表情・感情表現の拡張~~ — 完了
+- 未使用FBX5本（Run/Attack_02/Damage_01/Damage_02/GetUp）を読み込み登録+PlaceholderCharacterにフォールバッククリップ追加
+- `AnimationResolver`/`EnrichedAnimationResolver`によるコンテキスト依存アニメーション選択（16ルール）
+- `BehaviorStateMachine`に`previousState`追加、`PomodoroStateMachine`に`phaseProgress`追加
+- `AnimationController`にspeed制御、`ThreeCharacterHandle`に`playAnimation()`追加
+- `EmotionState`値オブジェクト（satisfaction/fatigue/affinity）+ `EmotionService` + affinity永続化
+- `InteractionTracker`（クリック回数3秒ウィンドウ・餌やり回数追跡）
+- march速度のphaseProgress連動（1.5→2.5加速）、work終盤run切替、起き上がりアニメーション、リアクション多様化
+- 詳細: [character-animation-mapping.md](character-animation-mapping.md)
 
 ### ~~モデルに餌をあげる~~ — 完了（ふれあいモード Phase 2 で実装）
 - キャベツ3Dオブジェクトのドラッグ＆ドロップで餌やり

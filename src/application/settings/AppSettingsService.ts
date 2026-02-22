@@ -23,17 +23,23 @@ export interface BackgroundConfigInput {
   readonly backgroundNotify: boolean
 }
 
+export interface EmotionConfigInput {
+  readonly affinity: number
+}
+
 export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
   readonly backgroundConfig: BackgroundConfigInput
   readonly weatherConfig: WeatherConfig
+  readonly emotionConfig: EmotionConfigInput
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
   updateThemeConfig(theme: ThemePreference): void
   updateBackgroundConfig(input: BackgroundConfigInput): void
   updateWeatherConfig(partial: Partial<WeatherConfig>): void
+  updateEmotionConfig(input: EmotionConfigInput): void
   resetToDefault(): void
 }
 
@@ -56,10 +62,11 @@ function saveAllToStorage(
   sound: SoundConfigInput,
   theme: ThemePreference,
   background: BackgroundConfigInput,
-  weather: WeatherConfig
+  weather: WeatherConfig,
+  emotion: EmotionConfigInput
 ): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme, background, weather })
+    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion })
   }
 }
 
@@ -67,6 +74,7 @@ const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMute
 const DEFAULT_THEME: ThemePreference = 'system'
 const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
 const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
+const DEFAULT_EMOTION: EmotionConfigInput = { affinity: 0 }
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -78,6 +86,7 @@ export function createAppSettingsService(
   let currentTheme: ThemePreference = DEFAULT_THEME
   let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
   let currentWeather: WeatherConfig = { ...DEFAULT_WEATHER }
+  let currentEmotion: EmotionConfigInput = { ...DEFAULT_EMOTION }
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -125,7 +134,7 @@ export function createAppSettingsService(
   }
 
   function save(): void {
-    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather)
+    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion)
   }
 
   return {
@@ -133,6 +142,7 @@ export function createAppSettingsService(
     get themePreference() { return currentTheme },
     get backgroundConfig() { return currentBackground },
     get weatherConfig() { return currentWeather },
+    get emotionConfig() { return currentEmotion },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
@@ -181,6 +191,14 @@ export function createAppSettingsService(
             cloudDensityLevel: typeof w.cloudDensityLevel === 'number' ? w.cloudDensityLevel as WeatherConfig['cloudDensityLevel'] : DEFAULT_WEATHER.cloudDensityLevel,
           }
           publishWeatherChanged(currentWeather)
+        }
+      }
+
+      // 感情設定の復元（affinityのみ永続化）
+      if (data.emotion) {
+        const em = data.emotion as Record<string, unknown>
+        if (typeof em.affinity === 'number') {
+          currentEmotion = { affinity: em.affinity }
         }
       }
 
@@ -239,12 +257,18 @@ export function createAppSettingsService(
       save()
     },
 
+    updateEmotionConfig(input: EmotionConfigInput): void {
+      currentEmotion = input
+      save()
+    },
+
     resetToDefault(): void {
       currentConfig = createDefaultConfig()
       currentSound = { ...DEFAULT_SOUND }
       currentTheme = DEFAULT_THEME
       currentBackground = { ...DEFAULT_BACKGROUND }
       currentWeather = { ...DEFAULT_WEATHER }
+      currentEmotion = { ...DEFAULT_EMOTION }
       publishSettingsChanged(currentConfig)
       save()
     }
