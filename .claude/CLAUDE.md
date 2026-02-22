@@ -196,6 +196,8 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [react-migration.md](.claude/memories/react-migration.md) — React移行の経緯・効果・CSS方式選定（vanilla-extract採用理由）
 - [asset-licensing-distribution.md](.claude/memories/asset-licensing-distribution.md) — 素材ライセンスと配布方式（購入素材の法的整理・リポジトリ構成）
 - [source-code-licensing.md](.claude/memories/source-code-licensing.md) — ソースコードライセンス選定（PolyForm Noncommercial 1.0.0の調査・採用理由）
+- [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
+- [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 
 ## Key Conventions
 
