@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useAppDeps } from './AppContext'
 import { OverlayFureai } from './OverlayFureai'
+import { FureaiExitButton } from './FureaiExitButton'
 import { PromptInput } from './PromptInput'
 import { HeartEffect } from './HeartEffect'
 import { useEventBusCallback } from './hooks/useEventBus'
@@ -17,6 +18,7 @@ export function SceneFureai(): JSX.Element {
   return (
     <>
       <OverlayFureai />
+      <FureaiExitButton />
       <PromptInput />
       <HeartEffect triggerKey={heartKey} />
     </>

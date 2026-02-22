@@ -24,7 +24,7 @@ const Z_RANGE = 8
 const Z_POWER = 1.3
 
 /** freeモードのデフォルトカメラ設定。main.tsと共有 */
-export const DEFAULT_CAMERA = { posY: 0.6, posZ: 5, lookAtY: 1.6 } as const
+export const DEFAULT_CAMERA = { posY: 0.6, posZ: 5, lookAtY: 1.5 } as const
 
 /** ふれあいモードのカメラ設定 */
 export const FUREAI_CAMERA = { posZ: 7, lookAtY: 1.4 } as const

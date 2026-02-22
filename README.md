@@ -1,20 +1,41 @@
 pomodoro-pet v0.1.0
 ==========
 
-3Dバーチャルペット型ポモドーロタイマー（STEAM公開を目指す）
+A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 
-- アーキテクチャ
+## Screenshots
 
-クリーンアーキテクチャ（依存方向: 外→内のみ）
+| Home | Config |
+|:---:|:---:|
+| ![Home](.claude/memories/2026-02-22_PomodoroPet/screen01_home.png) | ![Config](.claude/memories/2026-02-22_PomodoroPet/screen02_config.png) |
 
+| Statistics | Pet (Fureai Mode) |
+|:---:|:---:|
+| ![Statistics](.claude/memories/2026-02-22_PomodoroPet/screen03_stats.png) | ![Pet](.claude/memories/2026-02-22_PomodoroPet/screen04_pet.png) |
+
+| Pomodoro | Break |
+|:---:|:---:|
+| ![Pomodoro](.claude/memories/2026-02-22_PomodoroPet/screen06_pomodoro.png) | ![Break](.claude/memories/2026-02-22_PomodoroPet/screen07_break.png) |
+
+| Congrats |
+|:---:|
+| ![Congrats](.claude/memories/2026-02-22_PomodoroPet/screen08_congrats.png) |
+
+## Architecture
+
+Clean Architecture (dependency direction: outer → inner only)
+
+```
 domain ← application ← adapters ← infrastructure
+```
 
-3つのドメインコンテキスト: タイマー, キャラクター, 環境
-モジュール間通信はEventBus（Pub/Sub）で疎結合
+Three domain contexts: Timer, Character, Environment.
+Modules communicate via EventBus (Pub/Sub) for loose coupling.
 
-- 技術スタック: TypeScript + Electron + Three.js + Vite
+## Tech Stack
 
-- 素材の入手先
-    - https://downraindc3d.itch.io/wildboar
- 
-__END__
+TypeScript + Electron + Three.js + React + Vite + vanilla-extract
+
+## Assets
+
+- https://downraindc3d.itch.io/wildboar

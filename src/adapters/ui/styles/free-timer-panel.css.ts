@@ -239,8 +239,7 @@ export const tlClock = style({
   whiteSpace: 'nowrap',
   transform: 'scaleY(1.2)',
   lineHeight: 0.9,
-  paddingBottom: 20,
-  paddingTop: 4,
+  paddingBottom: 24,
 })
 
 export const tlAmpm = style({
@@ -384,10 +383,10 @@ export const btn = style({
 })
 
 export const btnConfirm = style({
-  background: vars.color.surfaceSubtle,
+  background: vars.color.overlayBg,
   borderColor: vars.color.separator,
-  fontSize: 26,
-  padding: '14px 24px',
+  fontSize: 33,
+  padding: '20px 0',
   marginTop: 40,
   width: '100%',
   selectors: {
@@ -402,7 +401,7 @@ export const btnPrimary = style({
   border: `2px solid rgb(${vars.color.work})`,
   color: '#fff',
   fontSize: 33,
-  padding: '20px 24px',
+  padding: '20px 0',
   marginTop: 0,
   width: '100%',
   opacity: 1,
@@ -419,7 +418,7 @@ export const btnPrimary = style({
 
 export const startButtonContainer = style({
   position: 'fixed',
-  bottom: 76,
+  bottom: 20,
   left: 10,
   right: 10,
   zIndex: 1000,

@@ -21,7 +21,7 @@ export const overlay = style({
 })
 
 export const overlayExpanded = style({
-  bottom: 172,
+  bottom: 112,
 })
 
 export const title = style({
@@ -29,10 +29,14 @@ export const title = style({
   position: 'absolute',
   top: 32,
   left: 16,
+  right: 16,
   transform: 'translateY(-50%)',
   fontWeight: 600,
   color: vars.color.textSubtle,
   textAlign: 'left',
+  display: 'flex',
+  justifyContent: 'space-between',
+  alignItems: 'center',
 })
 
 export const overlayCompact = style({

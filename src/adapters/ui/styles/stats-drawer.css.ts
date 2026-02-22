@@ -4,12 +4,14 @@ import { vars } from './theme.css'
 export const drawer = style({
   position: 'fixed',
   top: 20,
+  bottom: 112,
   left: 10,
   right: 10,
+  overflowY: 'auto',
   background: vars.color.overlayBg,
   color: vars.color.text,
   borderRadius: 12,
-  padding: '16px 14px 28px 14px',
+  padding: '56px 12px 24px 14px',
   fontFamily: vars.font.family,
   textAlign: 'center',
   zIndex: 1000,
@@ -19,27 +21,6 @@ export const drawer = style({
   transition: 'background 0.3s ease',
 })
 
-export const closeBtn = style({
-  position: 'absolute',
-  top: 8,
-  right: 8,
-  borderRadius: '50%',
-  border: 'none',
-  background: 'transparent',
-  appearance: 'none',
-  color: vars.color.textFaint,
-  cursor: 'pointer',
-  zIndex: 1001,
-  transition: 'color 0.2s',
-  padding: '6px 0',
-  lineHeight: '0',
-  pointerEvents: 'auto',
-  selectors: {
-    '&:hover': {
-      color: vars.color.textOnSurface,
-    },
-  },
-})
 
 export const heading = style({
   fontSize: 18,
@@ -129,6 +110,7 @@ export const legendCell = style({
 
 export const chartSection = style({
   marginTop: 16,
+  paddingLeft: 30,
 })
 
 export const chartTitle = style({

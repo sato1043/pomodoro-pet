@@ -74,23 +74,28 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 - `three/ThreeCharacterAdapter` — FBXモデル読み込み（失敗時PlaceholderCharacterにフォールバック）。`FBXCharacterConfig` でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter` — Raycasterベースのホバー/クリック/摘まみ上げ/撫でる。GestureRecognizerでドラッグ（Y軸持ち上げ）と撫でる（左右ストローク）を判定。`InteractionConfig`で状態別ホバーカーソルをキャラクターごとにカスタマイズ可能
-- `three/FeedingInteractionAdapter` — 餌オブジェクト（キャベツ/リンゴ）のドラッグ＆ドロップによる餌やり操作。複数`CabbageHandle[]`対応。Z平面投影+NDCベースZ制御（べき乗カーブで奥ほど加速）でパースペクティブ補正。ふれあいモード時にカメラをz=7に後退。距離< 2.5でfeed成功→`FeedingSuccess`イベント発行→3秒後再出現。`isActive`フラグでふれあいモード中のみ動作
+- `three/FeedingInteractionAdapter` — 餌オブジェクト（キャベツ/リンゴ）のドラッグ＆ドロップによる餌やり操作。複数`CabbageHandle[]`対応。Z平面投影+NDCベースZ制御（べき乗カーブで奥ほど加速）でパースペクティブ補正。ふれあいモード時にカメラをz=7に後退。距離< 2.5でfeed成功→`FeedingSuccess`イベント発行→3秒後再出現。`isActive`フラグでふれあいモード中のみ動作。`DEFAULT_CAMERA`/`FUREAI_CAMERA`定数をexportしmain.tsと共有
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout。`settings`AppSceneは`free`として扱う
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+FureaiEntryButtonを束ねる
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+StatsDrawer+BackButtonを束ねる。showStats/settingsExpandedで表示切替を管理
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
-- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInput+HeartEffectを束ねる。`FeedingSuccess`イベント購読でハートエフェクトを発火
-- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計+×戻るボタン）
-- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のキャベツSVGアイコン。createPortalでdocument.bodyに描画
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + FreeTimerPanel
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。`FeedingSuccess`イベント購読でハートエフェクトを発火
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
+- `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置（`bottom: 232`）
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + 日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditorを切替）。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）。createPortalでdocument.bodyに描画
+- `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル。設定パネル展開時に表示
+- `ui/BackButton.tsx` — 統計パネルからの戻るボタン。StartPomodoroButtonと同位置、キャンセル色（overlayBg）
+- `ui/SettingsButton.tsx` — 設定パネル展開ボタン。画面左下のギアSVGアイコン（`bottom: 112`）。createPortalでdocument.bodyに描画
+- `ui/StatsButton.tsx` — 統計パネル表示ボタン。画面左下のチャートSVGアイコン（`bottom: 168`）。createPortalでdocument.bodyに描画
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ（`data-testid="overlay-pomodoro"`）。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/FreeTimerPanel.tsx` — freeモード。`editor.expanded`でFreeSummaryView（折りたたみ: タイムラインサマリー＋VolumeControl＋Start Pomodoro）とFreeSettingsEditor（展開: タイマー設定ボタングループ＋VolumeControl(プリセット付)＋Set確定＋テーマ/バックグラウンド設定）を切替。Setボタン直下に「Theme: [☀] [☽] [🖥]」「In Background: [🔊] [🔔]」のアイコントグル行を配置。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット。右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/HeartEffect.tsx` — ふれあいモード餌やり成功時のハートパーティクルエフェクト。createPortalでdocument.bodyに描画。10個のSVGハートが画面中央付近から浮き上がるCSSアニメーション（floatUp 1.2-2.0秒）。triggerKey=0で非表示
-- `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。FreeTimerPanelから利用
+- `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。OverlayFreeから利用
 - `ui/PromptInput.tsx` — プロンプト入力UI
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 
@@ -106,7 +111,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
 - `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）。ミュート時は`AudioContext.suspend()`でシステムリソースを解放、解除時に`resume()`で復帰。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートと独立管理）
-- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応。VolumeControl（ミュート操作UI）はFreeTimerPanelのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
+- `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応。VolumeControl（ミュート操作UI）はOverlayFreeのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
 
 ## Static Assets
 

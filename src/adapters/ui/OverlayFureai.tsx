@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
-import { useAppDeps } from './AppContext'
 import * as overlayStyles from './styles/overlay.css'
 
 function formatClock(date: Date): string {
@@ -15,7 +14,6 @@ function formatClock(date: Date): string {
 }
 
 export function OverlayFureai(): JSX.Element {
-  const { fureaiCoordinator } = useAppDeps()
   const [clock, setClock] = useState(() => formatClock(new Date()))
 
   useEffect(() => {
@@ -29,15 +27,6 @@ export function OverlayFureai(): JSX.Element {
     <div data-testid="overlay-fureai" className={overlayStyles.overlayCompact}>
       <span className={overlayStyles.compactTitle}>Pomodoro Pet</span>
       <span className={overlayStyles.compactClock}>{clock}</span>
-      <button
-        className={overlayStyles.compactCloseButton}
-        onClick={() => fureaiCoordinator.exitFureai()}
-        data-testid="fureai-close"
-      >
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-          <path d="M4 4L12 12M12 4L4 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-        </svg>
-      </button>
     </div>,
     document.body
   )

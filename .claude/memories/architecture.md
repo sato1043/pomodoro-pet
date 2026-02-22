@@ -123,16 +123,21 @@ EventBus（UI/インフラ通知）:
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+FureaiEntryButtonを束ねる
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+StatsDrawer+BackButtonを束ねる。showStats/settingsExpandedで表示切替を管理
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
-- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+FreeTimerPanel
-- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計+×戻るボタン）
-- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のキャベツSVGアイコン。createPortalでdocument.bodyに描画
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditorを切替）。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
+- `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置
+- `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）
+- `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル
+- `ui/BackButton.tsx` — 統計パネルからの戻るボタン。StartPomodoroButtonと同位置、キャンセル色
+- `ui/SettingsButton.tsx` — 設定パネル展開ボタン。ギアSVGアイコン（`bottom: 112`）
+- `ui/StatsButton.tsx` — 統計パネル表示ボタン。チャートSVGアイコン（`bottom: 168`）
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/FreeTimerPanel.tsx` — freeモード。showStats/editor.expandedで3ビュー（StatsDrawer/FreeSettingsEditor/FreeSummaryView）を切替。FreeSummaryView右上にハンバーガーアイコン（設定展開）+チャートアイコン（統計表示）を縦並び配置。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
@@ -140,7 +145,7 @@ EventBus（UI/インフラ通知）:
 - `ui/PromptInput.tsx` — プロンプト入力UI
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -155,7 +160,7 @@ EventBus（UI/インフラ通知）:
 - `audio/AudioAdapter.ts` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止）。ミュート時は`AudioContext.suspend()`でシステムリソース（PulseAudioストリーム等）を解放し、解除時に`resume()`で復帰する。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートとの共存: `updateSuspendState()`で`isMuted || backgroundMuted`を統合判定）
 - `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+クロスフェードタイマー解除+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応
 
-**ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はFreeTimerPanelにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
+**ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化

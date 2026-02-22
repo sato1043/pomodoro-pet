@@ -4,6 +4,7 @@ import type { DailyStats } from '../../domain/statistics/StatisticsTypes'
 import { todayKey, formatDateKey } from '../../domain/statistics/StatisticsTypes'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
 import { useAppDeps } from './AppContext'
+import { OverlayTitle } from './OverlayTitle'
 import * as styles from './styles/stats-drawer.css'
 
 // --- 純粋関数 ---
@@ -132,17 +133,6 @@ function heatLevel(workPhases: number): number {
   if (workPhases <= 2) return 2
   if (workPhases <= 4) return 3
   return 4
-}
-
-// --- SVGアイコン ---
-
-function CloseIcon(): JSX.Element {
-  return (
-    <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" style={{ display: 'block' }}>
-      <line x1="6" y1="6" x2="18" y2="18" />
-      <line x1="18" y1="6" x2="6" y2="18" />
-    </svg>
-  )
 }
 
 // --- コンポーネント ---
@@ -414,10 +404,7 @@ export function StatsDrawer({ onClose }: StatsDrawerProps): JSX.Element {
         '--heatmap-today-stroke': 'var(--theme-heatmap-today-stroke)',
       } as React.CSSProperties}
     >
-      <button className={styles.closeBtn} onClick={onClose}>
-        <CloseIcon />
-      </button>
-
+      <OverlayTitle />
       <div className={styles.heading}>Statistics</div>
 
       <div className={styles.summaryGrid}>

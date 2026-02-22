@@ -3,8 +3,8 @@ import { vars } from './theme.css'
 
 export const statsButton = style({
   position: 'fixed',
-  bottom: 20,
-  left: 66,
+  bottom: 168,
+  left: 10,
   width: 48,
   height: 48,
   borderRadius: '50%',
