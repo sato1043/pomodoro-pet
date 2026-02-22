@@ -422,7 +422,7 @@ CLAには主に2つの類型がある:
 |---|---|---|
 | `THIRD_PARTY_LICENSES` への依存パッケージのライセンス記載 | 完了 | `npm run licenses`で自動生成。`licenses/`ディレクトリに配置。`extraResources`でバイナリ同梱 |
 | アプリ内About画面でのライセンス表記 | 未着手 | TODO.md「About画面の作成」に記載 |
-| EULA（End User License Agreement）の策定 | 未着手 | TODO.md「EULA策定」に記載 |
+| EULA（End User License Agreement）の策定 | 完了 | `licenses/EULA.txt`。NSISインストーラーに組み込み済み |
 
 ---
 

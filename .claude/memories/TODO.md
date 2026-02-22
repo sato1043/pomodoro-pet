@@ -143,19 +143,11 @@
 - ~~プロジェクトライセンス（PolyForm Noncommercial 1.0.0）の表示~~
 - ~~バージョン情報~~
 
-### EULA（End User License Agreement）の策定
-- 配布形態: itch.io + NSISインストーラーで有料バイナリ配布
-- 準拠法: 日本法
-- NSISインストーラーにEULA表示を組み込む（electron-builderの`nsis.license`オプション）
-- 含めるべき内容:
-  - ライセンス付与（個人・非商用の利用権）
-  - 禁止事項（逆コンパイル、素材抽出・再利用、再配布、商用利用）
-  - 知的財産権（ソフトウェア・素材の著作権帰属）
-  - 免責事項（現状有姿、損害賠償上限）
-  - **返金不可の明記**
-  - 契約終了条件（違反時のライセンス終了）
-  - 準拠法・管轄裁判所
-- PolyForm Noncommercialとの関係整理（ソースコードのライセンスとバイナリ配布のライセンスは別）
+### ~~EULA（End User License Agreement）の策定~~ — 完了
+- `licenses/EULA.txt` に英語で策定（全10条）
+- NSISインストーラーに組み込み済み（`nsis.license`）
+- `extraResources`でバイナリにも同梱
+- **注意: 法的助言ではない。配布前に弁護士確認を推奨**
 
 ### 有料配布方式の設計
 - itch.io「Direct to you」モード（PayPal直接入金）、$4.99 USD、返金不可

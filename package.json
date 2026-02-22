@@ -31,7 +31,8 @@
       "out/**/*"
     ],
     "extraResources": [
-      "licenses/THIRD_PARTY_LICENSES.txt"
+      "licenses/THIRD_PARTY_LICENSES.txt",
+      "licenses/EULA.txt"
     ],
     "win": {
       "icon": "build/icon.ico",
@@ -41,7 +42,8 @@
     },
     "nsis": {
       "oneClick": false,
-      "allowToChangeInstallationDirectory": true
+      "allowToChangeInstallationDirectory": true,
+      "license": "licenses/EULA.txt"
     }
   },
   "dependencies": {
