@@ -315,7 +315,7 @@ async function main(): Promise<void> {
     const delta = clock.getDelta()
     const deltaMs = delta * 1000
 
-    if (orchestrator.isRunning) {
+    if (orchestrator.isRunning && windowFocused) {
       orchestrator.tick(deltaMs)
     }
 
