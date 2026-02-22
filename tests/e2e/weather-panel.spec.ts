@@ -74,7 +74,8 @@ test('天気タイプの切替でactive状態が変化する', async () => {
   await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
 
-  // 初期状態: sunnyがactive
+  // sunnyに明示的に設定
+  await page.locator('[data-testid="weather-sunny"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
 
   // rainyをクリック
@@ -139,10 +140,15 @@ test('時間帯切替でactive状態が変化する', async () => {
 test('Setを押さずに閉じるとスナップショットから復元される', async () => {
   const { page } = app
 
+  // まずsunny+dayをSetで確定して既知の状態にする
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await page.locator('[data-testid="time-day"]').click()
+  await page.locator('[data-testid="set-button"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+
   // パネルを開く
   await page.locator('[data-testid="weather-toggle"]').click()
-
-  // 初期: sunny + dayがactive
   await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
   await expect(page.locator('[data-testid="time-day"]')).toHaveClass(/active/)
 
@@ -159,6 +165,57 @@ test('Setを押さずに閉じるとスナップショットから復元され�
   await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
   await expect(page.locator('[data-testid="time-day"]')).toHaveClass(/active/)
+
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('cloud-level-3クリックでlevel 0〜3がonクラス、level 4〜5が非on', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // cloud-level-3をクリック
+  await page.locator('[data-testid="cloud-level-3"]').click()
+
+  // level 0〜3がonクラスを持つ
+  for (const level of [0, 1, 2, 3]) {
+    await expect(page.locator(`[data-testid="cloud-level-${level}"]`)).toHaveClass(/on/)
+  }
+  // level 4〜5がonクラスを持たない
+  for (const level of [4, 5]) {
+    await expect(page.locator(`[data-testid="cloud-level-${level}"]`)).not.toHaveClass(/on/)
+  }
+
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('cloud-resetクリックでプリセット値にリセットされる', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // sunnyに明示的に設定（前テストの状態に依存しない）
+  await page.locator('[data-testid="weather-sunny"]').click()
+
+  // sunnyのプリセットは cloudDensityLevel=1（cloudPresetLevel('sunny') === 1）
+  // まずlevel 5に設定
+  await page.locator('[data-testid="cloud-level-5"]').click()
+  for (const level of [0, 1, 2, 3, 4, 5]) {
+    await expect(page.locator(`[data-testid="cloud-level-${level}"]`)).toHaveClass(/on/)
+  }
+
+  // リセットクリック
+  await page.locator('[data-testid="cloud-reset"]').click()
+
+  // sunnyプリセット（cloudDensityLevel=1）: level 0〜1がon、level 2〜5が非on
+  for (const level of [0, 1]) {
+    await expect(page.locator(`[data-testid="cloud-level-${level}"]`)).toHaveClass(/on/)
+  }
+  for (const level of [2, 3, 4, 5]) {
+    await expect(page.locator(`[data-testid="cloud-level-${level}"]`)).not.toHaveClass(/on/)
+  }
 
   await page.locator('[data-testid="weather-close"]').click()
 })

@@ -19,7 +19,7 @@ test('設定パネルのトグル（開閉）', async () => {
 
   // メニューボタンをクリックして展開
   // SVGアイコンのボタン（settingsToggle）を特定
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
 
   // 展開時: 「Set」ボタンが見える、「Start Pomodoro」は消える
@@ -37,7 +37,7 @@ test('Work/Break/LongBreak/Setsのボタン選択', async () => {
   const { page } = app
 
   // 展開する
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -62,7 +62,7 @@ test('Setを押さずに閉じると設定がスナップショットから復�
   const { page } = app
 
   // 展開して現在のWork activeボタンの値を記録
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -92,7 +92,7 @@ test('Setを押さずに閉じると設定がスナップショットから復�
 test('BG Audio/BG Notifyトグルの表示', async () => {
   const { page } = app
 
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -108,7 +108,7 @@ test('BG Audio/BG Notifyトグルの表示', async () => {
 test('BG Audioトグル操作でactive状態が切り替わる', async () => {
   const { page } = app
 
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -133,7 +133,7 @@ test('BG Audioトグル操作でactive状態が切り替わる', async () => {
 test('BG設定のスナップショット復元', async () => {
   const { page } = app
 
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -164,7 +164,7 @@ test('「Set」ボタンで設定確定しパネルが閉じる', async () => {
   const { page } = app
 
   // 展開
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -176,5 +176,35 @@ test('「Set」ボタンで設定確定しパネルが閉じる', async () => {
   await page.getByRole('button', { name: 'Set' }).click()
 
   // パネルが閉じる（Start Pomodoroが見える）
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('settings-toggleクリックでset-button表示、settings-closeクリックでStart Pomodoro復帰', async () => {
+  const { page } = app
+
+  // 展開
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // settings-closeクリックで閉じる
+  await page.locator('[data-testid="settings-close"]').click()
+
+  // Start Pomodoroが復帰
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('settings-closeクリックでset-buttonが非表示になる', async () => {
+  const { page } = app
+
+  // 展開
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // settings-closeクリック
+  await page.locator('[data-testid="settings-close"]').click()
+
+  // set-buttonが非表示
+  await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })

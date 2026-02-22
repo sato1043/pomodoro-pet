@@ -15,7 +15,7 @@ test('テーマ切替でcolorSchemeが即座に反映される', async () => {
   const { page } = app
 
   // 展開
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -48,7 +48,7 @@ test('テーマ変更をSetを押さずに閉じるとスナップショット�
   )
 
   // 展開
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 

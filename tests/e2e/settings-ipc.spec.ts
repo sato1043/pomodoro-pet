@@ -50,7 +50,7 @@ test('設定変更がsettings.jsonに永続化される', async () => {
   const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
 
   // 展開 → Work 50を選択 → Set確定
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -89,7 +89,7 @@ test('BG設定がsettings.jsonに永続化される', async () => {
   const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
 
   // 展開
-  const toggleBtn = page.locator('button').filter({ has: page.locator('svg') }).first()
+  const toggleBtn = page.locator('[data-testid="settings-toggle"]')
   await toggleBtn.click()
   await expect(page.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -116,7 +116,7 @@ test('アプリ再起動後にBG設定が復元される', async () => {
   // 1回目: BG Notify OFFにして保存
   const { electronApp: app1, page: page1 } = await launchFresh()
 
-  const toggleBtn1 = page1.locator('button').filter({ has: page1.locator('svg') }).first()
+  const toggleBtn1 = page1.locator('[data-testid="settings-toggle"]')
   await toggleBtn1.click()
   await expect(page1.getByRole('button', { name: 'Set' })).toBeVisible()
 
@@ -132,7 +132,7 @@ test('アプリ再起動後にBG設定が復元される', async () => {
   // 2回目: 再起動して設定が復元されているか確認
   const { electronApp: app2, page: page2 } = await launchFresh()
 
-  const toggleBtn2 = page2.locator('button').filter({ has: page2.locator('svg') }).first()
+  const toggleBtn2 = page2.locator('[data-testid="settings-toggle"]')
   await toggleBtn2.click()
   await expect(page2.getByRole('button', { name: 'Set' })).toBeVisible()
   await page2.waitForTimeout(500)
@@ -175,7 +175,7 @@ test('天気設定がsettings.jsonに永続化される', async () => {
   await page.locator('[data-testid="time-night"]').click()
 
   // Setで確定
-  await page.getByRole('button', { name: 'Set' }).click()
+  await page.locator('[data-testid="set-button"]').click()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
   await page.waitForTimeout(500)
 
@@ -198,7 +198,7 @@ test('アプリ再起動後に天気設定が復元される', async () => {
   await page1.locator('[data-testid="weather-cloudy"]').click()
   await page1.locator('[data-testid="time-evening"]').click()
 
-  await page1.getByRole('button', { name: 'Set' }).click()
+  await page1.locator('[data-testid="set-button"]').click()
   await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
   await page1.waitForTimeout(500)
 
@@ -226,7 +226,7 @@ test('アプリ再起動後にテーマ設定が復元される', async () => {
   // 1回目: テーマをDarkに変更して保存
   const { electronApp: app1, page: page1 } = await launchFresh()
 
-  const toggleBtn1 = page1.locator('button').filter({ has: page1.locator('svg') }).first()
+  const toggleBtn1 = page1.locator('[data-testid="settings-toggle"]')
   await toggleBtn1.click()
   await expect(page1.getByRole('button', { name: 'Set' })).toBeVisible()
 
