@@ -1,9 +1,9 @@
 import { style } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
-export const statsButton = style({
-  position: 'fixed',
-  bottom: 224,
+const baseButton = {
+  position: 'fixed' as const,
+  bottom: 168,
   left: 10,
   width: 48,
   height: 48,
@@ -15,8 +15,7 @@ export const statsButton = style({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 1000,
-  pointerEvents: 'auto',
+  pointerEvents: 'auto' as const,
   padding: 0,
   transition: 'transform 0.2s ease, background 0.2s ease',
   color: vars.color.textSubtle,
@@ -24,4 +23,14 @@ export const statsButton = style({
     transform: 'scale(1.1)',
     color: vars.color.text,
   },
+}
+
+export const weatherButton = style({
+  ...baseButton,
+  zIndex: 1000,
+})
+
+export const weatherCloseButton = style({
+  ...baseButton,
+  zIndex: 1010,
 })

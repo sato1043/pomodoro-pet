@@ -28,9 +28,15 @@ import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './applica
 import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
 import { createCabbageObject } from './infrastructure/three/CabbageObject'
 import { createAppleObject } from './infrastructure/three/AppleObject'
-import { createFeedingInteractionAdapter, DEFAULT_CAMERA, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
+import { createFeedingInteractionAdapter, DEFAULT_CAMERA, FUREAI_CAMERA, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
+import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
+import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConfig'
+import { resolveEnvironmentTheme } from './domain/environment/value-objects/EnvironmentTheme'
+import { createRainEffect } from './infrastructure/three/RainEffect'
+import { createSnowEffect } from './infrastructure/three/SnowEffect'
+import { createCloudEffect } from './infrastructure/three/CloudEffect'
 
 const BREAK_BGM_TRIGGERS: PhaseTriggerMap = {
   break: [{ id: 'break-getset', timing: { type: 'remaining', beforeEndMs: 30000 } }],
@@ -68,25 +74,33 @@ function createScene(): {
   return { scene, camera, renderer }
 }
 
-function addLights(scene: THREE.Scene): void {
-  const ambientLight = new THREE.AmbientLight(0xffeedd, 0.8)
-  scene.add(ambientLight)
+interface SceneLights {
+  ambient: THREE.AmbientLight
+  hemisphere: THREE.HemisphereLight
+  sun: THREE.DirectionalLight
+}
 
-  const hemisphereLight = new THREE.HemisphereLight(0x87ceeb, 0x5d8a3c, 0.6)
-  scene.add(hemisphereLight)
+function addLights(scene: THREE.Scene): SceneLights {
+  const ambient = new THREE.AmbientLight(0xffeedd, 0.8)
+  scene.add(ambient)
 
-  const sunLight = new THREE.DirectionalLight(0xfff5e0, 1.2)
-  sunLight.position.set(8, 12, 5)
-  sunLight.castShadow = true
-  sunLight.shadow.mapSize.width = 2048
-  sunLight.shadow.mapSize.height = 2048
-  sunLight.shadow.camera.near = 0.5
-  sunLight.shadow.camera.far = 40
-  sunLight.shadow.camera.left = -15
-  sunLight.shadow.camera.right = 15
-  sunLight.shadow.camera.top = 15
-  sunLight.shadow.camera.bottom = -15
-  scene.add(sunLight)
+  const hemisphere = new THREE.HemisphereLight(0x87ceeb, 0x5d8a3c, 0.6)
+  scene.add(hemisphere)
+
+  const sun = new THREE.DirectionalLight(0xfff5e0, 1.2)
+  sun.position.set(8, 12, 5)
+  sun.castShadow = true
+  sun.shadow.mapSize.width = 2048
+  sun.shadow.mapSize.height = 2048
+  sun.shadow.camera.near = 0.5
+  sun.shadow.camera.far = 40
+  sun.shadow.camera.left = -15
+  sun.shadow.camera.right = 15
+  sun.shadow.camera.top = 15
+  sun.shadow.camera.bottom = -15
+  scene.add(sun)
+
+  return { ambient, hemisphere, sun }
 }
 
 function setupResizeHandler(
@@ -102,7 +116,7 @@ function setupResizeHandler(
 
 async function main(): Promise<void> {
   const { scene, camera, renderer } = createScene()
-  addLights(scene)
+  const lights = addLights(scene)
   setupResizeHandler(camera, renderer)
 
   // シーン設定と無限スクロール
@@ -111,6 +125,38 @@ async function main(): Promise<void> {
   const chunkCount = 6
   const scrollManager = createScrollManager(sceneConfig, chunkSpec, chunkCount)
   const scrollRenderer = createInfiniteScrollRenderer(scene, sceneConfig, chunkSpec, chunkCount)
+
+  // 雨エフェクト
+  const rainEffect = createRainEffect(scene)
+  const snowEffect = createSnowEffect(scene)
+  const cloudEffect = createCloudEffect(scene)
+
+  // 天気適用関数
+  function applyWeather(config: WeatherConfig): void {
+    const weather = config.weather
+    const timeOfDay = config.autoTimeOfDay
+      ? resolveTimeOfDay(new Date().getHours())
+      : config.timeOfDay
+    const params = resolveEnvironmentTheme(weather, timeOfDay)
+
+    lights.ambient.color.setHex(params.ambientColor)
+    lights.ambient.intensity = params.ambientIntensity
+    lights.hemisphere.color.setHex(params.hemiSkyColor)
+    lights.hemisphere.groundColor.setHex(params.hemiGroundColor)
+    lights.hemisphere.intensity = params.hemiIntensity
+    lights.sun.color.setHex(params.sunColor)
+    lights.sun.intensity = params.sunIntensity
+    lights.sun.position.set(params.sunPosition.x, params.sunPosition.y, params.sunPosition.z)
+
+    renderer.toneMappingExposure = params.exposure
+    scrollRenderer.applyTheme(params)
+    rainEffect.setVisible(weather === 'rainy')
+    snowEffect.setVisible(weather === 'snowy')
+
+    // 雲の密度をconfigのcloudDensityLevelから決定
+    cloudEffect.setDensity(config.cloudDensityLevel)
+    cloudEffect.setVisible(config.cloudDensityLevel > 0)
+  }
 
   // ポモドーロタイマー初期化
   const bus = createEventBus()
@@ -213,6 +259,33 @@ async function main(): Promise<void> {
     renderReactUI()
   })
 
+  // WeatherConfigChanged → 天気適用
+  bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
+    if (event.type !== 'WeatherConfigChanged') return
+    applyWeather(event.weather)
+  })
+
+  // WeatherPreviewOpen → カメラ位置切替 + キャラクター歩行
+  // 天気プレビュー中フラグ（autoTimeIntervalとfocus復帰時の保存値上書きを抑止）
+  let weatherPreviewOpen = false
+
+  bus.subscribe<{ open: boolean }>('WeatherPreviewOpen', (event) => {
+    weatherPreviewOpen = event.open
+    if (event.open) {
+      camera.position.setZ(FUREAI_CAMERA.posZ)
+      camera.lookAt(0, FUREAI_CAMERA.lookAtY, 0)
+      switchPreset('march-cycle')
+      stopAutoTimeInterval()
+    } else {
+      camera.position.setZ(DEFAULT_CAMERA.posZ)
+      camera.lookAt(0, DEFAULT_CAMERA.lookAtY, 0)
+      switchPreset('autonomous')
+      if (settingsService.weatherConfig.autoTimeOfDay) {
+        startAutoTimeInterval()
+      }
+    }
+  })
+
   // SoundSettingsLoaded → AudioAdapter + SfxPlayerに適用
   bus.subscribe<SettingsEvent>('SoundSettingsLoaded', (event) => {
     if (event.type !== 'SoundSettingsLoaded') return
@@ -232,6 +305,9 @@ async function main(): Promise<void> {
 
   // 保存済み統計データの復元
   await statisticsService.loadFromStorage()
+
+  // 初期天気適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
+  applyWeather(settingsService.weatherConfig)
 
   // 初回React UIレンダリング
   renderReactUI()
@@ -266,6 +342,35 @@ async function main(): Promise<void> {
     () => settingsService.backgroundConfig.backgroundNotify,
     () => windowFocused
   )
+
+  // autoTimeOfDay: 1分間隔で時間帯を監視し天気を再適用
+  let autoTimeInterval: ReturnType<typeof setInterval> | null = null
+  function startAutoTimeInterval(): void {
+    if (autoTimeInterval !== null) return
+    autoTimeInterval = setInterval(() => {
+      applyWeather(settingsService.weatherConfig)
+    }, 60000)
+  }
+  function stopAutoTimeInterval(): void {
+    if (autoTimeInterval !== null) {
+      clearInterval(autoTimeInterval)
+      autoTimeInterval = null
+    }
+  }
+  // WeatherConfigChanged購読でinterval管理（プレビュー中はinterval開始しない）
+  bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
+    if (event.type !== 'WeatherConfigChanged') return
+    if (weatherPreviewOpen) return
+    if (event.weather.autoTimeOfDay) {
+      startAutoTimeInterval()
+    } else {
+      stopAutoTimeInterval()
+    }
+  })
+  // 初期状態でautoTimeOfDay有効ならinterval開始
+  if (settingsService.weatherConfig.autoTimeOfDay) {
+    startAutoTimeInterval()
+  }
 
   // バックグラウンド時のタイマー継続とオーディオ制御
   // rAFはバックグラウンドで停止するため、setIntervalでタイマーを進める
@@ -306,6 +411,11 @@ async function main(): Promise<void> {
     windowFocused = true
     audio.setBackgroundMuted(false)
     sfxPlayer.setBackgroundMuted(false)
+
+    // autoTimeOfDay有効時、バックグラウンド中の時間帯変化を反映（プレビュー中はスキップ）
+    if (!weatherPreviewOpen && settingsService.weatherConfig.autoTimeOfDay) {
+      applyWeather(settingsService.weatherConfig)
+    }
   })
 
   // レンダリングループ
@@ -323,6 +433,9 @@ async function main(): Promise<void> {
       character, behaviorSM, charHandle, deltaMs,
       scrollManager, (state) => scrollRenderer.update(state)
     )
+    rainEffect.update(deltaMs)
+    snowEffect.update(deltaMs)
+    cloudEffect.update(deltaMs)
     charHandle.update(delta)
     renderer.render(scene, camera)
   }

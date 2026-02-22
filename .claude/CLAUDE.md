@@ -52,7 +52,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 - **timer**: `PomodoroStateMachine` エンティティ。`CyclePlan`（フェーズ順列）をインデックス走査する方式。デフォルト1セット/サイクル。tick(deltaMs)でイベント配列を返す純粋ロジック。`PomodoroState`判別共用体型（work/break/long-break + running, congrats）で状態を表現。`exitManually()`でcongrats中以外の手動終了。`PomodoroStateMachineOptions`で`PhaseTimeTrigger`を注入可能（elapsed/remainingタイミングでTriggerFiredイベント発行）。break/long-breakの残り30秒でgetsetトリガーを発行し、TimerSfxBridgeがBGM切替に使用。`CyclePlan`値オブジェクト（`buildCyclePlan(config)`）がセット構造・休憩タイプを一元管理。Sets=1はBreak、Sets>1の最終セットはLong Break。`parseDebugTimer(spec)`でVITE_DEBUG_TIMERの秒数指定をパース
 - **character**: `BehaviorStateMachine` が11状態（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse/feeding）を管理。`march`はwork中の目的ある前進（scrolling=true）、`wander`はbreak/free中のふらつき歩き（scrolling=false）。`feeding`はふれあいモードで餌を食べる状態（sitアニメ代用、3-5秒、loop=false）。遷移トリガーは timeout/prompt/interaction の3種。`InteractionKind`に`feed`を含む。`fixedWanderDirection`オプションでmarch方向を固定可能。`GestureRecognizer`でドラッグ/撫でるを判定。`isInteractionLocked()`でポモドーロ作業中のインタラクション拒否を判定。`lockState`/`unlockState`で状態ロック（congrats時happy、work時march）。`BehaviorPreset.durationOverrides`でプリセット別に状態の持続時間を上書き可能（march-cycle: march 30〜60秒、idle 3〜5秒）。fureai-idleプリセットではfeeding→happy遷移を定義
-- **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数
+- **environment**: `SceneConfig`（進行方向・スクロール速度・状態別スクロール有無）と`ChunkSpec`（チャンク寸法・オブジェクト数）。`shouldScroll()`純粋関数。`WeatherConfig`値オブジェクト（`WeatherType`晴/曇/雨/雪、`TimeOfDay`朝/昼/夕/夜、`CloudDensityLevel`0-5の6段階雲量、`autoTimeOfDay`フラグ）。`resolveTimeOfDay(hour)`で時刻→時間帯変換。`cloudPresetLevel(weather)`で天気→雲量プリセット変換。`EnvironmentThemeParams`（空色・霧・ライト・地面色・露出の描画パラメータ）。`resolveEnvironmentTheme(weather, timeOfDay)`で20パターン（4天気×4時間帯+フォールバック）のルックアップテーブル
 - **shared**: `EventBus`（Pub/Sub）。UI/インフラ層への通知専用。階層間の状態連動はPomodoroOrchestratorが直接コールバックで管理
 
 ### アプリケーション層 (`src/application/`)
@@ -61,7 +61,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `AppSceneManager` — アプリケーションシーン管理（free/pomodoro/settings/fureai）。純粋な状態ホルダー（EventBus不要）。enterPomodoro/exitPomodoro/enterFureai/exitFureaiがAppSceneEvent[]を返す
 - `FureaiCoordinator` — ふれあいモードのシーン遷移+プリセット切替+餌やり制御を協調。enterFureai()でfureai-idleプリセット+FeedingAdapter活性化、exitFureai()でautonomousプリセット+FeedingAdapter非活性化。feedCharacter()でfeeding状態遷移。`FeedingAdapter`インターフェースでアダプター層の活性化制御を抽象化。PomodoroOrchestratorとは独立
 - `DisplayTransition` — 宣言的シーン遷移グラフ。`DisplayScene`型（AppScene+PhaseTypeの結合キー）、`DISPLAY_SCENE_GRAPH`定数（遷移ルールのテーブル）、`DisplayTransitionState`（テーブルルックアップによる状態管理）。`toDisplayScene()`変換ヘルパー
-- `AppSettingsService` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時の挙動を制御
+- `AppSettingsService` — タイマー設定＋サウンド設定＋バックグラウンド設定＋天気設定管理。分→ms変換＋`createConfig()`バリデーション。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`/`WeatherConfigChanged`イベントをEventBus経由で発行。`loadFromStorage()`/`saveAllToStorage()`でElectron IPC経由の永続化（`{userData}/settings.json`）。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時の挙動を制御。`weatherConfig`ゲッター＋`updateWeatherConfig(partial)`で天気設定の部分更新と永続化
 - `InterpretPromptUseCase` — 英語/日本語キーワードマッチング → 行動名に変換
 - `UpdateBehaviorUseCase` — 毎フレームtick。StateMachine遷移 + ScrollManager経由で背景スクロール制御
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
@@ -78,18 +78,21 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout。`settings`AppSceneは`free`として扱う
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+StatsDrawer+BackButtonを束ねる。showStats/settingsExpandedで表示切替を管理
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+StatsDrawer+WeatherPanel+各CloseButtonを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。hideButtonsで排他表示制御
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。`FeedingSuccess`イベント購読でハートエフェクトを発火
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
-- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
-- `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置（`bottom: 232`）
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 280`）。createPortalでdocument.bodyに描画
+- `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置（`bottom: 280`）
+- `ui/WeatherButton.tsx` — 天気パネル表示ボタン。画面左下の雲SVGアイコン（`bottom: 168`）。createPortalでdocument.bodyに描画
+- `ui/WeatherCloseButton.tsx` — 天気パネルからの戻るボタン。←矢印アイコン。WeatherButtonと同位置（`bottom: 168`、`z-index: 1010`でパネルより上）
+- `ui/WeatherPanel.tsx` — 天気設定パネル。コンパクトフローティングUI（`bottom: 110, left: 66`）。天気タイプ（sunny/cloudy/rainy/snowy）+雲量（0-5の6段階セグメント+リセットボタン）+時間帯（morning/day/evening/night/auto）をアイコンボタンで切替。ドラフトstate方式でプレビュー（EventBus発行のみ、永続化なし）、Setボタンで確定、閉じるとスナップショット復元。パネル表示中はカメラをふれあいモード位置に後退+キャラクターmarch-cycleプリセット
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ（`data-testid="overlay-free"`）。createPortalでdocument.bodyに描画。タイトル "Pomodoro Pet" + 日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditorを切替）。useSettingsEditorフックでスナップショット/復元を管理
 - `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）。createPortalでdocument.bodyに描画
 - `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル。設定パネル展開時に表示
 - `ui/BackButton.tsx` — 統計パネルからの戻るボタン。StartPomodoroButtonと同位置、キャンセル色（overlayBg）
 - `ui/SettingsButton.tsx` — 設定パネル展開ボタン。画面左下のギアSVGアイコン（`bottom: 112`）。createPortalでdocument.bodyに描画
-- `ui/StatsButton.tsx` — 統計パネル表示ボタン。画面左下のチャートSVGアイコン（`bottom: 168`）。createPortalでdocument.bodyに描画
+- `ui/StatsButton.tsx` — 統計パネル表示ボタン。画面左下のチャートSVGアイコン（`bottom: 224`）。createPortalでdocument.bodyに描画
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ（`data-testid="overlay-pomodoro"`）。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（`z-index: 10000`）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現し、リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット。右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
@@ -108,7 +111,10 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `three/AppleObject` — プリミティブ形状のリンゴ3Dオブジェクト。赤い球体+ハイライト+茎+葉。スケール0.15（キャベツの半分）。`CabbageHandle`インターフェースを共用
 - `three/EnvironmentBuilder` — 旧・単一シーン環境生成（現在は未使用、InfiniteScrollRendererに置換）
 - `three/EnvironmentChunk` — 1チャンク分の環境オブジェクト生成。ChunkSpecに基づくランダム配置。regenerate()でリサイクル時に再生成
-- `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定
+- `three/InfiniteScrollRenderer` — 3チャンクの3D配置管理。ScrollStateに基づく位置更新とリサイクル時のregenerate()呼び出し。霧・背景色設定。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新
+- `three/RainEffect` — 雨エフェクト。LineSegments（650本の短い線分）で残像付き雨粒を表現。地面到達時にスプラッシュパーティクル（リングバッファ方式、最大200個）を発生。`WeatherEffect`インターフェース（update/setVisible/dispose）を定義・exportし、SnowEffectが共用
+- `three/SnowEffect` — 雪エフェクト。Points（750個）で雪粒を表現。パーティクルごとにランダムな位相・周波数を持ち、sin/cosでX/Z方向にゆらゆら揺れながら落下
+- `three/CloudEffect` — 雲エフェクト。半透明の扁平SphereGeometry群（3-6個/雲）をクラスター化し、z方向にゆっくりドリフト。6段階密度（0=none〜5=overcast、最大100個）。`setDensity(level)`で雲数を動的に再生成
 - `audio/ProceduralSounds` — Web Audio APIでRain/Forest/Windをノイズ+フィルタ+LFOから生成（外部mp3不要）
 - `audio/AudioAdapter` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止、loadFromStorage後にrefreshVolumeで復元）。ミュート時は`AudioContext.suspend()`でシステムリソースを解放、解除時に`resume()`で復帰。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートと独立管理）
 - `audio/SfxPlayer` — MP3等の音声ファイルをワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioDataでデコードし、バッファキャッシュで2回目以降は即時再生。volume/mute制御。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応。VolumeControl（ミュート操作UI）はOverlayFreeのみに配置されるため、ポモドーロ実行中のミュート切替は発生しない
@@ -170,7 +176,8 @@ PlaywrightでElectronアプリの統合テストを実行。`VITE_DEBUG_TIMER=3/
 - `tests/e2e/smoke.spec.ts` — 起動・基本表示
 - `tests/e2e/free-mode.spec.ts` — freeモードUI操作
 - `tests/e2e/pomodoro-flow.spec.ts` — ポモドーロサイクル全体フロー
-- `tests/e2e/settings-ipc.spec.ts` — 設定永続化（IPC経由）
+- `tests/e2e/settings-ipc.spec.ts` — 設定永続化（IPC経由、天気設定含む）
+- `tests/e2e/weather-panel.spec.ts` — 天気パネルUI操作（表示/非表示、天気切替、時間帯切替、スナップショット復元、排他表示）
 
 vanilla-extractのハッシュ化クラス名を回避するため、テスト対象のインタラクティブ要素には`data-testid`属性を使用する。
 

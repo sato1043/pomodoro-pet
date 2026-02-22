@@ -3,7 +3,7 @@ import { vars } from './theme.css'
 
 export const entryButton = style({
   position: 'fixed',
-  bottom: 232,
+  bottom: 280,
   left: 10,
   width: 48,
   height: 48,

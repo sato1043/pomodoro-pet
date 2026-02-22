@@ -194,6 +194,83 @@ describe('AppSettingsService', () => {
     })
   })
 
+  describe('weatherConfig', () => {
+    it('初期状態でデフォルト天気設定を保持する', () => {
+      expect(service.weatherConfig).toEqual({
+        weather: 'sunny',
+        timeOfDay: 'day',
+        autoWeather: false,
+        autoTimeOfDay: false,
+        cloudDensityLevel: 1,
+      })
+    })
+
+    it('cloudDensityLevelが0-5の範囲で設定できる', () => {
+      service.updateWeatherConfig({ cloudDensityLevel: 5 })
+      expect(service.weatherConfig.cloudDensityLevel).toBe(5)
+      service.updateWeatherConfig({ cloudDensityLevel: 0 })
+      expect(service.weatherConfig.cloudDensityLevel).toBe(0)
+    })
+
+    it('updateWeatherConfigで部分更新できる', () => {
+      service.updateWeatherConfig({ weather: 'rainy' })
+      expect(service.weatherConfig.weather).toBe('rainy')
+      expect(service.weatherConfig.timeOfDay).toBe('day')
+      expect(service.weatherConfig.autoTimeOfDay).toBe(false)
+    })
+
+    it('updateWeatherConfigで複数フィールドを同時更新できる', () => {
+      service.updateWeatherConfig({ weather: 'rainy', timeOfDay: 'night', autoTimeOfDay: false })
+      expect(service.weatherConfig).toMatchObject({
+        weather: 'rainy',
+        timeOfDay: 'night',
+        autoWeather: false,
+        autoTimeOfDay: false,
+      })
+    })
+
+    it('cloudDensityLevel更新がイベントに反映される', () => {
+      const received: SettingsEvent[] = []
+      bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
+        received.push(event)
+      })
+
+      service.updateWeatherConfig({ cloudDensityLevel: 4 })
+
+      expect(received).toHaveLength(1)
+      if (received[0].type === 'WeatherConfigChanged') {
+        expect(received[0].weather.cloudDensityLevel).toBe(4)
+      }
+    })
+
+    it('updateWeatherConfigでWeatherConfigChangedイベントを発行する', () => {
+      const received: SettingsEvent[] = []
+      bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
+        received.push(event)
+      })
+
+      service.updateWeatherConfig({ weather: 'rainy' })
+
+      expect(received).toHaveLength(1)
+      expect(received[0].type).toBe('WeatherConfigChanged')
+      if (received[0].type === 'WeatherConfigChanged') {
+        expect(received[0].weather.weather).toBe('rainy')
+      }
+    })
+
+    it('resetToDefaultでデフォルト天気設定に戻す', () => {
+      service.updateWeatherConfig({ weather: 'rainy', autoTimeOfDay: false })
+      service.resetToDefault()
+      expect(service.weatherConfig).toEqual({
+        weather: 'sunny',
+        timeOfDay: 'day',
+        autoWeather: false,
+        autoTimeOfDay: false,
+        cloudDensityLevel: 1,
+      })
+    })
+  })
+
   describe('resetToDefault', () => {
     it('デフォルト値に戻す', () => {
       service.updateTimerConfig({

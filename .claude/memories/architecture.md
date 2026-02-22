@@ -69,6 +69,8 @@ EventBus（UI/インフラ通知）:
 - `ChunkSpec` — チャンク寸法（幅・奥行き）とオブジェクト配置数（木・草・岩・花）
 - `shouldScroll()` — 現在の状態でスクロールすべきか判定する純粋関数
 - `SceneObject` — シーンオブジェクト型定義
+- `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
+- `EnvironmentThemeParams` — 描画パラメータ（空色・霧・ライト・地面色・露出）。`resolveEnvironmentTheme(weather, timeOfDay)`で20パターンルックアップ
 
 ### 4. 統計
 - `StatisticsTypes` — DailyStats型（日次集計）、emptyDailyStats()、todayKey()、formatDateKey()ヘルパー。StatisticsData型（Record<'YYYY-MM-DD', DailyStats>）
@@ -96,6 +98,8 @@ EventBus（UI/インフラ通知）:
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
+- `environment/value-objects/WeatherConfig.ts` — WeatherConfig, WeatherType, TimeOfDay, CloudDensityLevel, resolveTimeOfDay(), cloudPresetLevel()
+- `environment/value-objects/EnvironmentTheme.ts` — EnvironmentThemeParams, resolveEnvironmentTheme()（20パターンルックアップ）
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
@@ -155,7 +159,10 @@ EventBus（UI/インフラ通知）:
 - `three/AppleObject.ts` — プリミティブ形状リンゴ3Dオブジェクト。CabbageHandleインターフェースを共用。スケール0.15
 - `three/EnvironmentBuilder.ts` — 旧・単一シーン環境生成（InfiniteScrollRendererに置換済み）
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkSpecベース、中央帯回避配置、regenerate対応）
-- `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）
+- `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新
+- `three/RainEffect.ts` — 雨エフェクト。LineSegments（650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。WeatherEffectインターフェース定義
+- `three/SnowEffect.ts` — 雪エフェクト。Points（750個）sin/cosゆらゆら揺れ
+- `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
 - `audio/AudioAdapter.ts` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止）。ミュート時は`AudioContext.suspend()`でシステムリソース（PulseAudioストリーム等）を解放し、解除時に`resume()`で復帰する。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートとの共存: `updateSuspendState()`で`isMuted || backgroundMuted`を統合判定）
 - `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+クロスフェードタイマー解除+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応
@@ -178,12 +185,14 @@ EventBus（UI/インフラ通知）:
 - `domain/character/BehaviorStateMachine.test.ts` — 全11状態遷移・6プリセット・durationOverrides・プロンプト遷移・tick・keepAlive・isScrollingState・feedインタラクション・feeding→happy遷移チェーン
 - `domain/character/GestureRecognizer.test.ts` — ドラッグ/撫でるジェスチャー判定・drag vs pet判定・設定カスタマイズ
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
+- `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
+- `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai・全サイクル
 - `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
-- `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定
+- `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行
 - `application/timer/TimerSfxBridge.test.ts` — work完了音/ファンファーレ使い分け・休憩BGMクロスフェード・エラーハンドリング・shouldPlayAudio
 - `application/notification/NotificationBridge.test.ts` — バックグラウンド通知発行・フォアグラウンド時スキップ・無効時スキップ・long-break/congratsスキップ・解除関数
@@ -198,4 +207,5 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/smoke.spec.ts` — 起動・タイトル表示・Start Pomodoroボタン存在
 - `e2e/free-mode.spec.ts` — 設定パネルトグル・ボタン選択・Set確定・BG Audio/Notifyトグル表示・操作・スナップショット復元
 - `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
-- `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元・showNotification API確認・BG設定永続化/復元・statistics API確認
+- `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元・showNotification API確認・BG設定永続化/復元・statistics API確認・天気設定永続化/再起動復元
+- `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather非活性・時間帯切替・スナップショット復元・Stats/Weather排他表示

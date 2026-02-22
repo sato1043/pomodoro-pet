@@ -2,11 +2,13 @@ import * as THREE from 'three'
 import type { SceneConfig } from '../../domain/environment/value-objects/SceneConfig'
 import type { ChunkSpec } from '../../domain/environment/value-objects/SceneConfig'
 import type { ScrollState } from '../../application/environment/ScrollUseCase'
+import type { EnvironmentThemeParams } from '../../domain/environment/value-objects/EnvironmentTheme'
 import { createEnvironmentChunk, type EnvironmentChunk } from './EnvironmentChunk'
 
 export interface InfiniteScrollRenderer {
   readonly ground: THREE.Mesh
   update(state: ScrollState): void
+  applyTheme(params: EnvironmentThemeParams): void
   dispose(): void
 }
 
@@ -61,6 +63,18 @@ export function createInfiniteScrollRenderer(
       return chunks[centerIndex].ground
     },
     update,
+    applyTheme(params: EnvironmentThemeParams): void {
+      scene.background = new THREE.Color(params.skyColor)
+      if (scene.fog instanceof THREE.Fog) {
+        scene.fog.color.setHex(params.fogColor)
+        scene.fog.near = params.fogNear
+        scene.fog.far = params.fogFar
+      }
+      for (const chunk of chunks) {
+        const mat = chunk.ground.material as THREE.MeshStandardMaterial
+        mat.color.setHex(params.groundColor)
+      }
+    },
     dispose(): void {
       for (const chunk of chunks) {
         scene.remove(chunk.group)

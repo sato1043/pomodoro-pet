@@ -2,6 +2,8 @@ import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import { createConfig, createDefaultConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { EventBus } from '../../domain/shared/EventBus'
 import type { SettingsEvent, ThemePreference } from './SettingsEvents'
+import type { WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
+import { createDefaultWeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
 
 export interface TimerConfigInput {
   readonly workMinutes: number
@@ -25,11 +27,13 @@ export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
   readonly backgroundConfig: BackgroundConfigInput
+  readonly weatherConfig: WeatherConfig
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
   updateThemeConfig(theme: ThemePreference): void
   updateBackgroundConfig(input: BackgroundConfigInput): void
+  updateWeatherConfig(partial: Partial<WeatherConfig>): void
   resetToDefault(): void
 }
 
@@ -51,16 +55,18 @@ function saveAllToStorage(
   timer: TimerConfigInput,
   sound: SoundConfigInput,
   theme: ThemePreference,
-  background: BackgroundConfigInput
+  background: BackgroundConfigInput,
+  weather: WeatherConfig
 ): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme, background })
+    window.electronAPI.saveSettings({ timer, sound, theme, background, weather })
   }
 }
 
 const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMuted: false }
 const DEFAULT_THEME: ThemePreference = 'system'
 const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
+const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -71,6 +77,7 @@ export function createAppSettingsService(
   let currentSound: SoundConfigInput = { ...DEFAULT_SOUND }
   let currentTheme: ThemePreference = DEFAULT_THEME
   let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
+  let currentWeather: WeatherConfig = { ...DEFAULT_WEATHER }
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -108,10 +115,24 @@ export function createAppSettingsService(
     bus.publish(event.type, event)
   }
 
+  function publishWeatherChanged(weather: WeatherConfig): void {
+    const event: SettingsEvent = {
+      type: 'WeatherConfigChanged',
+      weather,
+      timestamp: Date.now()
+    }
+    bus.publish(event.type, event)
+  }
+
+  function save(): void {
+    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather)
+  }
+
   return {
     get currentConfig() { return currentConfig },
     get themePreference() { return currentTheme },
     get backgroundConfig() { return currentBackground },
+    get weatherConfig() { return currentWeather },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
@@ -148,6 +169,21 @@ export function createAppSettingsService(
         }
       }
 
+      // 天気設定の復元
+      if (data.weather) {
+        const w = data.weather as Record<string, unknown>
+        if (typeof w.weather === 'string' && typeof w.timeOfDay === 'string') {
+          currentWeather = {
+            weather: w.weather as WeatherConfig['weather'],
+            timeOfDay: w.timeOfDay as WeatherConfig['timeOfDay'],
+            autoWeather: typeof w.autoWeather === 'boolean' ? w.autoWeather : false,
+            autoTimeOfDay: typeof w.autoTimeOfDay === 'boolean' ? w.autoTimeOfDay : true,
+            cloudDensityLevel: typeof w.cloudDensityLevel === 'number' ? w.cloudDensityLevel as WeatherConfig['cloudDensityLevel'] : DEFAULT_WEATHER.cloudDensityLevel,
+          }
+          publishWeatherChanged(currentWeather)
+        }
+      }
+
       // タイマー設定の復元（SettingsChanged発行でUI再作成。この時点でAudioAdapterは既に更新済み）
       // デバッグタイマー有効時はデバッグ値を優先し、保存済みタイマー設定をスキップ
       if (data.timer && !debugTimer) {
@@ -179,22 +215,28 @@ export function createAppSettingsService(
       )
       currentConfig = config
       publishSettingsChanged(config)
-      saveAllToStorage(input, currentSound, currentTheme, currentBackground)
+      save()
     },
 
     updateSoundConfig(input: SoundConfigInput): void {
       currentSound = input
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
+      save()
     },
 
     updateThemeConfig(theme: ThemePreference): void {
       currentTheme = theme
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
+      save()
     },
 
     updateBackgroundConfig(input: BackgroundConfigInput): void {
       currentBackground = input
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
+      save()
+    },
+
+    updateWeatherConfig(partial: Partial<WeatherConfig>): void {
+      currentWeather = { ...currentWeather, ...partial }
+      publishWeatherChanged(currentWeather)
+      save()
     },
 
     resetToDefault(): void {
@@ -202,8 +244,9 @@ export function createAppSettingsService(
       currentSound = { ...DEFAULT_SOUND }
       currentTheme = DEFAULT_THEME
       currentBackground = { ...DEFAULT_BACKGROUND }
+      currentWeather = { ...DEFAULT_WEATHER }
       publishSettingsChanged(currentConfig)
-      saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground)
+      save()
     }
   }
 }

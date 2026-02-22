@@ -163,13 +163,24 @@
 - キャベツ3Dオブジェクトのドラッグ＆ドロップで餌やり
 - feeding状態（BehaviorStateMachine）→ happy遷移 → ハートエフェクト
 
-### 環境シーンのバリエーション
-- 無限スクロール背景基盤（InfiniteScrollRenderer + EnvironmentChunk）は実装済み
-- ChunkSpecを差し替えることでオブジェクト構成を変更可能
+### ~~天気エフェクト~~ — 完了
+- 4天気（sunny/cloudy/rainy/snowy）× 4時間帯（morning/day/evening/night）= 20パターンの環境テーマ
+- `WeatherConfig`値オブジェクト（天気タイプ、時間帯、autoTimeOfDay、cloudDensityLevel 0-5）
+- `EnvironmentThemeParams`ルックアップテーブルで空色・霧・ライト・地面色・露出を一括切替
+- 雨エフェクト（LineSegments残像付き650本 + スプラッシュパーティクル）
+- 雪エフェクト（Points 750個、sin/cosゆらゆら揺れ）
+- 雲エフェクト（半透明SphereGeometryクラスター、6段階密度0-100個、z方向ドリフト）
+- WeatherPanel（コンパクトフローティングUI、アイコンボタン＋雲量セグメントバー）
+- ドラフトstate＋Setボタン方式（プレビュー→確定/スナップショット復元）
+- パネル表示中はカメラ後退＋キャラクターmarch-cycle
+- autoTimeOfDayのプレビュー中interval一時停止（保存値上書き防止）
+- 設定永続化（settings.json）
+
+### 環境シーンのバリエーション（残課題）
 - シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等
-- 天気エフェクト: 晴れ/曇り/雨/雪をパーティクルやライティング変化で表現。時間帯（朝/昼/夕/夜）による空色・光源変化も検討
-- UIで切替可能にする
 - `EnvironmentChunk` のオブジェクト生成ロジックをプリセットごとに分離
+- 天気「Auto」ボタン: 天気API連携で自動天気切替（現在は非活性）
+- 時間帯遷移のlerp補間（現在はinstant切替）
 
 ### 環境映像（背景動画）
 - 要件定義でnice-to-haveとされた機能
