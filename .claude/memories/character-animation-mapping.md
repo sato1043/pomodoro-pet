@@ -176,6 +176,20 @@ UpdateBehaviorUseCase（毎フレーム）
 
 **注意:** デバッグインジケーターはプロダクションビルドには含まれない（`VITE_DEBUG_TIMER`未設定時は生成されない）。
 
+### フェイクタイマーが使えない理由
+
+Playwright 1.45+の`page.clock` APIは`Date`・`setTimeout`・`setInterval`・`requestAnimationFrame`・`performance.now()`を制御できるが、このアプリでは実用上困難である。
+
+| 依存箇所 | 問題 |
+|----------|------|
+| `THREE.Clock` | `performance.now()`ベース。フェイク化するとdelta計算が壊れるか、手動フレーム送りが必要 |
+| `requestAnimationFrame` | レンダリングループの駆動源。フェイク化すると自然に発火せず`clock.runFor(16)`の繰り返しが必要 |
+| `AnimationMixer` | rAFのdeltaに依存。フレーム送りタイミング次第でアニメーション遷移が不安定化 |
+| Web Audio API | 内部タイマーが独立しており`page.clock`では制御不能 |
+| `setInterval`(1秒) | バックグラウンドタイマー。rAFとの二重tick制御が崩れる |
+
+WebGL + Web Audio を含むアプリではフェイクタイマーは不向きである。`VITE_DEBUG_TIMER`によるタイマー短縮方式が実時間ベースで全パイプラインが正常動作するため、現行アプローチが最適である。
+
 ## 設定箇所
 
 - `src/main.ts` — FBXConfig定義（13アニメーション）、AnimationResolver/EmotionService/InteractionTracker初期化・接続
