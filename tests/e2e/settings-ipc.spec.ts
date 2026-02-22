@@ -229,6 +229,65 @@ test('アプリ再起動後に天気設定が復元される', async () => {
   await app2.close()
 })
 
+test('cloudDensityLevel設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // Weatherパネルを開く
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // cloudDensityLevelを4に設定
+  await page.locator('[data-testid="cloud-level-4"]').click()
+
+  // Setで確定
+  await page.locator('[data-testid="set-button"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page.waitForTimeout(500)
+
+  // settings.jsonを確認
+  const settingsPath = join(userDataPath, 'settings.json')
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.weather?.cloudDensityLevel).toBe(4)
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にcloudDensityLevel設定が復元される', async () => {
+  // 1回目: cloudDensityLevel=3に設定して保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  await page1.locator('[data-testid="weather-toggle"]').click()
+  await expect(page1.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  await page1.locator('[data-testid="cloud-level-3"]').click()
+
+  await page1.locator('[data-testid="set-button"]').click()
+  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動して復元を確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  await page2.locator('[data-testid="weather-toggle"]').click()
+  await page2.waitForTimeout(500)
+
+  // level 0〜3がon、level 4〜5が非on
+  for (const level of [0, 1, 2, 3]) {
+    await expect(page2.locator(`[data-testid="cloud-level-${level}"]`)).toHaveClass(/on/)
+  }
+  for (const level of [4, 5]) {
+    await expect(page2.locator(`[data-testid="cloud-level-${level}"]`)).not.toHaveClass(/on/)
+  }
+
+  await page2.locator('[data-testid="weather-close"]').click()
+
+  await app2.close()
+})
+
 test('アプリ再起動後にテーマ設定が復元される', async () => {
   // VITE_DEBUG_TIMER有効時はタイマー設定の復元がスキップされるため、
   // テーマ設定で永続化・復元を検証する
