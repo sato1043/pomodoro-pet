@@ -186,6 +186,9 @@ PlaywrightでElectronアプリの統合テストを実行。`VITE_DEBUG_TIMER=3/
 - `tests/e2e/fureai-mode.spec.ts` — ふれあいモードUI操作
 - `tests/e2e/theme.spec.ts` — テーマ切替・スナップショット復元
 - `tests/e2e/animation-state.spec.ts` — デバッグインジケーター経由のアニメーション状態・感情パラメータ検証
+- `tests/e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示
+- `tests/e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・空文字無視
+- `tests/e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計値・affinity永続化・fatigue変化・バックグラウンドタイマー
 
 vanilla-extractのハッシュ化クラス名を回避するため、テスト対象のインタラクティブ要素には`data-testid`属性を使用する。
 

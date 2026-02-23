@@ -109,7 +109,7 @@ export function PomodoroTimerPanel({ session, config, orchestrator }: PomodoroTi
   return (
     <>
       {/* ドット（overlay直下に配置） */}
-      <span className={styles.setDots}>
+      <span className={styles.setDots} data-testid="phase-dots">
         {plan.map((p, i) => {
           const c = phaseColor(p.type)
           const color = i < currentIdx ? vars.color.textSecondary

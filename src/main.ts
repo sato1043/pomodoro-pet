@@ -514,6 +514,7 @@ async function main(): Promise<void> {
       debugIndicator.dataset.presetName = behaviorSM.currentPreset
       debugIndicator.dataset.phaseProgress = String(session.isRunning ? session.phaseProgress : 0)
       debugIndicator.dataset.emotion = JSON.stringify(emotionService.state)
+      debugIndicator.dataset.interactionLocked = String(behaviorSM.isInteractionLocked())
       debugIndicator.dataset.recentClicks = String(interactionTracker.history.recentClicks)
       debugIndicator.dataset.totalFeedingsToday = String(interactionTracker.history.totalFeedingsToday)
     }

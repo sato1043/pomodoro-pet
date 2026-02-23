@@ -229,3 +229,6 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰
 - `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元
 - `e2e/animation-state.spec.ts` — デバッグインジケーター経由のアニメーション状態・感情パラメータ・プリセット切替・phaseProgress検証
+- `e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示
+- `e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・Sendボタン・空文字無視
+- `e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー

@@ -12,37 +12,42 @@ E2Eテスト（Playwright + Electron）で検証できる範囲には技術的�
 | WebGLレンダリング結果 | 雨・雪・雲エフェクト、ライティング、背景スクロールはGPUで描画されDOMに表れない |
 | フェイクタイマー | Three.Clock・rAF・Web Audio APIが実時間に依存しており、page.clockでの制御は不安定（詳細は character-animation-mapping.md 参照） |
 
-## カバー済み項目（61テスト）
+## カバー済み項目（78テスト）
 
 | ファイル | テスト数 | カバー範囲 |
 |---------|---------|-----------|
 | smoke.spec.ts | 3 | 起動・タイトル・Start Pomodoroボタン存在 |
 | free-mode.spec.ts | 10 | 設定パネル開閉・ボタン選択・スナップショット復元・BG設定・Set確定・About画面 |
+| free-display.spec.ts | 4 | 時刻AM/PM表示・タイムラインW/Bセグメント・設定サマリー・終了時刻表示 |
 | pomodoro-flow.spec.ts | 4 | Start→WORK表示・Pause/Resume・Stop・タイマー完走→Congrats→free復帰 |
+| pomodoro-detail.spec.ts | 7 | サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序(celebrate/joyful-rest含む)・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー |
 | settings-ipc.spec.ts | 11 | electronAPI存在・settings.json永続化（タイマー/BG/天気/雲量/テーマ）・再起動復元 |
 | weather-panel.spec.ts | 10 | パネル開閉・天気タイプ/時間帯切替・雲量・リセット・スナップショット・排他表示 |
 | button-visibility.spec.ts | 5 | 初期全表示・設定/統計/天気パネル時の排他制御・順次開閉復帰 |
 | stats-panel.spec.ts | 4 | パネル開閉・Statistics見出し・排他表示 |
 | fureai-mode.spec.ts | 4 | Entry→overlay表示・テキスト確認・ボタン排他・Exit→free復帰 |
+| prompt-input.spec.ts | 6 | プロンプト入力欄表示・walk→wander・座れ→sit・sleep→sleep・空文字無視・Sendボタン送信 |
 | theme.spec.ts | 2 | colorScheme即時反映・スナップショット復元 |
 | animation-state.spec.ts | 8 | デバッグインジケーター存在・初期状態・感情初期値・プリセット切替(march-cycle/rest-cycle/autonomous)・phaseProgress・satisfaction加算 |
 
 ## 未カバー項目
 
-### A. テスト可能だが未実装（DOM/データで検証可能）
+### A. テスト可能だが未実装 → 実装済み
 
-| # | 項目 | 検証方法 | 備考 |
-|---|------|---------|------|
-| 1 | プロンプト入力（ふれあいモード） | PromptInputにテキスト入力→Enter→デバッグインジケーターでstate変化を確認 | data-testid="prompt-input"が存在すれば実現可能 |
-| 2 | 統計パネルの詳細表示 | StatsDrawer内の日付・completedCycles・focusTime等のテキストを検証 | data-testidの追加が必要な可能性あり |
-| 3 | サイクル進捗ドット表示 | PomodoroTimerPanel内のドットSVG要素数・色を検証 | フェーズ遷移に伴うドット更新の確認 |
-| 4 | タイムラインサマリー表示 | OverlayFree内のTimelineScheduleテキストを検証 | 設定変更→Set→表示値の一致確認 |
-| 5 | 時刻表示（freeモード） | OverlayFree内のHH:MM表示テキストを検証 | 表示形式の確認のみ |
-| 6 | ポモドーロ中の全フェーズ遷移確認 | デバッグインジケーターでmarch-cycle→rest-cycle→march-cycle→celebrate→joyful-rest→autonomousの順序を検証 | 現在はmarch-cycle→rest-cycle→Stop→autonomousのみ |
-| 7 | work中のインタラクション拒否 | ポモドーロ開始→デバッグインジケーターでisInteractionLocked相当の確認 | デバッグインジケーターへの属性追加が必要 |
-| 8 | バックグラウンドタイマー継続 | page.evaluate(() => window.dispatchEvent(new Event('blur')))→待機→focus→タイマー値が進んでいることを確認 | Electronのblur/focusシミュレーションが可能か要検証 |
-| 9 | 感情パラメータの自然変化 | 長時間work後のfatigue増加をデバッグインジケーターで検証 | work=3秒では変化量が微小（≈0.0000003）のため実質検証不能。デバッグタイマーの秒数増加が必要 |
-| 10 | affinity永続化 | settings.jsonのemotion.affinityをファイル読み込みで検証 | 餌やり操作がE2Eで困難なためaffinity変化を起こせない |
+全10項目がE2Eテストとして実装済み。
+
+| # | 項目 | テストファイル | 備考 |
+|---|------|-------------|------|
+| 1 | プロンプト入力（ふれあいモード） | prompt-input.spec.ts | data-testid="prompt-input"/"prompt-send"を追加 |
+| 2 | 統計パネルの詳細表示 | pomodoro-detail.spec.ts | ポモドーロ完走後にToday/work表示を確認 |
+| 3 | サイクル進捗ドット表示 | pomodoro-detail.spec.ts | data-testid="phase-dots"を追加、4ドット確認 |
+| 4 | タイムラインサマリー表示 | free-display.spec.ts | W/Bセグメント・Sets=テキスト・終了時刻 |
+| 5 | 時刻表示（freeモード） | free-display.spec.ts | AM/PM形式の存在確認 |
+| 6 | 全フェーズ遷移確認 | pomodoro-detail.spec.ts | march-cycle→rest-cycle→march-cycle→celebrate→joyful-rest→autonomous |
+| 7 | work中のインタラクション拒否 | pomodoro-detail.spec.ts | data-interaction-locked属性を追加 |
+| 8 | バックグラウンドタイマー継続 | pomodoro-detail.spec.ts | blur/focusイベントでタイマー進行を確認 |
+| 9 | 感情パラメータの自然変化 | pomodoro-detail.spec.ts | ポモドーロ完走後（work合計6秒）のfatigue > 0 |
+| 10 | affinity永続化 | pomodoro-detail.spec.ts | PomodoroCompletedでaffinity変化→settings.jsonに保存 |
 
 ### B. テスト困難（Three.jsキャンバス内操作が必要）
 
@@ -92,12 +97,12 @@ E2Eテスト（Playwright + Electron）で検証できる範囲には技術的�
 
 | 分類 | 項目数 | 割合 |
 |------|--------|------|
-| カバー済み | 61テスト / 10ファイル | — |
-| テスト可能だが未実装 | 10項目 | うち実用的に追加可能なものは#1〜#6の6項目 |
+| カバー済み | 78テスト / 13ファイル | — |
+| テスト可能だが未実装 | 0項目（全10項目を実装済み） | — |
 | テスト困難（Three.js依存） | 7項目 | page.evaluateでイベント直接発火すれば一部回避可能 |
 | テスト不可能（DOM外） | 12項目 | ユニットテストでカバーする領域 |
 
-現在のE2Eテストは **UIレイアウト・パネル制御・設定永続化・基本タイマーフロー・プリセット切替・感情パラメータ** をカバーしている。未カバー項目の大半はThree.jsキャンバス内操作またはWeb Audio API依存であり、E2Eテストの技術的限界に起因する。これらはドメイン層・アプリケーション層のユニットテスト（カバレッジ100%）で補完されている。
+現在のE2Eテストは **UIレイアウト・パネル制御・設定永続化・基本タイマーフロー・プリセット切替・感情パラメータ・プロンプト入力・全フェーズ遷移・インタラクションロック・統計値・affinity永続化・バックグラウンドタイマー** をカバーしている。未カバー項目はThree.jsキャンバス内操作またはWeb Audio API依存であり、E2Eテストの技術的限界に起因する。これらはドメイン層・アプリケーション層のユニットテスト（カバレッジ100%）で補完されている。
 
 ## E2E未カバー項目のテストオペレーションと確認内容
 

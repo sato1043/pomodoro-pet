@@ -32,8 +32,9 @@ export function PromptInput(): JSX.Element {
         onKeyDown={handleKeyDown}
         placeholder="指示を入力... (例: walk, 座れ, dance)"
         className={styles.field}
+        data-testid="prompt-input"
       />
-      <button onClick={handleSubmit} className={styles.submit}>
+      <button onClick={handleSubmit} className={styles.submit} data-testid="prompt-send">
         Send
       </button>
     </div>
