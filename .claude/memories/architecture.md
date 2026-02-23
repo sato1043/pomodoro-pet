@@ -215,6 +215,25 @@ EventBus（UI/インフラ通知）:
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
 
+#### フェイクタイマー検討結果
+
+結論: **全25ファイル・518テストにおいてvi.useFakeTimers()は不要**。
+
+ドメイン層・アプリケーション層はフェイクタイマーが不要になるよう設計されている。
+
+| 分類 | ファイル数 | テスト数 |
+|------|----------|---------|
+| タイミングAPI不使用 | 15 | 209 |
+| tick(deltaMs)パターン | 7 | 191 |
+| Date使用だが固定値入力 | 3 | 36 |
+
+設計上の特性:
+- **相対時間パターン**: `tick(deltaMs)`で経過時間を引数として注入する。setTimeout/setIntervalに依存しない
+- **日付の引数注入**: `addWorkPhase('2025-01-15', ms)`のように日付文字列を外部から渡す。`new Date()`への直接依存がない
+- **タイムスタンプの分離**: `Date.now()`はイベントメタデータの記録のみに使用する。テストはタイムスタンプ値を検証しない
+
+フェイクタイマーが必要になるのはsetTimeout/setIntervalを直接使うコード（src/main.tsのバックグラウンドタイマー等）だが、インフラ層でありユニットテストのカバレッジ対象外。E2Eテストでカバー済み。
+
 #### E2Eテスト（Playwright）
 Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_TIMER=3/2/3/2`で短縮ビルドし、全ポモドーロサイクルを約1.5分で検証。vanilla-extractのハッシュ化クラス名を回避するため`data-testid`属性を使用。
 
