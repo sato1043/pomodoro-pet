@@ -15,7 +15,7 @@ export const settingsButton = style({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  zIndex: 1000,
+  zIndex: 1001,
   pointerEvents: 'auto',
   padding: 0,
   transition: 'transform 0.2s ease, background 0.2s ease',

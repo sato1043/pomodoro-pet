@@ -212,6 +212,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [e2e-coverage-gaps.md](.claude/memories/e2e-coverage-gaps.md) — E2Eテストカバレッジ分析（カバー済み/未カバー/テスト不可能の分類）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
+- [PRIVACY_POLICY.txt](licenses/PRIVACY_POLICY.txt) — プライバシーポリシー（英語本文+日本語参考訳）
 
 ## Key Conventions
 

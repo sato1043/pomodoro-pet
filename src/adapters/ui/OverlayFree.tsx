@@ -12,8 +12,10 @@ import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
 import { SetButton } from './SetButton'
+import { CloseButton } from './CloseButton'
 import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
+import { LegalDocContent } from './LegalDocContent'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
 import * as aboutStyles from './styles/about.css'
@@ -436,9 +438,12 @@ interface FreeSettingsEditorProps {
   readonly themePreference: ThemePreference
   readonly onThemeChange: (theme: ThemePreference) => void
   readonly onAboutClick: () => void
+  readonly onEulaClick: () => void
+  readonly onPrivacyClick: () => void
+  readonly onLicensesClick: () => void
 }
 
-function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick }: FreeSettingsEditorProps): JSX.Element {
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick }: FreeSettingsEditorProps): JSX.Element {
   return (
     <>
       <FreeTimerSettings
@@ -461,6 +466,9 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
       />
       <div className={aboutStyles.aboutLink}>
         <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
+        <button className={aboutStyles.aboutLinkButton} onClick={onEulaClick} data-testid="eula-link">EULA</button>
+        <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy Policy</button>
+        <button className={aboutStyles.aboutLinkButton} onClick={onLicensesClick} data-testid="licenses-link">Third-party</button>
       </div>
     </>
   )
@@ -479,13 +487,21 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
   const { themePreference, setThemePreference } = useTheme()
   const editor = useSettingsEditor()
   const [showAbout, setShowAbout] = useState(false)
+  const [showEula, setShowEula] = useState(false)
+  const [showPrivacy, setShowPrivacy] = useState(false)
+  const [showLicenses, setShowLicenses] = useState(false)
 
   useEffect(() => {
     onExpandedChange?.(editor.expanded)
   }, [editor.expanded, onExpandedChange])
 
   useEffect(() => {
-    if (!editor.expanded) setShowAbout(false)
+    if (!editor.expanded) {
+      setShowAbout(false)
+      setShowEula(false)
+      setShowPrivacy(false)
+      setShowLicenses(false)
+    }
   }, [editor.expanded])
 
   useEffect(() => {
@@ -503,6 +519,15 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
     if (showAbout) {
       return <AboutContent onBack={() => setShowAbout(false)} />
     }
+    if (showEula) {
+      return <LegalDocContent title="EULA" field="eulaText" onBack={() => setShowEula(false)} />
+    }
+    if (showPrivacy) {
+      return <LegalDocContent title="Privacy Policy" field="privacyPolicyText" onBack={() => setShowPrivacy(false)} />
+    }
+    if (showLicenses) {
+      return <LegalDocContent title="Third-party Licenses" field="licensesText" onBack={() => setShowLicenses(false)} />
+    }
     return (
       <FreeSettingsEditor
         editor={editor}
@@ -511,16 +536,29 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
         themePreference={themePreference}
         onThemeChange={setThemePreference}
         onAboutClick={() => setShowAbout(true)}
+        onEulaClick={() => setShowEula(true)}
+        onPrivacyClick={() => setShowPrivacy(true)}
+        onLicensesClick={() => setShowLicenses(true)}
       />
     )
   }
+
+  const showDocPanel = showAbout || showEula || showPrivacy || showLicenses
+  const docBackHandler = showAbout
+    ? () => setShowAbout(false)
+    : showEula
+      ? () => setShowEula(false)
+      : showPrivacy
+        ? () => setShowPrivacy(false)
+        : () => setShowLicenses(false)
 
   return createPortal(
     <div data-testid="overlay-free" className={className}>
       <OverlayTitle />
       <div className={styles.freeMode}>
         {renderContent()}
-        {editor.expanded && !showAbout && <SetButton onClick={editor.confirm} />}
+        {editor.expanded && !showDocPanel && <SetButton onClick={editor.confirm} />}
+        {editor.expanded && showDocPanel && <CloseButton onClick={docBackHandler} />}
       </div>
     </div>,
     document.body

@@ -32,7 +32,9 @@
     ],
     "extraResources": [
       "licenses/THIRD_PARTY_LICENSES.txt",
-      "licenses/EULA.txt"
+      "licenses/EULA.txt",
+      "licenses/PRIVACY_POLICY.txt",
+      "LICENSE"
     ],
     "win": {
       "icon": "build/icon.ico",

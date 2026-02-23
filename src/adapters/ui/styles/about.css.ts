@@ -2,8 +2,19 @@ import { style } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
 export const container = style({
+  display: 'flex',
+  flexDirection: 'column',
   textAlign: 'left',
   marginTop: 8,
+  height: 'calc(100vh - 220px)',
+})
+
+export const scrollContent = style({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
+  overflow: 'hidden',
 })
 
 export const heading = style({
@@ -16,6 +27,13 @@ export const heading = style({
 
 export const section = style({
   marginBottom: 16,
+})
+
+export const expandSection = style({
+  flex: 1,
+  display: 'flex',
+  flexDirection: 'column',
+  minHeight: 0,
 })
 
 export const sectionTitle = style({
@@ -49,17 +67,19 @@ export const licensePre = style({
   background: vars.color.surfaceLight,
   borderRadius: 6,
   padding: '8px 10px',
-  maxHeight: 300,
-  overflowY: 'auto',
   whiteSpace: 'pre-wrap',
   wordBreak: 'break-word',
   border: `1px solid ${vars.color.borderLight}`,
+  flex: 1,
+  overflowY: 'auto',
+  minHeight: 0,
 })
 
 export const closeRow = style({
   display: 'flex',
   justifyContent: 'center',
-  marginTop: 16,
+  paddingTop: 16,
+  flexShrink: 0,
 })
 
 export const closeButton = style({
@@ -85,6 +105,7 @@ export const aboutLink = style({
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
+  gap: 8,
   marginTop: 16,
 })
 

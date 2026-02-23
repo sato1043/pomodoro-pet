@@ -74,16 +74,38 @@ ipcMain.handle('notification:show', (_event, options: { title: string; body: str
 
 ipcMain.handle('about:load', async () => {
   const isDev = !app.isPackaged
-  const licensePath = isDev
-    ? join(__dirname, '../../licenses/THIRD_PARTY_LICENSES.txt')
-    : join(process.resourcesPath, 'licenses/THIRD_PARTY_LICENSES.txt')
-  let licensesText = ''
-  try {
-    licensesText = await readFile(licensePath, 'utf-8')
-  } catch {
-    // ファイルが見つからない場合は空文字
+  const licensesDir = isDev
+    ? join(__dirname, '../../licenses')
+    : join(process.resourcesPath, 'licenses')
+
+  async function readLicenseFile(filename: string): Promise<string> {
+    try {
+      return await readFile(join(licensesDir, filename), 'utf-8')
+    } catch {
+      return ''
+    }
   }
-  return { version: app.getVersion(), licensesText }
+
+  const licenseDir = isDev
+    ? join(__dirname, '../..')
+    : process.resourcesPath
+
+  async function readRootFile(filename: string): Promise<string> {
+    try {
+      return await readFile(join(licenseDir, filename), 'utf-8')
+    } catch {
+      return ''
+    }
+  }
+
+  const [licensesText, eulaText, privacyPolicyText, licenseText] = await Promise.all([
+    readLicenseFile('THIRD_PARTY_LICENSES.txt'),
+    readLicenseFile('EULA.txt'),
+    readLicenseFile('PRIVACY_POLICY.txt'),
+    readRootFile('LICENSE'),
+  ])
+
+  return { version: app.getVersion(), licensesText, eulaText, privacyPolicyText, licenseText }
 })
 
 function createWindow(): void {

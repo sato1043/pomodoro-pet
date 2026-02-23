@@ -1,0 +1,264 @@
+PRIVACY POLICY
+
+Pomodoro Pet
+Last Updated: 2026-02-22
+
+
+1. INTRODUCTION
+
+This Privacy Policy describes how Pomodoro Pet ("the Software"), developed
+by sato1043@updater.cc ("the Developer"), handles your information. The
+Developer is committed to protecting your privacy.
+
+
+2. INFORMATION WE DO NOT COLLECT
+
+The Software does NOT collect any of the following:
+
+- Personal information (name, email address, phone number, etc.)
+- Account credentials or login information
+- Location data
+- Device identifiers or hardware information
+- Usage analytics or telemetry
+- Advertising identifiers
+- Cookies or tracking data
+
+
+3. LOCALLY STORED DATA
+
+The Software stores the following data exclusively on your local device.
+This data never leaves your device and is not transmitted to the Developer
+or any third party.
+
+(a) Settings (stored in %APPDATA%/pomodoro-pet/settings.json on Windows):
+    - Timer configuration (work/break/long-break duration, number of sets)
+    - Sound configuration (preset, volume, mute state)
+    - Background behavior (audio/notification preferences)
+    - Weather display settings (weather type, time of day, cloud density)
+    - Character emotion parameter (affinity value)
+
+(b) Statistics (stored in %APPDATA%/pomodoro-pet/statistics.json on Windows):
+    - Daily aggregated data: completed and aborted pomodoro cycles,
+      number of work/break phases completed, total work/break time
+    - Keyed by date (YYYY-MM-DD format)
+
+All data is stored as plain JSON files. No encryption is applied. No
+personal information is included in these files.
+
+
+4. SYSTEM NOTIFICATIONS
+
+The Software uses the operating system's notification API to display local
+notifications (e.g., when a pomodoro phase completes while the application
+is in the background). These notifications are processed entirely on your
+device and do not involve any network communication.
+
+
+5. NO NETWORK COMMUNICATION
+
+The Software does not make any network requests during normal operation.
+Specifically, the Software does not:
+
+- Send or receive data over the internet
+- Connect to any remote servers or APIs
+- Perform update checks
+- Transmit crash reports
+- Display advertisements
+- Synchronize data with cloud services
+
+
+6. THIRD-PARTY SERVICES
+
+The Software is distributed through itch.io. Your purchase, account
+management, and payment processing on itch.io are governed by itch.io's
+own privacy policy (https://itch.io/docs/legal/privacy-policy). The
+Software itself does not communicate with itch.io or any other third-party
+service after installation.
+
+
+7. FUTURE CHANGES
+
+The Developer may introduce the following features in future versions of
+the Software:
+
+- Analytics or crash reporting to improve software quality
+- Cloud data synchronization to enable cross-device usage
+- Other features that may involve network communication
+
+If any such features are introduced, this Privacy Policy will be updated
+before the release of the version containing those features. Users will
+be notified of the changes through the application's update notes. Where
+applicable, the Developer will obtain user consent before collecting or
+transmitting any data.
+
+
+8. DATA DELETION
+
+All data stored by the Software resides on your local device. To delete
+all data:
+
+- Uninstall the Software, or
+- Manually delete the %APPDATA%/pomodoro-pet/ directory
+
+No data is retained by the Developer or any third party after deletion.
+
+
+9. CHILDREN'S PRIVACY
+
+The Software does not knowingly collect any personal information from
+anyone, including children under the age of 13 (or the applicable age
+in your jurisdiction). Since the Software collects no personal information,
+no special provisions for children's data are necessary.
+
+
+10. CONTACT
+
+If you have any questions about this Privacy Policy, please contact:
+
+    sato1043@updater.cc
+
+
+11. GOVERNING LAW
+
+This Privacy Policy shall be governed by and construed in accordance with
+the laws of Japan.
+
+
+Copyright 2026 sato1043@updater.cc. All rights reserved.
+
+
+========================================================================
+
+PRIVACY POLICY (Japanese Translation / Reference Only)
+
+This Japanese translation is provided for reference purposes only. In the
+event of any conflict between the English version and this Japanese
+translation, the English version shall prevail.
+
+========================================================================
+
+プライバシーポリシー（日本語参考訳）
+
+本日本語訳は参考目的でのみ提供される。英語版と日本語訳の間に矛盾がある場合、
+英語版が優先される。
+
+Pomodoro Pet
+最終更新日: 2026-02-22
+
+
+1. はじめに
+
+本プライバシーポリシーは、sato1043@updater.cc（以下「開発者」）が開発した
+Pomodoro Pet（以下「本ソフトウェア」）における情報の取り扱いについて記述する。
+開発者はユーザーのプライバシー保護に努める。
+
+
+2. 収集しない情報
+
+本ソフトウェアは以下の情報を一切収集しない。
+
+- 個人情報（氏名、メールアドレス、電話番号等）
+- アカウント認証情報やログイン情報
+- 位置情報
+- デバイス識別子やハードウェア情報
+- 利用状況の分析データやテレメトリ
+- 広告識別子
+- Cookieやトラッキングデータ
+
+
+3. ローカル保存データ
+
+本ソフトウェアは以下のデータをユーザーのローカルデバイスにのみ保存する。
+これらのデータはデバイスから外部に送信されることはなく、開発者や第三者に
+転送されることもない。
+
+(a) 設定（Windowsの場合 %APPDATA%/pomodoro-pet/settings.json に保存）:
+    - タイマー設定（作業/休憩/長時間休憩の時間、セット数）
+    - サウンド設定（プリセット、音量、ミュート状態）
+    - バックグラウンド動作設定（音声/通知の有無）
+    - 天気表示設定（天気タイプ、時間帯、雲量）
+    - キャラクター感情パラメータ（親密度）
+
+(b) 統計（Windowsの場合 %APPDATA%/pomodoro-pet/statistics.json に保存）:
+    - 日次集計データ: 完了/中断したポモドーロサイクル数、
+      作業/休憩フェーズの完了数、累計作業/休憩時間
+    - 日付キー（YYYY-MM-DD形式）で管理
+
+すべてのデータはプレーンなJSONファイルとして保存される。暗号化は適用されない。
+これらのファイルに個人情報は含まれない。
+
+
+4. システム通知
+
+本ソフトウェアはOSの通知APIを使用してローカル通知を表示する（例: アプリが
+バックグラウンドにあるときにポモドーロフェーズが完了した場合）。これらの通知は
+デバイス上で完結し、ネットワーク通信を伴わない。
+
+
+5. ネットワーク通信の不使用
+
+本ソフトウェアは通常動作時にネットワークリクエストを一切行わない。
+具体的に、本ソフトウェアは以下を行わない。
+
+- インターネット経由でのデータ送受信
+- リモートサーバーやAPIへの接続
+- アップデートの確認
+- クラッシュレポートの送信
+- 広告の表示
+- クラウドサービスとのデータ同期
+
+
+6. 第三者サービス
+
+本ソフトウェアはitch.ioを通じて配布される。itch.ioでの購入、アカウント管理、
+決済処理はitch.io自身のプライバシーポリシー
+（https://itch.io/docs/legal/privacy-policy）に準拠する。本ソフトウェア自体は
+インストール後にitch.ioやその他の第三者サービスと通信しない。
+
+
+7. 将来の変更
+
+開発者は本ソフトウェアの将来のバージョンにおいて、以下の機能を導入する
+可能性がある。
+
+- ソフトウェア品質向上のためのアナリティクスまたはクラッシュレポート
+- デバイス間利用を可能にするクラウドデータ同期
+- その他ネットワーク通信を伴う可能性のある機能
+
+これらの機能が導入される場合、当該機能を含むバージョンのリリース前に
+本プライバシーポリシーを更新する。変更はアプリケーションのアップデートノートを
+通じてユーザーに通知される。該当する場合、開発者はデータの収集や送信の前に
+ユーザーの同意を取得する。
+
+
+8. データの削除
+
+本ソフトウェアが保存するすべてのデータはローカルデバイスに存在する。
+すべてのデータを削除するには以下のいずれかを行う。
+
+- 本ソフトウェアをアンインストールする
+- %APPDATA%/pomodoro-pet/ ディレクトリを手動で削除する
+
+削除後、開発者や第三者にデータが残ることはない。
+
+
+9. 子どものプライバシー
+
+本ソフトウェアは13歳未満（または管轄地域で適用される年齢未満）の子どもを含め、
+いかなる者からも個人情報を意図的に収集しない。本ソフトウェアは個人情報を収集
+しないため、子どものデータに関する特別な措置は不要である。
+
+
+10. お問い合わせ
+
+本プライバシーポリシーに関する質問は以下に連絡すること。
+
+    sato1043@updater.cc
+
+
+11. 準拠法
+
+本プライバシーポリシーは日本法に準拠し、日本法に従って解釈される。
+
+
+Copyright 2026 sato1043@updater.cc. All rights reserved.
