@@ -7,6 +7,8 @@ import type { CyclePhase } from '../../domain/timer/value-objects/CyclePlan'
 import type { ThemePreference } from '../../application/settings/SettingsEvents'
 import { useAppDeps } from './AppContext'
 import { useTheme } from './ThemeContext'
+import { useLicenseMode } from './LicenseContext'
+import type { FeatureName } from '../../application/license/LicenseState'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
@@ -444,28 +446,31 @@ interface FreeSettingsEditorProps {
   readonly onLicensesClick: () => void
   readonly onRegisterClick: () => void
   readonly licenseKeyHint?: string
+  readonly canUse: (feature: FeatureName) => boolean
 }
 
-function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint }: FreeSettingsEditorProps): JSX.Element {
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse }: FreeSettingsEditorProps): JSX.Element {
   return (
     <>
-      <FreeTimerSettings
-        settings={editor.settings}
-        onUpdate={editor.updateSetting}
-      />
+      {canUse('timerSettings') && (
+        <FreeTimerSettings
+          settings={editor.settings}
+          onUpdate={editor.updateSetting}
+        />
+      )}
       <VolumeControl
         audio={audio}
         sfx={sfx}
-        showPresets={true}
+        showPresets={canUse('soundSettings')}
         onSoundChange={editor.handleSoundChange}
         forceUpdateKey={editor.volumeKey}
       />
       <ThemeToggles value={themePreference} onChange={onThemeChange} />
       <BackgroundToggles
         audio={editor.backgroundAudio}
-        notify={editor.backgroundNotify}
+        notify={canUse('backgroundNotify') ? editor.backgroundNotify : false}
         onAudioChange={editor.setBackgroundAudio}
-        onNotifyChange={editor.setBackgroundNotify}
+        onNotifyChange={canUse('backgroundNotify') ? editor.setBackgroundNotify : () => {}}
       />
       <div className={aboutStyles.aboutLink}>
         <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
@@ -493,6 +498,7 @@ interface OverlayFreeProps {
 export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: OverlayFreeProps): JSX.Element {
   const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
+  const { canUse } = useLicenseMode()
   const editor = useSettingsEditor()
   const [showAbout, setShowAbout] = useState(false)
   const [showEula, setShowEula] = useState(false)
@@ -585,6 +591,7 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
         onLicensesClick={() => setShowLicenses(true)}
         onRegisterClick={() => setShowRegistration(true)}
         licenseKeyHint={licenseKeyHint}
+        canUse={canUse}
       />
     )
   }

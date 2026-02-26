@@ -38,6 +38,8 @@ import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
 import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConfig'
 import { resolveEnvironmentTheme } from './domain/environment/value-objects/EnvironmentTheme'
+import { isFeatureEnabled } from './application/license/LicenseState'
+import type { LicenseMode } from './application/license/LicenseState'
 import { createRainEffect } from './infrastructure/three/RainEffect'
 import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
@@ -239,6 +241,25 @@ async function main(): Promise<void> {
     renderer, camera, cabbageHandles, charHandle, character, behaviorSM, bus
   )
 
+  // ライセンスモード（レンダラー側の制限判定用）
+  // VITE_DEBUG_LICENSE が有効値なら初期値を固定（メインプロセスからのpushでも上書きされる）
+  const debugLicense = (import.meta.env.VITE_DEBUG_LICENSE ?? '') as string
+  const validModes: LicenseMode[] = ['registered', 'trial', 'expired', 'restricted']
+  const initialLicenseMode: LicenseMode = validModes.includes(debugLicense as LicenseMode)
+    ? debugLicense as LicenseMode
+    : 'trial'
+  let currentLicenseMode: LicenseMode = initialLicenseMode
+  if (window.electronAPI?.onLicenseChanged) {
+    window.electronAPI.onLicenseChanged((state) => {
+      currentLicenseMode = (state as { mode: LicenseMode }).mode
+    })
+    if (window.electronAPI.checkLicenseStatus) {
+      window.electronAPI.checkLicenseStatus().then((s) => {
+        currentLicenseMode = (s as { mode: LicenseMode }).mode
+      })
+    }
+  }
+
   // EmotionService（感情パラメータ管理）
   const emotionService: EmotionService = createEmotionService(settingsService.emotionConfig.affinity)
 
@@ -246,15 +267,22 @@ async function main(): Promise<void> {
   const interactionTracker: InteractionTracker = createInteractionTracker()
 
   // 感情イベント購読（ポモドーロ完了/中断、餌やり成功）
+  // emotionAccumulation が無効なら感情パラメータの変化と永続化をスキップ
   bus.subscribe<PomodoroEvent>('PomodoroCompleted', () => {
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_completed' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
   })
   bus.subscribe<PomodoroEvent>('PomodoroAborted', () => {
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_aborted' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
   })
   bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+      interactionTracker.recordFeeding()
+      return
+    }
     emotionService.applyEvent({ type: 'fed' })
     interactionTracker.recordFeeding()
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
@@ -388,7 +416,7 @@ async function main(): Promise<void> {
   bridgeTimerToNotification(
     bus,
     notificationPort,
-    () => settingsService.backgroundConfig.backgroundNotify,
+    () => isFeatureEnabled(currentLicenseMode, 'backgroundNotify') && settingsService.backgroundConfig.backgroundNotify,
     () => windowFocused
   )
 
@@ -488,9 +516,11 @@ async function main(): Promise<void> {
       orchestrator.tick(deltaMs)
     }
 
-    // 感情パラメータの自然変化
-    const isWorkPhase = orchestrator.isRunning && session.currentPhase.type === 'work'
-    emotionService.tick(deltaMs, isWorkPhase)
+    // 感情パラメータの自然変化（emotionAccumulation無効時はスキップ）
+    if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+      const isWorkPhase = orchestrator.isRunning && session.currentPhase.type === 'work'
+      emotionService.tick(deltaMs, isWorkPhase)
+    }
 
     // インタラクション追跡の時間更新
     interactionTracker.tick(deltaMs)

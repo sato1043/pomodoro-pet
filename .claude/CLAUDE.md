@@ -147,6 +147,11 @@ VITE_DEBUG_TIMER=10/5/15    # work=10秒、break=5秒、long-break=15秒、Sets=
 VITE_DEBUG_TIMER=10/5/15/3  # work=10秒、break=5秒、long-break=15秒、Sets=3
 # 注意: break/long-breakが30秒未満の場合、break-getsetトリガー（残り30秒）が開始直後に発火する
 
+# ライセンスモード固定（デバッグ用）
+# 有効値: registered / trial / expired / restricted
+# 設定するとハートビートをスキップし、指定モードでUI制限を確認できる
+VITE_DEBUG_LICENSE=expired
+
 # DevTools自動オープン
 VITE_DEV_TOOLS=1
 
@@ -162,6 +167,8 @@ VITE_STORE_URL=https://www.updater.cc
 ```
 
 `VITE_HEARTBEAT_URL`/`VITE_STORE_URL`は`electron.vite.config.ts`の`loadEnv()`で読み込まれ、メインプロセスの`define`で`__HEARTBEAT_URL__`/`__STORE_URL__`としてビルド時に埋め込まれる。ライセンス状態の初期値は`trial`。`__HEARTBEAT_URL__`が設定されている場合のみ起動10秒後にハートビートを実行し、結果に基づき状態遷移する。未設定の場合は`trial`を維持する。この制御はdev/prodに関わらず`__HEARTBEAT_URL__`の有無だけで決まる。
+
+`VITE_DEBUG_LICENSE`は`electron.vite.config.ts`で`__DEBUG_LICENSE__`としてメインプロセスに埋め込まれ、レンダラーでは`import.meta.env.VITE_DEBUG_LICENSE`として参照される。設定するとハートビートをスキップし、指定モードの`LicenseState`をレンダラーにpushする。`VITE_HEARTBEAT_URL`との併用時は`VITE_DEBUG_LICENSE`が優先される。
 
 Viteは`NODE_ENV`に応じてenvファイルを選択する:
 
@@ -225,9 +232,11 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [character-animation-mapping.md](.claude/memories/character-animation-mapping.md) — キャラクター状態とFBXアニメーションの対応表
 - [e2e-coverage-gaps.md](.claude/memories/e2e-coverage-gaps.md) — E2Eテストカバレッジ分析（カバー済み/未カバー/テスト不可能の分類）
 - [gcp-update-server.md](.claude/memories/gcp-update-server.md) — GCPバックエンド仕様書（API仕様、Firestoreスキーマ、デプロイ手順、キー登録ルール、管理スクリプト）
+- [feature-license-map.md](.claude/memories/feature-license-map.md) — 全機能一覧とライセンス制限マップ（FeatureNameマッピング・制限不要機能の根拠）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 - [PRIVACY_POLICY.txt](licenses/PRIVACY_POLICY.txt) — プライバシーポリシー（英語本文+日本語参考訳）
+- [CHANGELOG.md](CHANGELOG.md) — 変更履歴（Keep a Changelog形式）
 
 ## Key Conventions
 
@@ -235,6 +244,10 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - ドメイン層は純粋関数/オブジェクトで構成。Three.js やDOM への依存を持たない
 - `electron/` ディレクトリ名は使用禁止（`electron` npmパッケージ名と衝突する）。代わりに `desktop/` を使用
 - rendererの root は `src/`（`electron.vite.config.ts` の `renderer.root: 'src'`）
+- **バージョン管理と変更記録**: すべての変更で[CHANGELOG.md](CHANGELOG.md)への追記を義務付ける
+  - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新
+  - **バグ修正時**: package.json patch bump + feature-license-map.md冒頭バージョン更新+変更履歴1行追加 + CHANGELOG.md追記
+  - feature-license-map.mdのバージョン = package.jsonのバージョン（常に同期）
 
 ## Known Issues & Tips
 

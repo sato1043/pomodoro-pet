@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback } from 'react'
+import { useLicenseMode } from './LicenseContext'
 import { OverlayFree } from './OverlayFree'
 import { FureaiEntryButton } from './FureaiEntryButton'
 import { StartPomodoroButton } from './StartPomodoroButton'
@@ -12,6 +13,7 @@ import { WeatherCloseButton } from './WeatherCloseButton'
 import { WeatherPanel } from './WeatherPanel'
 
 export function SceneFree(): JSX.Element {
+  const { canUse } = useLicenseMode()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [showWeather, setShowWeather] = useState(false)
@@ -36,11 +38,11 @@ export function SceneFree(): JSX.Element {
       {showWeather && <WeatherPanel onClose={() => setShowWeather(false)} />}
       {showWeather && <WeatherCloseButton onClick={() => setShowWeather(false)} />}
       {!hideButtons && <StartPomodoroButton />}
-      {!hideButtons && <StatsButton onClick={() => setShowStats(true)} />}
+      {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
       {!hideButtons && <SettingsButton onClick={() => toggleSettingsRef.current()} />}
       {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
-      {!hideButtons && <FureaiEntryButton />}
-      {!hideButtons && <WeatherButton onClick={() => setShowWeather(true)} />}
+      {!hideButtons && canUse('fureai') && <FureaiEntryButton />}
+      {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
     </>
   )
 }

@@ -80,33 +80,29 @@ export function resolveLicenseMode(ctx: LicenseContext): LicenseMode {
   return 'restricted'
 }
 
+// --- 機能有効化マップ（デフォルト無効） ---
+
+const ALL_FEATURES: readonly FeatureName[] = [
+  'pomodoroTimer', 'timerSettings', 'character', 'stats', 'fureai',
+  'weatherSettings', 'soundSettings', 'backgroundNotify',
+  'emotionAccumulation', 'autoUpdate',
+] as const
+
+const ENABLED_FEATURES: Readonly<Record<LicenseMode, ReadonlySet<FeatureName>>> = {
+  registered: new Set<FeatureName>(ALL_FEATURES),
+  trial:      new Set<FeatureName>(ALL_FEATURES),
+  expired:    new Set<FeatureName>(['pomodoroTimer', 'character']),
+  restricted: new Set<FeatureName>(['pomodoroTimer', 'character']),
+}
+
 /**
  * 機能利用可否を判定する純粋関数
  *
- * 機能制限表:
- * | 機能               | registered | trial | expired | restricted |
- * |--------------------|-----------|-------|---------|------------|
- * | pomodoroTimer      | o         | o     | o       | o          |
- * | timerSettings      | o         | o     | x       | x          |
- * | character          | o         | o     | o       | o          |
- * | stats              | o         | o     | x       | x          |
- * | fureai             | o         | o     | x       | x          |
- * | weatherSettings    | o         | o     | x       | x          |
- * | soundSettings      | o         | o     | x       | x          |
- * | backgroundNotify   | o         | o     | x       | x          |
- * | emotionAccumulation| o         | o     | x       | x          |
- * | autoUpdate         | o         | o     | x       | x          |
+ * デフォルト無効方式: ENABLED_FEATURESに明示的に列挙された機能のみ有効。
+ * 新機能追加時にマップへの追加を忘れると全モードで無効になる（安全側に倒れる）。
  */
 export function isFeatureEnabled(mode: LicenseMode, feature: FeatureName): boolean {
-  // registered と trial は全機能利用可能
-  if (mode === 'registered' || mode === 'trial') return true
-
-  // expired と restricted は基本機能のみ
-  const alwaysEnabled: ReadonlySet<FeatureName> = new Set([
-    'pomodoroTimer',
-    'character',
-  ])
-  return alwaysEnabled.has(feature)
+  return ENABLED_FEATURES[mode]?.has(feature) ?? false
 }
 
 /**

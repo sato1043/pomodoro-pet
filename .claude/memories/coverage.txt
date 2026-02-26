@@ -3,42 +3,45 @@
  RUN  v2.1.9 /home/sato1043/projects/test1
       Coverage enabled with v8
 
- ✓ tests/domain/character/EmotionState.test.ts (18 tests) 17ms
- ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 15ms
- ✓ tests/application/statistics/StatisticsService.test.ts (12 tests) 24ms
- ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 18ms
- ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 68ms
- ✓ tests/application/fureai/FureaiCoordinator.test.ts (13 tests) 28ms
- ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 56ms
- ✓ tests/domain/character/EnrichedAnimationResolver.test.ts (63 tests) 57ms
- ✓ tests/domain/timer/PomodoroStateMachine.test.ts (60 tests) 76ms
- ✓ tests/application/settings/AppSettingsService.test.ts (24 tests) 38ms
- ✓ tests/domain/character/BehaviorStateMachine.test.ts (89 tests) 86ms
- ✓ tests/application/app-scene/AppSceneManager.test.ts (17 tests) 25ms
- ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 18ms
- ✓ tests/application/statistics/StatisticsBridge.test.ts (7 tests) 19ms
- ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 16ms
- ✓ tests/domain/character/InteractionTracker.test.ts (12 tests) 17ms
- ✓ tests/domain/environment/EnvironmentTheme.test.ts (19 tests) 39ms
- ✓ tests/domain/environment/WeatherConfig.test.ts (15 tests) 19ms
- ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 20ms
- ✓ tests/domain/character/AnimationResolver.test.ts (13 tests) 16ms
- ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 19ms
- ✓ tests/domain/shared/EventBus.test.ts (4 tests) 16ms
- ✓ tests/domain/statistics/StatisticsTypes.test.ts (6 tests) 10ms
- ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 7ms
- ✓ tests/setup.test.ts (1 test) 3ms
+ ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 24ms
+ ✓ tests/application/license/LicenseState.test.ts (58 tests) 71ms
+ ✓ tests/application/statistics/StatisticsService.test.ts (12 tests) 45ms
+ ✓ tests/domain/character/EmotionState.test.ts (18 tests) 56ms
+ ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 149ms
+ ✓ tests/application/settings/AppSettingsService.test.ts (26 tests) 122ms
+ ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 167ms
+ ✓ tests/domain/timer/PomodoroStateMachine.test.ts (60 tests) 195ms
+ ✓ tests/application/fureai/FureaiCoordinator.test.ts (13 tests) 76ms
+ ✓ tests/domain/character/EnrichedAnimationResolver.test.ts (63 tests) 189ms
+ ✓ tests/domain/character/BehaviorStateMachine.test.ts (89 tests) 240ms
+ ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 65ms
+ ✓ tests/application/app-scene/AppSceneManager.test.ts (17 tests) 150ms
+ ✓ tests/application/statistics/StatisticsBridge.test.ts (7 tests) 58ms
+ ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 53ms
+ ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 33ms
+ ✓ tests/adapters/ui/LicenseContext.test.ts (3 tests) 48ms
+ ✓ tests/domain/character/InteractionTracker.test.ts (12 tests) 37ms
+ ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 24ms
+ ✓ tests/adapters/ui/reflowParagraphs.test.ts (10 tests) 24ms
+ ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 47ms
+ ✓ tests/domain/environment/EnvironmentTheme.test.ts (19 tests) 100ms
+ ✓ tests/domain/environment/WeatherConfig.test.ts (15 tests) 42ms
+ ✓ tests/domain/shared/EventBus.test.ts (4 tests) 47ms
+ ✓ tests/domain/character/AnimationResolver.test.ts (13 tests) 30ms
+ ✓ tests/domain/statistics/StatisticsTypes.test.ts (6 tests) 18ms
+ ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 30ms
+ ✓ tests/setup.test.ts (1 test) 9ms
 
- Test Files  25 passed (25)
-      Tests  518 passed (518)
-   Start at  21:57:31
-   Duration  2.55s (transform 1.71s, setup 0ms, collect 3.44s, tests 728ms, environment 14ms, prepare 5.43s)
+ Test Files  28 passed (28)
+      Tests  591 passed (591)
+   Start at  20:08:28
+   Duration  10.32s (transform 3.85s, setup 0ms, collect 7.47s, tests 2.15s, environment 48ms, prepare 15.41s)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------
 File               | % Stmts | % Branch | % Funcs | % Lines | Uncovered Line #s 
 -------------------|---------|----------|---------|---------|-------------------
-All files          |   87.95 |     95.7 |   92.19 |   87.95 |                   
+All files          |   87.98 |    95.98 |   92.34 |   87.98 |                   
  ...tion/app-scene |   38.15 |      100 |     100 |   38.15 |                   
   AppScene.ts      |       0 |        0 |       0 |       0 |                   
   ...eneManager.ts |     100 |      100 |     100 |     100 |                   
@@ -51,10 +54,12 @@ All files          |   87.95 |     95.7 |   92.19 |   87.95 |
   ScrollUseCase.ts |     100 |      100 |     100 |     100 |                   
  ...ication/fureai |     100 |      100 |     100 |     100 |                   
   ...oordinator.ts |     100 |      100 |     100 |     100 |                   
+ ...cation/license |     100 |      100 |     100 |     100 |                   
+  LicenseState.ts  |     100 |      100 |     100 |     100 |                   
  ...n/notification |     100 |    78.57 |     100 |     100 |                   
   ...tionBridge.ts |     100 |    78.57 |     100 |     100 | 25,38-39          
- ...ation/settings |    49.5 |    88.23 |   58.33 |    49.5 |                   
-  ...ngsService.ts |    49.5 |     87.5 |   56.52 |    49.5 | ...45-247,261-263 
+ ...ation/settings |   49.27 |    88.88 |      60 |   49.27 |                   
+  ...ngsService.ts |   49.27 |    88.23 |   58.33 |   49.27 | ...61-263,277-279 
   ...ingsEvents.ts |       0 |        0 |       0 |       0 |                   
  ...ion/statistics |     100 |    86.36 |     100 |     100 |                   
   ...ticsBridge.ts |     100 |    72.72 |     100 |     100 | 14,33,38          

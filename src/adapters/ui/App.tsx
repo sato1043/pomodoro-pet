@@ -1,5 +1,6 @@
 import { AppProvider, type AppDeps } from './AppContext'
 import { ThemeProvider } from './ThemeContext'
+import { LicenseProvider } from './LicenseContext'
 import { SceneRouter } from './SceneRouter'
 
 interface AppProps {
@@ -10,7 +11,9 @@ export function App({ deps }: AppProps): JSX.Element {
   return (
     <AppProvider value={deps}>
       <ThemeProvider>
-        <SceneRouter />
+        <LicenseProvider>
+          <SceneRouter />
+        </LicenseProvider>
       </ThemeProvider>
     </AppProvider>
   )

@@ -380,6 +380,48 @@ AppSceneとPhaseTypeを組み合わせた5つの表示シーンで画面状態�
 
 ### 15. 環境映像 — 未実装（nice-to-have）
 
+### 16. ライセンス機能制限 — 実装済
+
+#### 16.1 ライセンスモード
+- 4モード: registered / trial / expired / restricted
+- registered/trialは全10機能が有効
+- expired/restrictedはpomodoroTimer + characterのみ有効（残り8機能は無効）
+
+#### 16.2 機能制限マップ（ENABLED_FEATURES）
+デフォルト無効方式。`ENABLED_FEATURES`マップに明示的に列挙された機能のみ有効（安全側に倒れる）。
+
+| FeatureName | registered/trial | expired/restricted |
+|---|---|---|
+| pomodoroTimer | 有効 | 有効 |
+| timerSettings | 有効 | 無効 |
+| character | 有効 | 有効 |
+| stats | 有効 | 無効 |
+| fureai | 有効 | 無効 |
+| weatherSettings | 有効 | 無効 |
+| soundSettings | 有効 | 無効 |
+| backgroundNotify | 有効 | 無効 |
+| emotionAccumulation | 有効 | 無効 |
+| autoUpdate | 有効 | 無効 |
+
+#### 16.3 UI制限（LicenseContext）
+- `LicenseProvider`（React Context）+ `useLicenseMode()`フックで全UIからcanUse()判定
+- null（初期/非Electron）はtrial扱い → 全機能有効
+- SceneFree: StatsButton/FureaiEntryButton/WeatherButtonをcanUseで表示制御
+- OverlayFree: FreeTimerSettings非表示、サウンドプリセット非表示、通知トグルdisabled
+
+#### 16.4 レンダラー側制限（main.ts）
+- `currentLicenseMode`変数を`onLicenseChanged`で更新
+- EmotionService.tick()/applyEvent()をisFeatureEnabled()でガード
+- NotificationBridge isEnabledコールバックにisFeatureEnabled()判定追加
+
+#### 16.5 メインプロセス制限（desktop/main/index.ts）
+- `update:check`/`update:download` IPCハンドラでexpired/restricted時に早期リターン
+- 起動時の自動チェックは既にregistered/trialに制限済み
+
+#### 16.6 デバッグ
+- `VITE_DEBUG_LICENSE`環境変数でモード固定（ハートビートスキップ）
+- 詳細: [feature-license-map.md](feature-license-map.md)
+
 ## 非機能要件
 - プラットフォーム: Windows
 - デスクトップアプリ: Electron v33

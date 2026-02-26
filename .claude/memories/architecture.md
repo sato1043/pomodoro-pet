@@ -86,8 +86,8 @@ EventBus（UI/インフラ通知）:
 ## ファイルマップ
 
 ### desktop/ — Electronプロセス
-- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`statistics:load`/`statistics:save` IPCハンドラ、`about:load` IPCハンドラ）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
-- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout公開）
+- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`statistics:load`/`statistics:save` IPCハンドラ、`about:load` IPCハンドラ、`license:status`/`license:register`/`license:check` IPCハンドラ、`update:check`/`update:download`/`update:install` IPCハンドラ）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）。`__DEBUG_LICENSE__`でライセンスモード固定（ハートビートスキップ）。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
+- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged公開）
 
 ### src/domain/ — ドメインモデル
 - `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応、phaseProgressゲッター）
@@ -118,7 +118,7 @@ EventBus（UI/インフラ通知）:
 - `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替+餌やり制御を協調。enterFureai()でfureai-idleプリセット+FeedingAdapter活性化、exitFureai()でautonomousプリセット+FeedingAdapter非活性化。feedCharacter()でfeeding状態遷移。PomodoroOrchestratorとは独立
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
-- `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）
+- `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）。`ENABLED_FEATURES`マップ（デフォルト無効方式）でモード×機能の有効化を一元管理。registered/trialは全機能有効、expired/restrictedはpomodoroTimer+characterのみ
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
 - `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
@@ -135,15 +135,16 @@ EventBus（UI/インフラ通知）:
 - `three/ThreeCharacterAdapter.ts` — FBX/プレースホルダー統合キャラクター表示。`FBXCharacterConfig`でモデルパス・スケール・テクスチャ・アニメーションを一括設定
 - `three/ThreeInteractionAdapter.ts` — Raycasterベースのホバー/クリック/摘まみ上げ（Y軸持ち上げ）/撫でる。`InteractionConfig`で状態別ホバーカーソルをカスタマイズ可能
 - `three/FeedingInteractionAdapter.ts` — 餌オブジェクト（キャベツ/リンゴ）のD&D餌やり操作。複数CabbageHandle[]対応。Z平面投影+NDCベースZ制御（べき乗カーブ）。ふれあいモード時カメラ後退。`FeedingSuccess`イベント発行。`isActive`フラグでふれあいモード中のみ動作
-- `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、SceneRouterを配置
+- `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+StatsDrawer+BackButtonを束ねる。showStats/settingsExpandedで表示切替を管理
+- `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い=全機能有効）
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToastに渡す
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+StatsDrawer+WeatherPanel+BackButtonを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/FureaiEntryButton/WeatherButtonの表示を制御
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
 - `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
 - `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置
@@ -185,8 +186,8 @@ EventBus（UI/インフラ通知）:
 **ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化
-- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout）
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード
+- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
 ### tests/
@@ -219,6 +220,7 @@ EventBus（UI/インフラ通知）:
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
 - `application/license/LicenseState.test.ts` — ライセンス判定ロジック（58テスト）
+- `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
 
 #### フェイクタイマー検討結果
 

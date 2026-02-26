@@ -154,16 +154,12 @@
 - 詳細・リリース前準備チェックリスト: [distribution-plan.md](distribution-plan.md)
 - GCPバックエンド仕様: [gcp-update-server.md](gcp-update-server.md)
 
-### 未登録時（expired/restricted）の機能制限の実装
-- LicenseState.tsのisFeatureEnabled()は実装済み。UIレイヤーでの制限適用が未実装
-- タイマー設定変更の無効化（デフォルト固定）
-- 統計パネルの非表示
-- ふれあいモードの無効化（FureaiEntryButton非表示）
-- 天気・時間帯変更の無効化（WeatherButton非表示）
-- サウンドプリセット変更の無効化（デフォルト固定）
-- バックグラウンド通知の無効化
-- 感情パラメータ蓄積の凍結
-- 自動アップデートの無効化
+### ~~未登録時（expired/restricted）の機能制限の実装~~ — 完了
+- LicenseContext（React Context）+ useLicenseMode()フックで全UIからcanUse()判定
+- タイマー設定・統計・ふれあい・天気・サウンドプリセット・通知・感情蓄積・自動アップデートを制限
+- ENABLED_FEATURESマップ（デフォルト無効方式）でモード×機能の有効化を一元管理
+- VITE_DEBUG_LICENSEで開発時のモード固定に対応
+- 詳細: [feature-license-map.md](feature-license-map.md)
 
 ### ~~素材ライセンス整理・配布方式の決定~~ — 完了
 - 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)

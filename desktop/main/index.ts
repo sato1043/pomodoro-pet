@@ -13,6 +13,7 @@ app.commandLine.appendSwitch('enable-unsafe-swiftshader')
 declare const __APP_ID__: string
 declare const __HEARTBEAT_URL__: string
 declare const __STORE_URL__: string
+declare const __DEBUG_LICENSE__: string
 
 if (__APP_ID__) {
   app.setAppUserModelId(__APP_ID__)
@@ -190,10 +191,22 @@ async function heartbeat(deviceId: string, appVersion: string, downloadKey?: str
 
 // --- ライセンス状態解決 ---
 
+const VALID_LICENSE_MODES = new Set(['registered', 'trial', 'expired', 'restricted'])
+
+function parseDebugLicense(value: string): LicenseState['mode'] | null {
+  const v = value.trim().toLowerCase()
+  if (VALID_LICENSE_MODES.has(v)) return v as LicenseState['mode']
+  return null
+}
+
 // 初期状態は trial。ハートビート完了後に実際の状態に遷移する。
 // restricted はハートビートで明示的に判定された場合のみ適用する。
 // これにより起動〜ハートビート完了までの間にLicenseToastがUIを遮らない。
-let currentLicenseState: LicenseState = { mode: 'trial' }
+// __DEBUG_LICENSE__ が有効値なら固定値を使用する。
+const debugLicenseMode = parseDebugLicense(__DEBUG_LICENSE__ ?? '')
+let currentLicenseState: LicenseState = debugLicenseMode
+  ? { mode: debugLicenseMode }
+  : { mode: 'trial' }
 
 
 async function resolveLicense(mainWindow: BrowserWindow | null): Promise<LicenseState> {
@@ -474,11 +487,13 @@ ipcMain.handle('license:check', async () => {
 // アップデート関連IPC
 ipcMain.handle('update:check', async () => {
   if (!app.isPackaged) return
+  if (currentLicenseState.mode === 'expired' || currentLicenseState.mode === 'restricted') return
   await autoUpdater.checkForUpdates()
 })
 
 ipcMain.handle('update:download', async () => {
   if (!app.isPackaged) return
+  if (currentLicenseState.mode === 'expired' || currentLicenseState.mode === 'restricted') return
   await autoUpdater.downloadUpdate()
 })
 
@@ -522,7 +537,14 @@ function createWindow(): void {
 
   // 起動後10秒でライセンスチェック + アップデートチェック
   // HEARTBEAT_URL未設定 → 初期状態（trial）を維持
+  // __DEBUG_LICENSE__設定時 → 固定値をpushしてresolveLicenseをスキップ
   setTimeout(async () => {
+    if (debugLicenseMode) {
+      if (mainWindow && !mainWindow.isDestroyed()) {
+        mainWindow.webContents.send('license:changed', currentLicenseState)
+      }
+      return
+    }
     if (!__HEARTBEAT_URL__) return
 
     const state = await resolveLicense(mainWindow)
