@@ -27,12 +27,19 @@ export interface EmotionConfigInput {
   readonly affinity: number
 }
 
+export interface LicenseSettingsInput {
+  readonly deviceId: string | null
+  readonly downloadKey: string | null
+  readonly jwt: string | null
+}
+
 export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
   readonly backgroundConfig: BackgroundConfigInput
   readonly weatherConfig: WeatherConfig
   readonly emotionConfig: EmotionConfigInput
+  readonly licenseSettings: LicenseSettingsInput
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
@@ -75,6 +82,7 @@ const DEFAULT_THEME: ThemePreference = 'system'
 const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
 const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
 const DEFAULT_EMOTION: EmotionConfigInput = { affinity: 0 }
+const DEFAULT_LICENSE: LicenseSettingsInput = { deviceId: null, downloadKey: null, jwt: null }
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -87,6 +95,7 @@ export function createAppSettingsService(
   let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
   let currentWeather: WeatherConfig = { ...DEFAULT_WEATHER }
   let currentEmotion: EmotionConfigInput = { ...DEFAULT_EMOTION }
+  let currentLicense: LicenseSettingsInput = { ...DEFAULT_LICENSE }
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -143,6 +152,7 @@ export function createAppSettingsService(
     get backgroundConfig() { return currentBackground },
     get weatherConfig() { return currentWeather },
     get emotionConfig() { return currentEmotion },
+    get licenseSettings() { return currentLicense },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
@@ -201,6 +211,12 @@ export function createAppSettingsService(
           currentEmotion = { affinity: em.affinity }
         }
       }
+
+      // ライセンス設定の復元（deviceId/downloadKey/jwtはメインプロセスで管理、読み取り専用）
+      const deviceId = typeof data.deviceId === 'string' ? data.deviceId : null
+      const downloadKey = typeof data.downloadKey === 'string' ? data.downloadKey : null
+      const jwt = typeof data.jwt === 'string' ? data.jwt : null
+      currentLicense = { deviceId, downloadKey, jwt }
 
       // タイマー設定の復元（SettingsChanged発行でUI再作成。この時点でAudioAdapterは既に更新済み）
       // デバッグタイマー有効時はデバッグ値を優先し、保存済みタイマー設定をスキップ

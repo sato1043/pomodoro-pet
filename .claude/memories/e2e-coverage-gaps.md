@@ -12,7 +12,7 @@ E2Eテスト（Playwright + Electron）で検証できる範囲には技術的�
 | WebGLレンダリング結果 | 雨・雪・雲エフェクト、ライティング、背景スクロールはGPUで描画されDOMに表れない |
 | フェイクタイマー | Three.Clock・rAF・Web Audio APIが実時間に依存しており、page.clockでの制御は不安定（詳細は character-animation-mapping.md 参照） |
 
-## カバー済み項目（78テスト / 13ファイル）
+## カバー済み項目（92テスト / 14ファイル）
 
 | ファイル | テスト数 | カバー範囲 |
 |---------|---------|-----------|
@@ -22,6 +22,7 @@ E2Eテスト（Playwright + Electron）で検証できる範囲には技術的�
 | pomodoro-flow.spec.ts | 4 | Start→WORK表示・Pause/Resume・Stop・タイマー完走→Congrats→free復帰 |
 | pomodoro-detail.spec.ts | 7 | サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序(celebrate/joyful-rest含む)・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー |
 | settings-ipc.spec.ts | 11 | electronAPI存在・settings.json永続化（タイマー/BG/天気/雲量/テーマ）・再起動復元 |
+| registration.spec.ts | 8 | ライセンス/アップデート/shell API存在・Registerリンク表示・登録パネル表示/CloseButton復帰/空キーエラー/入力・REGISTRATION_GUIDE読み込み |
 | weather-panel.spec.ts | 10 | パネル開閉・天気タイプ/時間帯切替・雲量・リセット・スナップショット・排他表示 |
 | button-visibility.spec.ts | 5 | 初期全表示・設定/統計/天気パネル時の排他制御・順次開閉復帰 |
 | stats-panel.spec.ts | 4 | パネル開閉・Statistics見出し・排他表示 |
@@ -52,6 +53,22 @@ E2Eテスト（Playwright + Electron）で検証できる範囲には技術的�
 |---|------|-----------|
 | 6 | 餌やり（ドラッグ＆ドロップ） | キャベツ/リンゴのキャンバス内位置特定→キャラクターまでのドラッグ→距離<2.5判定。全てWebGL座標系 |
 | 7 | ハートエフェクト発火 | FeedingSuccessイベントが餌やり成功（#6）に依存。EventBusをwindowに公開すればpage.evaluateで回避可能 |
+
+### A-3. ライセンス/アップデート — サーバー依存
+
+E2Eテスト環境（`!app.isPackaged`）ではHEARTBEAT_URLが未設定のため、サーバー通信が発生しない。開発モードではライセンス状態がtrial固定。
+
+| # | 項目 | 困難な理由 |
+|---|------|-----------|
+| 8 | ハートビートAPI通信 | GCP Cloud Functionが必要。E2Eテスト環境ではサーバーが存在しない |
+| 9 | download key 登録（サーバー検証） | itch.io APIとFirestoreが必要。モックサーバー構築は可能だが費用対効果が低い |
+| 10 | JWT発行・検証フロー | RS256鍵ペアとサーバーが必要 |
+| 11 | deviceId 自動生成 | `app.isPackaged=true`の環境でのみresolveLicenseが動作するため |
+| 12 | LicenseToast 表示（expired/restricted） | 開発モードではtrial固定のため、expired/restrictedのトーストが表示されない |
+| 13 | UpdateNotification 表示 | autoUpdaterがパッケージ済みアプリでのみ動作。GitHub Releasesとの連携が必要 |
+| 14 | autoUpdater ダウンロード/インストール | パッケージ済みアプリ + GitHub Releases上の新バージョンが必要 |
+| 15 | 2段階オンラインチェック（Stage 1 + Stage 2） | 実ネットワーク状態に依存。オフライン/タイムアウトの再現が困難 |
+| 16 | 機能制限モード（expired/restricted時のUI無効化） | サーバー通信なしではexpired/restrictedに遷移できない |
 
 ### B. テスト不可能 — DOM外で完結
 
@@ -106,11 +123,12 @@ GPUで描画される視覚エフェクト。DOMに表れない。
 
 | 分類 | 項目数 |
 |------|--------|
-| カバー済み | 78テスト / 13ファイル |
+| カバー済み | 92テスト / 14ファイル |
 | テスト困難（Three.jsキャンバス操作） | 7項目 |
+| テスト困難（サーバー依存） | 9項目 |
 | テスト不可能（DOM外で完結） | 12項目 |
 
-E2Eテストは **UIレイアウト・パネル制御・設定永続化・タイマーフロー（完走含む）・全フェーズ遷移・プリセット切替・感情パラメータ・プロンプト入力・インタラクションロック・統計値・affinity永続化・バックグラウンドタイマー** をカバーしている。未カバー項目はThree.jsキャンバス内操作またはWeb Audio API / WebGL / OS通知依存であり、E2Eテストの技術的限界に起因する。これらはドメイン層・アプリケーション層のユニットテスト（カバレッジ100%）で補完されている。
+E2Eテストは **UIレイアウト・パネル制御・設定永続化・タイマーフロー（完走含む）・全フェーズ遷移・プリセット切替・感情パラメータ・プロンプト入力・インタラクションロック・統計値・affinity永続化・バックグラウンドタイマー・ライセンスAPI存在確認・RegistrationDialog UI操作** をカバーしている。未カバー項目はThree.jsキャンバス内操作、サーバー通信依存、Web Audio API / WebGL / OS通知依存であり、E2Eテストの技術的限界に起因する。ライセンス判定ロジック（LicenseState.ts）はユニットテスト（58テスト）で全パターンカバーされている。
 
 ## 手動テストオペレーション詳細
 
@@ -292,6 +310,78 @@ Rain（ブラウンノイズ+LP）、Forest（ホワイトノイズ+BP+LFO）、
 | ポモドーロ完了 | サイクル完了！ | ポモドーロサイクルが完了しました |
 
 条件: BG Notify=ONかつバックグラウンド時のみ。`app.setAppUserModelId()`が前提。
+
+---
+
+### C. ライセンス/アップデート — サーバー依存
+
+#### C-1. ハートビートAPI（トライアル開始）
+
+**前提**: GCPバックエンド構築済み + HEARTBEAT_URL設定済み
+
+**操作手順**:
+1. deviceIdなし（settings.json初期状態）でパッケージ済みアプリを起動
+2. 起動後10秒待つ
+
+**確認内容**:
+- settings.jsonにdeviceIdが生成されている（UUID形式）
+- Firestoreのdevices/{deviceId}にtrialStartDateが記録されている
+- トライアル期間中: LicenseToastが表示されない
+- 30日経過後: LicenseToastに「Your trial period has ended」が表示される
+
+---
+
+#### C-2. download key登録
+
+**前提**: GCPバックエンド + itch.io APIキー設定済み
+
+**操作手順**:
+1. 設定パネル → Registerリンク → RegistrationDialogを開く
+2. 有効なdownload keyを入力して「Register」をクリック
+
+**確認内容**:
+- ダイアログが閉じる
+- Registerリンクが「Registered (****WXYZ)」に変化（key末尾4桁表示）
+- settings.jsonにjwt、downloadKeyが保存されている
+- Firestoreのdevices/{deviceId}.registeredKeyにハッシュが記録されている
+
+---
+
+#### C-3. LicenseToast表示（expired/restricted）
+
+**操作手順**:
+1. トライアル30日経過後（またはFirestoreで直接trialStartDateを古い日付に変更）にパッケージ済みアプリを起動
+
+**確認内容**:
+- LicenseToast（data-testid="license-toast"）が表示される
+- 「Your trial period has ended. Register to unlock all features.」メッセージ
+- 「Get Pomodoro Pet」ボタンクリックでitch.ioページが開く
+
+---
+
+#### C-4. UpdateNotification表示
+
+**前提**: GitHub Releasesに現行バージョンより新しいバージョンがpush済み
+
+**操作手順**: パッケージ済み登録済みアプリを起動し、10秒待つ
+
+**確認内容**:
+- UpdateNotification（data-testid="update-notification"）が表示される
+- バージョン番号が正しい
+- 「Download」ボタンでダウンロード開始
+- ダウンロード完了後「Restart Now」ボタンが表示される
+- ポモドーロ中はUpdateNotificationが非表示
+
+---
+
+#### C-5. オフライン時の動作
+
+**操作手順**: ネットワーク切断状態で登録済みアプリを起動
+
+**確認内容**:
+- JWT有効: 全機能利用可 + トースト「Could not verify registration status」
+- JWT期限切れ（30日超）: 全機能利用可 + 同トースト
+- JWTなし: restricted モード + 機能制限
 
 ---
 

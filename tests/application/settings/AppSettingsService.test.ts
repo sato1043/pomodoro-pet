@@ -271,6 +271,26 @@ describe('AppSettingsService', () => {
     })
   })
 
+  describe('licenseSettings', () => {
+    it('初期状態で全フィールドがnull', () => {
+      expect(service.licenseSettings).toEqual({
+        deviceId: null,
+        downloadKey: null,
+        jwt: null,
+      })
+    })
+
+    it('resetToDefaultでlicenseSettingsは変更されない', () => {
+      // licenseSettingsはメインプロセスで管理されるため、resetToDefaultの影響を受けない
+      service.resetToDefault()
+      expect(service.licenseSettings).toEqual({
+        deviceId: null,
+        downloadKey: null,
+        jwt: null,
+      })
+    })
+  })
+
   describe('resetToDefault', () => {
     it('デフォルト値に戻す', () => {
       service.updateTimerConfig({

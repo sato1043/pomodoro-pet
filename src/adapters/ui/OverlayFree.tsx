@@ -16,6 +16,7 @@ import { CloseButton } from './CloseButton'
 import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
 import { LegalDocContent } from './LegalDocContent'
+import { RegistrationContent } from './RegistrationContent'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
 import * as aboutStyles from './styles/about.css'
@@ -441,9 +442,11 @@ interface FreeSettingsEditorProps {
   readonly onEulaClick: () => void
   readonly onPrivacyClick: () => void
   readonly onLicensesClick: () => void
+  readonly onRegisterClick: () => void
+  readonly licenseKeyHint?: string
 }
 
-function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick }: FreeSettingsEditorProps): JSX.Element {
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint }: FreeSettingsEditorProps): JSX.Element {
   return (
     <>
       <FreeTimerSettings
@@ -466,8 +469,13 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
       />
       <div className={aboutStyles.aboutLink}>
         <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
+        <button className={aboutStyles.aboutLinkButton} onClick={onRegisterClick} data-testid="register-link">
+          {licenseKeyHint ? `Registered (${licenseKeyHint})` : 'Register'}
+        </button>
+      </div>
+      <div className={aboutStyles.aboutLink}>
         <button className={aboutStyles.aboutLinkButton} onClick={onEulaClick} data-testid="eula-link">EULA</button>
-        <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy Policy</button>
+        <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onLicensesClick} data-testid="licenses-link">Third-party</button>
       </div>
     </>
@@ -490,6 +498,25 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
   const [showEula, setShowEula] = useState(false)
   const [showPrivacy, setShowPrivacy] = useState(false)
   const [showLicenses, setShowLicenses] = useState(false)
+  const [showRegistration, setShowRegistration] = useState(false)
+  const [licenseKeyHint, setLicenseKeyHint] = useState<string | undefined>(undefined)
+
+  // ライセンス状態の購読
+  useEffect(() => {
+    if (!window.electronAPI?.onLicenseChanged) return
+    const unsubscribe = window.electronAPI.onLicenseChanged((state) => {
+      const s = state as LicenseState
+      setLicenseKeyHint(s.keyHint)
+    })
+    // 初期ロード
+    if (window.electronAPI.checkLicenseStatus) {
+      window.electronAPI.checkLicenseStatus().then((s) => {
+        const state = s as LicenseState
+        setLicenseKeyHint(state.keyHint)
+      })
+    }
+    return unsubscribe
+  }, [])
 
   useEffect(() => {
     onExpandedChange?.(editor.expanded)
@@ -501,6 +528,7 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
       setShowEula(false)
       setShowPrivacy(false)
       setShowLicenses(false)
+      setShowRegistration(false)
     }
   }, [editor.expanded])
 
@@ -528,6 +556,22 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
     if (showLicenses) {
       return <LegalDocContent title="Third-party Licenses" field="licensesText" onBack={() => setShowLicenses(false)} />
     }
+    if (showRegistration) {
+      return (
+        <RegistrationContent
+          onBack={() => setShowRegistration(false)}
+          onRegistered={() => {
+            if (window.electronAPI?.checkLicenseStatus) {
+              window.electronAPI.checkLicenseStatus().then((s) => {
+                const state = s as LicenseState
+                setLicenseKeyHint(state.keyHint)
+              })
+            }
+          }}
+          keyHint={licenseKeyHint}
+        />
+      )
+    }
     return (
       <FreeSettingsEditor
         editor={editor}
@@ -539,18 +583,22 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
         onEulaClick={() => setShowEula(true)}
         onPrivacyClick={() => setShowPrivacy(true)}
         onLicensesClick={() => setShowLicenses(true)}
+        onRegisterClick={() => setShowRegistration(true)}
+        licenseKeyHint={licenseKeyHint}
       />
     )
   }
 
-  const showDocPanel = showAbout || showEula || showPrivacy || showLicenses
+  const showDocPanel = showAbout || showEula || showPrivacy || showLicenses || showRegistration
   const docBackHandler = showAbout
     ? () => setShowAbout(false)
     : showEula
       ? () => setShowEula(false)
       : showPrivacy
         ? () => setShowPrivacy(false)
-        : () => setShowLicenses(false)
+        : showLicenses
+          ? () => setShowLicenses(false)
+          : () => setShowRegistration(false)
 
   return createPortal(
     <div data-testid="overlay-free" className={className}>

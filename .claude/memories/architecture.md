@@ -118,6 +118,7 @@ EventBus（UI/インフラ通知）:
 - `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替+餌やり制御を協調。enterFureai()でfureai-idleプリセット+FeedingAdapter活性化、exitFureai()でautonomousプリセット+FeedingAdapter非活性化。feedCharacter()でfeeding状態遷移。PomodoroOrchestratorとは独立
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
+- `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
 - `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
@@ -158,9 +159,12 @@ EventBus（UI/インフラ通知）:
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
 - `ui/PromptInput.tsx` — プロンプト入力UI
+- `ui/RegistrationContent.tsx` — 登録パネル（download key入力、Registration Guide表示）
+- `ui/UpdateNotification.tsx` — アップデート通知バナー
+- `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -214,6 +218,7 @@ EventBus（UI/インフラ通知）:
 - `domain/statistics/StatisticsTypes.test.ts` — emptyDailyStats・todayKey・formatDateKey
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
+- `application/license/LicenseState.test.ts` — ライセンス判定ロジック（58テスト）
 
 #### フェイクタイマー検討結果
 
@@ -251,6 +256,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示
 - `e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・Sendボタン・空文字無視
 - `e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー
+- `e2e/registration.spec.ts` — 登録UI・API存在確認（8テスト）
 
 ##### E2Eフェイクタイマー検討結果
 

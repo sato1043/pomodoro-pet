@@ -1,0 +1,157 @@
+REGISTRATION GUIDE
+
+Pomodoro Pet
+
+
+1. ABOUT POMODORO PET
+
+Pomodoro Pet is a 3D virtual pet Pomodoro timer. A cute character
+walks alongside you while you work, helping you stay focused and
+take proper breaks.
+
+
+2. FREE TRIAL
+
+You can use all features for free for 30 days from the first launch.
+No registration or payment is required during the trial period.
+
+
+3. AFTER THE TRIAL
+
+After the trial period ends, the basic Pomodoro timer and character
+display remain available. Some features (settings customization,
+statistics, fureai mode, weather, sound presets, etc.) will be
+limited until you register.
+
+
+4. REGISTRATION BENEFITS
+
+Registering unlocks all features permanently:
+- Full timer settings customization
+- Statistics and history
+- Fureai (interaction) mode
+- Weather and time-of-day settings
+- Sound presets and volume control
+- Background notifications
+- Automatic updates
+- Offline use (up to 30 days without internet)
+
+
+5. HOW TO REGISTER
+
+Step 1: Purchase Pomodoro Pet on itch.io
+        https://www.updater.cc
+
+Step 2: Find your Download Key
+        After purchase, you will receive a Download Key.
+        It can be found in:
+        - The purchase confirmation page (in the download URL)
+        - The purchase confirmation email from itch.io
+
+Step 3: Enter the Download Key in the app
+        Open Pomodoro Pet, go to Settings, click "Register",
+        and paste your Download Key. Click "Register" to complete.
+
+
+6. WHERE TO FIND YOUR DOWNLOAD KEY
+
+On itch.io, after purchasing, go to your purchase page:
+  My purchases > Pomodoro Pet > Download
+
+The URL of the download page contains your key:
+  https://OWNER.itch.io/GAME/download/XXXXXXXXXXXXXXXX
+                                       ^^^^^^^^^^^^^^^^
+                                       This is your Download Key
+
+You can also find it in the purchase confirmation email from itch.io.
+
+
+7. CONTACT
+
+If you have any questions or issues with registration:
+    sato1043@updater.cc
+
+
+========================================================================
+
+REGISTRATION GUIDE (Japanese Translation / Reference Only)
+
+This Japanese translation is provided for reference purposes only. In the
+event of any conflict between the English version and this Japanese
+translation, the English version shall prevail.
+
+========================================================================
+
+登録ガイド（日本語参考訳）
+
+本日本語訳は参考目的でのみ提供される。英語版と日本語訳の間に矛盾がある場合、
+英語版が優先される。
+
+Pomodoro Pet
+
+
+1. Pomodoro Pet について
+
+Pomodoro Pet は3Dバーチャルペット型ポモドーロタイマーである。かわいい
+キャラクターが作業中に一緒に歩き、集中と適切な休憩を支援する。
+
+
+2. 無料トライアル
+
+初回起動から30日間、すべての機能を無料で利用できる。
+トライアル期間中は登録や支払いは不要である。
+
+
+3. トライアル終了後
+
+トライアル期間終了後も、基本的なポモドーロタイマーとキャラクター表示は
+引き続き利用できる。一部の機能（設定カスタマイズ、統計、ふれあいモード、
+天気、サウンドプリセット等）は登録するまで制限される。
+
+
+4. 登録のメリット
+
+登録するとすべての機能が永続的に利用可能になる:
+- タイマー設定の完全なカスタマイズ
+- 統計と履歴
+- ふれあい（インタラクション）モード
+- 天気・時間帯設定
+- サウンドプリセットと音量制御
+- バックグラウンド通知
+- 自動アップデート
+- オフライン利用（インターネット未接続で最大30日間）
+
+
+5. 登録手順
+
+ステップ1: itch.io で Pomodoro Pet を購入する
+           https://www.updater.cc
+
+ステップ2: ダウンロードキーを確認する
+           購入後、ダウンロードキーが発行される。
+           以下で確認できる:
+           - 購入完了ページ（ダウンロードURLに含まれる）
+           - itch.io からの購入確認メール
+
+ステップ3: アプリにダウンロードキーを入力する
+           Pomodoro Pet を開き、設定から「Register」をクリックし、
+           ダウンロードキーを貼り付ける。「Register」をクリックして完了。
+
+
+6. ダウンロードキーの場所
+
+itch.io で購入後、購入ページにアクセスする:
+  My purchases > Pomodoro Pet > Download
+
+ダウンロードページのURLにキーが含まれている:
+  https://OWNER.itch.io/GAME/download/XXXXXXXXXXXXXXXX
+                                       ^^^^^^^^^^^^^^^^
+                                       これがダウンロードキー
+
+itch.io からの購入確認メールにも記載されている。
+
+
+7. お問い合わせ
+
+登録に関する質問や問題がある場合:
+    sato1043@updater.cc

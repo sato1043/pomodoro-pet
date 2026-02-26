@@ -11,3 +11,7 @@ Thumbs.db
 .env.local
 coverage/
 test-results/
+tmp
+private.pem
+gcp-update-server/node_modules/
+gcp-update-server/dist/

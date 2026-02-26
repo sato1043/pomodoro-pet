@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useAppDeps } from './AppContext'
 import { useEventBusCallback } from './hooks/useEventBus'
 import type { AppSceneEvent } from '../../application/app-scene/AppScene'
@@ -6,6 +6,8 @@ import { SceneFree } from './SceneFree'
 import { ScenePomodoro } from './ScenePomodoro'
 import { SceneFureai } from './SceneFureai'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
+import { UpdateNotification } from './UpdateNotification'
+import { LicenseToast } from './LicenseToast'
 
 type ActiveScene = 'free' | 'pomodoro' | 'fureai'
 
@@ -22,7 +24,29 @@ export function SceneRouter(): JSX.Element {
     return toActiveScene(orchestrator.sceneManager.currentScene)
   })
 
+  const [licenseMode, setLicenseMode] = useState<LicenseMode | null>(null)
+  const [serverMessage, setServerMessage] = useState<string | undefined>(undefined)
+
   const sceneTransitionRef = useRef<SceneTransitionRef>(null)
+
+  // ライセンス状態の購読
+  useEffect(() => {
+    if (!window.electronAPI?.onLicenseChanged) return
+    const unsubscribe = window.electronAPI.onLicenseChanged((state) => {
+      const s = state as LicenseState
+      setLicenseMode(s.mode)
+      setServerMessage(s.serverMessage)
+    })
+    // 初期ロード
+    if (window.electronAPI.checkLicenseStatus) {
+      window.electronAPI.checkLicenseStatus().then((s) => {
+        const state = s as LicenseState
+        setLicenseMode(state.mode)
+        setServerMessage(state.serverMessage)
+      })
+    }
+    return unsubscribe
+  }, [])
 
   const switchScene = useCallback((next: ActiveScene) => {
     if (sceneTransitionRef.current && !sceneTransitionRef.current.isPlaying) {
@@ -49,6 +73,8 @@ export function SceneRouter(): JSX.Element {
       {activeScene === 'pomodoro' && <ScenePomodoro />}
       {activeScene === 'fureai' && <SceneFureai />}
       <SceneTransition ref={sceneTransitionRef} />
+      <UpdateNotification pomodoroActive={activeScene === 'pomodoro'} />
+      <LicenseToast licenseMode={licenseMode} serverMessage={serverMessage} />
     </>
   )
 }

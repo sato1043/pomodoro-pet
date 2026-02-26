@@ -42,10 +42,10 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ### Electron プロセス構成
 
-- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`about:load` IPCハンドラ）。`__APP_ID__`（electron-vite define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）
-- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブ/showNotification/loadAbout API公開）
+- `desktop/main/index.ts` — メインプロセス（BrowserWindow生成、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`about:load` IPCハンドラ、`license:status`/`license:register`/`license:check` IPCハンドラ、`update:check`/`update:download`/`update:install` IPCハンドラ、`shell:openExternal` IPCハンドラ、autoUpdater初期化、2段階オンラインチェック+ハートビート、JWT RS256検証）。`__APP_ID__`（electron-vite define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）。`__HEARTBEAT_URL__`で接続先APIを制御（未設定時はハートビートをスキップしtrial維持）
+- `desktop/preload/index.ts` — contextBridge（`contextIsolation: true`, `nodeIntegration: false`、設定ロード/セーブ/showNotification/loadAbout/license/update/shell API公開、`onUpdateStatus`/`onLicenseChanged` push通知受信）
 - `src/main.ts` — レンダラープロセスのエントリポイント。全モジュールの組立とレンダリングループ。blur/focusイベントでバックグラウンド検出、setInterval(1秒)でバックグラウンドタイマー継続
-- `src/electron.d.ts` — `window.electronAPI`の型定義（platform, loadSettings, saveSettings, showNotification）
+- `src/electron.d.ts` — `window.electronAPI`の型定義（platform, loadSettings, saveSettings, showNotification, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 
 ### ドメイン層 (`src/domain/`)
 
@@ -69,6 +69,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `ScrollUseCase` — チャンク位置計算・リサイクル判定の純粋ロジック。Three.js非依存
 - `TimerSfxBridge` — EventBus購読でタイマーSFXを一元管理。`PhaseStarted(work)`でwork開始音、`PhaseStarted(congrats)`でファンファーレ、`PhaseStarted(break)`でwork完了音を再生（long-break前はcongrats→ファンファーレのためwork完了音をスキップする遅延判定）。break/long-break中は`break-chill.mp3`をループ再生し、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`インターフェースで環境音の停止/復帰を制御。`TimerSfxConfig`でURL・per-fileゲインを個別指定可能。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
 - `NotificationBridge` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work/break)、PomodoroCompletedで通知。`NotificationPort`でElectron Notification APIを抽象化
+- `LicenseState`（`src/application/license/LicenseState.ts`） — ライセンス状態の型定義と判定ロジック（純粋関数）。`resolveLicenseMode()`でLicenseContext→LicenseMode判定、`isFeatureEnabled()`でモード×機能の利用可否判定、`needsHeartbeat()`でハートビート要否判定
 
 ### アダプター層 (`src/adapters/`)
 
@@ -103,6 +104,9 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 - `ui/HeartEffect.tsx` — ふれあいモード餌やり成功時のハートパーティクルエフェクト。createPortalでdocument.bodyに描画。10個のSVGハートが画面中央付近から浮き上がるCSSアニメーション（floatUp 1.2-2.0秒）。triggerKey=0で非表示
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期。OverlayFreeから利用
 - `ui/PromptInput.tsx` — プロンプト入力UI
+- `ui/RegistrationContent.tsx` — 登録パネル（About同様のインラインパネル）。download key入力+Register+Registration Guide表示。設定パネル内で`renderContent()`切替表示
+- `ui/UpdateNotification.tsx` — アップデート通知バナー（`update:status` push通知受信）。available/downloadedで表示、ポモドーロ中は非表示
+- `ui/LicenseToast.tsx` — ライセンストースト（expired/restricted時のitch.ioリンク、registered+serverMessage時のオフライン通知）
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 
 ### インフラ層 (`src/infrastructure/`)
@@ -148,7 +152,16 @@ VITE_DEV_TOOLS=1
 
 # 開発サーバーのポート変更（デフォルト: 5173）
 VITE_DEV_PORT=3000
+
+# ハートビートAPI URL（設定するとライセンスチェックが有効になる）
+# 未設定の場合、ライセンス状態は初期値（trial）を維持しハートビートを実行しない
+VITE_HEARTBEAT_URL=https://api-XXXXX-an.a.run.app
+
+# ストアURL（デフォルト: https://www.updater.cc）
+VITE_STORE_URL=https://www.updater.cc
 ```
+
+`VITE_HEARTBEAT_URL`/`VITE_STORE_URL`は`electron.vite.config.ts`の`loadEnv()`で読み込まれ、メインプロセスの`define`で`__HEARTBEAT_URL__`/`__STORE_URL__`としてビルド時に埋め込まれる。ライセンス状態の初期値は`trial`。`__HEARTBEAT_URL__`が設定されている場合のみ起動10秒後にハートビートを実行し、結果に基づき状態遷移する。未設定の場合は`trial`を維持する。この制御はdev/prodに関わらず`__HEARTBEAT_URL__`の有無だけで決まる。
 
 Viteは`NODE_ENV`に応じてenvファイルを選択する:
 
@@ -189,6 +202,7 @@ PlaywrightでElectronアプリの統合テストを実行。`VITE_DEBUG_TIMER=3/
 - `tests/e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示
 - `tests/e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・空文字無視
 - `tests/e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計値・affinity永続化・fatigue変化・バックグラウンドタイマー
+- `tests/e2e/registration.spec.ts` — ライセンス/アップデートAPI存在確認、Registerリンク表示、登録パネル表示/CloseButton復帰/空キーエラー/入力、REGISTRATION_GUIDE読み込み
 
 vanilla-extractのハッシュ化クラス名を回避するため、テスト対象のインタラクティブ要素には`data-testid`属性を使用する。
 
@@ -210,6 +224,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [distribution-plan.md](.claude/memories/distribution-plan.md) — 有料配布方式（itch.io「Direct to you」モード・価格・税務・手数料試算）
 - [character-animation-mapping.md](.claude/memories/character-animation-mapping.md) — キャラクター状態とFBXアニメーションの対応表
 - [e2e-coverage-gaps.md](.claude/memories/e2e-coverage-gaps.md) — E2Eテストカバレッジ分析（カバー済み/未カバー/テスト不可能の分類）
+- [gcp-update-server.md](.claude/memories/gcp-update-server.md) — GCPバックエンド仕様書（API仕様、Firestoreスキーマ、デプロイ手順、キー登録ルール、管理スクリプト）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 - [PRIVACY_POLICY.txt](licenses/PRIVACY_POLICY.txt) — プライバシーポリシー（英語本文+日本語参考訳）

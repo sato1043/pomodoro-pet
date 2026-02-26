@@ -22,7 +22,7 @@
     "licenses": "generate-license-file --input package.json --output licenses/THIRD_PARTY_LICENSES.txt --eol lf --overwrite && cat licenses/ASSET_CREDITS.txt licenses/THIRD_PARTY_LICENSES.txt > licenses/THIRD_PARTY_LICENSES.tmp && mv licenses/THIRD_PARTY_LICENSES.tmp licenses/THIRD_PARTY_LICENSES.txt"
   },
   "build": {
-    "appId": "com.pomodoro-pet.app",
+    "appId": "cc.updater.pomodoro-pet",
     "productName": "Pomodoro Pet",
     "directories": {
       "output": "release"
@@ -30,10 +30,16 @@
     "files": [
       "out/**/*"
     ],
+    "publish": {
+      "provider": "github",
+      "owner": "OWNER",
+      "repo": "REPO"
+    },
     "extraResources": [
       "licenses/THIRD_PARTY_LICENSES.txt",
       "licenses/EULA.txt",
       "licenses/PRIVACY_POLICY.txt",
+      "licenses/REGISTRATION_GUIDE.txt",
       "LICENSE"
     ],
     "win": {
@@ -43,7 +49,7 @@
       ]
     },
     "nsis": {
-      "oneClick": false,
+      "oneClick": true,
       "allowToChangeInstallationDirectory": true,
       "license": "licenses/EULA.txt"
     }
@@ -51,6 +57,7 @@
   "dependencies": {
     "@vanilla-extract/css": "^1.18.0",
     "@vanilla-extract/dynamic": "^2.1.5",
+    "electron-updater": "^6.8.3",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "three": "^0.170.0"

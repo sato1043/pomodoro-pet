@@ -1,0 +1,25 @@
+{
+  "name": "pomodoro-pet-update-server",
+  "version": "1.0.0",
+  "description": "Pomodoro Pet license management and update server",
+  "engines": {
+    "node": ">=22"
+  },
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "gcp-build": "npm run build",
+    "init-firestore": "npx tsx scripts/init-firestore.ts",
+    "admin": "npx tsx scripts/admin.ts",
+    "dev": "npx tsx src/index.ts"
+  },
+  "dependencies": {
+    "@google-cloud/functions-framework": "^3.4.0",
+    "firebase-admin": "^12.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.0.0",
+    "typescript": "^5.7.0"
+  }
+}

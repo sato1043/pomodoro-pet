@@ -10,7 +10,9 @@ export default defineConfig({
   main: {
     plugins: [externalizeDepsPlugin()],
     define: {
-      __APP_ID__: JSON.stringify(pkg.build?.appId ?? '')
+      __APP_ID__: JSON.stringify(pkg.build?.appId ?? ''),
+      __HEARTBEAT_URL__: JSON.stringify(process.env.HEARTBEAT_URL || env.VITE_HEARTBEAT_URL || ''),
+      __STORE_URL__: JSON.stringify(process.env.STORE_URL || env.VITE_STORE_URL || 'https://www.updater.cc'),
     },
     build: {
       rollupOptions: {

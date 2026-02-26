@@ -149,18 +149,21 @@
 - `extraResources`でバイナリにも同梱
 - **注意: 法的助言ではない。配布前に弁護士確認を推奨**
 
-### 有料配布方式の設計
-- itch.io「Direct to you」モード（PayPal直接入金）、$4.99 USD、返金不可
-- 詳細: [distribution-plan.md](distribution-plan.md)
+### ~~有料配布方式の設計~~ — 完了
+- itch.io「Direct to you」モード、ワンクリックインストール、自動アップデート+ライセンス管理（GCP）
+- 詳細・リリース前準備チェックリスト: [distribution-plan.md](distribution-plan.md)
+- GCPバックエンド仕様: [gcp-update-server.md](gcp-update-server.md)
 
-### 配布準備（技術面）
-- 正しい `build.appId` / `AppUserModelId` の取得と設定
-- コード署名証明書の取得・設定
-- 自動アップデート（electron-updater）の導入検討
-  - 導入時にプライバシーポリシーが必要になる（更新チェックでサーバーへHTTPリクエスト→IPアドレスが記録されうる）
-- インストーラーのカスタマイズ（NSIS設定、ライセンス表示等）
-- GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
-- プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする
+### 未登録時（expired/restricted）の機能制限の実装
+- LicenseState.tsのisFeatureEnabled()は実装済み。UIレイヤーでの制限適用が未実装
+- タイマー設定変更の無効化（デフォルト固定）
+- 統計パネルの非表示
+- ふれあいモードの無効化（FureaiEntryButton非表示）
+- 天気・時間帯変更の無効化（WeatherButton非表示）
+- サウンドプリセット変更の無効化（デフォルト固定）
+- バックグラウンド通知の無効化
+- 感情パラメータ蓄積の凍結
+- 自動アップデートの無効化
 
 ### ~~素材ライセンス整理・配布方式の決定~~ — 完了
 - 詳細: [asset-licensing-distribution.md](asset-licensing-distribution.md)
@@ -283,6 +286,18 @@
 - ポモドーロ中のインタラクションロック時に入力不可状態を視覚的に表示
 - キャラクターの状態や感情に応じた応答メッセージの生成
 - モバイル/小画面対応（レスポンシブレイアウト）
+
+### 設定・統計のクラウド保存
+- 設定（settings.json）と統計（statistics.json）をサーバー側に保存し、デバイス間で同期する仕組み
+- 登録済みユーザー（download key認証済み）のみ利用可能
+- Firestoreの`devices/{deviceId}/settings`および`devices/{deviceId}/statistics`に保存
+- 同期方式の選択肢:
+  - 最終更新タイムスタンプによるlast-write-wins（シンプル、衝突リスク低）
+  - 差分マージ（複雑、デバイス間の同時利用に対応）
+- ハートビート時にサーバー側の設定・統計を取得し、ローカルと比較して新しい方を適用
+- 初回登録時にローカルデータをサーバーにアップロード（既存データの引き継ぎ）
+- オフライン時はローカルのみで動作し、次回オンライン時に同期
+- プライバシーポリシーの更新が必要（サーバー保存データの追記）
 
 ### プロンプト解釈のLLM化
 - 現在はキーワードマッチング

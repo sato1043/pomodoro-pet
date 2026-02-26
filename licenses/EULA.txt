@@ -4,10 +4,10 @@ Pomodoro Pet
 Version: 0.1.0
 Last Updated: 2026-02-22
 
-IMPORTANT: Please read this agreement carefully before installing or using
-the software. By installing or using the software, you agree to be bound
-by the terms of this agreement. If you do not agree, do not install or
-use the software.
+IMPORTANT: Please read this agreement carefully before purchasing,
+installing, or using the software. By purchasing, installing, or using
+the software, you agree to be bound by the terms of this agreement.
+If you do not agree, do not purchase, install, or use the software.
 
 
 1. DEFINITIONS
@@ -133,10 +133,10 @@ Pomodoro Pet
 バージョン: 0.1.0
 最終更新日: 2026-02-22
 
-重要: 本ソフトウェアをインストールまたは使用する前に、本契約を注意深くお読み
-ください。本ソフトウェアをインストールまたは使用することにより、本契約の条項に
-拘束されることに同意したものとみなされる。同意しない場合は、本ソフトウェアを
-インストールまたは使用しないこと。
+重要: 本ソフトウェアを購入、インストール、または使用する前に、本契約を注意深く
+お読みください。本ソフトウェアを購入、インストール、または使用することにより、
+本契約の条項に拘束されることに同意したものとみなされる。同意しない場合は、
+本ソフトウェアを購入、インストール、または使用しないこと。
 
 
 1. 定義

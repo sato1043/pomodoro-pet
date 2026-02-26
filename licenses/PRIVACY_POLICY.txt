@@ -1,7 +1,7 @@
 PRIVACY POLICY
 
 Pomodoro Pet
-Last Updated: 2026-02-22
+Last Updated: 2026-02-23
 
 
 1. INTRODUCTION
@@ -42,6 +42,12 @@ or any third party.
       number of work/break phases completed, total work/break time
     - Keyed by date (YYYY-MM-DD format)
 
+(c) License data (stored in %APPDATA%/pomodoro-pet/settings.json):
+    - Device ID (randomly generated UUID)
+    - JWT token (registration status proof, contains device ID and
+      key hint only)
+    - Download key (if registered)
+
 All data is stored as plain JSON files. No encryption is applied. No
 personal information is included in these files.
 
@@ -54,26 +60,38 @@ is in the background). These notifications are processed entirely on your
 device and do not involve any network communication.
 
 
-5. NO NETWORK COMMUNICATION
+5. NETWORK COMMUNICATION
 
-The Software does not make any network requests during normal operation.
-Specifically, the Software does not:
+The Software communicates with the following external services:
 
-- Send or receive data over the internet
-- Connect to any remote servers or APIs
-- Perform update checks
-- Transmit crash reports
-- Display advertisements
-- Synchronize data with cloud services
+(a) License verification server (GCP Cloud Function):
+    - Sends: Device ID (randomly generated UUID, not personally
+      identifiable), application version, download key (if registered)
+    - Purpose: Trial period management, license verification, JWT
+      token issuance
+    - Frequency: Once per application launch (skipped if cached
+      locally)
+
+(b) GitHub (github.com):
+    - Purpose: Internet connectivity check (HTTP HEAD request),
+      application update check and binary download
+    - No personal data is sent
+
+The Software does NOT send:
+    - IP addresses are visible to servers as part of standard HTTP
+      communication, but are not collected or stored by the Developer
+    - Hardware information, OS information, or usage analytics
+    - Personal information of any kind
 
 
 6. THIRD-PARTY SERVICES
 
 The Software is distributed through itch.io. Your purchase, account
 management, and payment processing on itch.io are governed by itch.io's
-own privacy policy (https://itch.io/docs/legal/privacy-policy). The
-Software itself does not communicate with itch.io or any other third-party
-service after installation.
+own privacy policy (https://itch.io/docs/legal/privacy-policy).
+After installation, the Software communicates with the Developer's license
+verification server and GitHub as described in Section 5. The Software does
+not communicate with itch.io directly.
 
 
 7. FUTURE CHANGES
@@ -99,6 +117,10 @@ all data:
 
 - Uninstall the Software, or
 - Manually delete the %APPDATA%/pomodoro-pet/ directory
+
+Note: Device registration data stored on the Developer's server
+(device ID and registration status) cannot be deleted by the user.
+Contact sato1043@updater.cc to request deletion of server-side data.
 
 No data is retained by the Developer or any third party after deletion.
 
@@ -143,7 +165,7 @@ translation, the English version shall prevail.
 英語版が優先される。
 
 Pomodoro Pet
-最終更新日: 2026-02-22
+最終更新日: 2026-02-23
 
 
 1. はじめに
@@ -184,6 +206,11 @@ Pomodoro Pet（以下「本ソフトウェア」）における情報の取り�
       作業/休憩フェーズの完了数、累計作業/休憩時間
     - 日付キー（YYYY-MM-DD形式）で管理
 
+(c) ライセンスデータ（Windowsの場合 %APPDATA%/pomodoro-pet/settings.json に保存）:
+    - デバイスID（ランダム生成UUID）
+    - JWTトークン（登録状態の証明。デバイスIDとキーヒントのみ含む）
+    - ダウンロードキー（登録済みの場合）
+
 すべてのデータはプレーンなJSONファイルとして保存される。暗号化は適用されない。
 これらのファイルに個人情報は含まれない。
 
@@ -195,25 +222,35 @@ Pomodoro Pet（以下「本ソフトウェア」）における情報の取り�
 デバイス上で完結し、ネットワーク通信を伴わない。
 
 
-5. ネットワーク通信の不使用
+5. ネットワーク通信
 
-本ソフトウェアは通常動作時にネットワークリクエストを一切行わない。
-具体的に、本ソフトウェアは以下を行わない。
+本ソフトウェアは以下の外部サービスと通信する。
 
-- インターネット経由でのデータ送受信
-- リモートサーバーやAPIへの接続
-- アップデートの確認
-- クラッシュレポートの送信
-- 広告の表示
-- クラウドサービスとのデータ同期
+(a) ライセンス検証サーバー（GCP Cloud Function）:
+    - 送信する情報: デバイスID（ランダム生成UUID、個人を特定しない）、
+      アプリケーションバージョン、ダウンロードキー（登録済みの場合）
+    - 目的: トライアル期間管理、ライセンス検証、JWTトークン発行
+    - 頻度: アプリ起動ごとに1回（ローカルキャッシュがある場合はスキップ）
+
+(b) GitHub（github.com）:
+    - 目的: インターネット接続確認（HTTP HEADリクエスト）、
+      アプリケーションのアップデート確認とバイナリダウンロード
+    - 個人データは送信しない
+
+本ソフトウェアが送信しない情報:
+    - IPアドレスは標準的なHTTP通信の一部としてサーバーに見えるが、
+      開発者はIPアドレスを収集・保存しない
+    - ハードウェア情報、OS情報、利用状況の分析データ
+    - いかなる個人情報も送信しない
 
 
 6. 第三者サービス
 
 本ソフトウェアはitch.ioを通じて配布される。itch.ioでの購入、アカウント管理、
 決済処理はitch.io自身のプライバシーポリシー
-（https://itch.io/docs/legal/privacy-policy）に準拠する。本ソフトウェア自体は
-インストール後にitch.ioやその他の第三者サービスと通信しない。
+（https://itch.io/docs/legal/privacy-policy）に準拠する。
+インストール後、本ソフトウェアはセクション5に記載の通り、開発者のライセンス
+検証サーバーおよびGitHubと通信する。本ソフトウェアはitch.ioとは直接通信しない。
 
 
 7. 将来の変更
@@ -238,6 +275,10 @@ Pomodoro Pet（以下「本ソフトウェア」）における情報の取り�
 
 - 本ソフトウェアをアンインストールする
 - %APPDATA%/pomodoro-pet/ ディレクトリを手動で削除する
+
+注意: 開発者のサーバーに保存されたデバイス登録データ（デバイスIDおよび登録状態）
+はユーザーが削除できない。サーバー側のデータ削除を希望する場合は
+sato1043@updater.cc に連絡すること。
 
 削除後、開発者や第三者にデータが残ることはない。
 
