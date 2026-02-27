@@ -45,6 +45,6 @@ jobs:
         with:
           files: |
             release/*.exe
-            release/*.yml
+            release/latest.yml
             release/*.blockmap
           generate_release_notes: true
