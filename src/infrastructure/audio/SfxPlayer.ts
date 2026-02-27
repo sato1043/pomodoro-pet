@@ -56,11 +56,18 @@ export function createSfxPlayer(): SfxPlayer {
     const cached = bufferCache.get(url)
     if (cached) return cached
 
-    const response = await fetch(url)
-    const arrayBuffer = await response.arrayBuffer()
-    const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
-    bufferCache.set(url, audioBuffer)
-    return audioBuffer
+    try {
+      const response = await fetch(url)
+      const arrayBuffer = await response.arrayBuffer()
+      const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer)
+      bufferCache.set(url, audioBuffer)
+      return audioBuffer
+    } catch (e) {
+      console.warn(`音声ファイルの読み込みに失敗: ${url}`, e)
+      const silent = audioCtx.createBuffer(1, 1, audioCtx.sampleRate)
+      bufferCache.set(url, silent)
+      return silent
+    }
   }
 
   function clearLoopTimer(): void {
