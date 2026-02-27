@@ -70,30 +70,84 @@ ssh-keygen -t ed25519 -C "github-actions-deploy-key" -f ~/.ssh/pomodoro-pet-asse
 
 ## 5. リリースの実行
 
+### ブランチ運用
+
+```
+develop（開発）→ main（リリース）→ タグ push → GitHub Actions → GitHub Releases
+```
+
+- 日常の開発は `develop` ブランチで行う
+- リリース時に `develop` を `main` にマージし、`main` 上でタグを打つ
+- ワークフローはタグ push で起動する。ブランチではなくタグのコミットからビルドされる
+
 ### 手順
 
 ```bash
-# 1. バージョンを更新（package.json は手動 or npm version）
-npm version patch   # 0.1.0 → 0.1.1
+# 1. develop でバージョンを更新
+npm version patch   # 0.1.1 → 0.1.2（patch: バグ修正）
 # または
-npm version minor   # 0.1.0 → 0.2.0
+npm version minor   # 0.1.1 → 0.2.0（minor: 機能追加）
 
-# 2. タグを push（npm version が自動でタグを作成済み）
-git push origin develop --follow-tags
+# 2. develop を push
+git push origin develop
+
+# 3. main にマージ
+git checkout main
+git merge develop
+
+# 4. main とタグを push（npm version が自動でタグを作成済み）
+git push origin main --follow-tags
+
+# 5. develop に戻る
+git checkout develop
 ```
 
 `npm version` は以下を自動実行する:
 1. `package.json` の `version` を更新
-2. `git commit -m "vX.X.X"`
+2. `git commit -m "X.X.X"`
 3. `git tag vX.X.X`
 
 ### 確認
 
 1. GitHub の **Actions** タブでワークフローの実行状況を確認
+   ```bash
+   gh run list --limit 3          # 実行一覧
+   gh run view <run-id>           # 詳細表示
+   gh run watch <run-id>          # 完了まで待機
+   ```
 2. 成功すると **Releases** ページにインストーラーが公開される:
    - `Pomodoro Pet Setup X.X.X.exe` — NSIS インストーラー
    - `latest.yml` — electron-updater 用メタデータ
    - `Pomodoro Pet Setup X.X.X.exe.blockmap` — 差分アップデート用
+3. Releases ページ: `https://github.com/sato1043/pomodoro-pet/releases`
+
+### タグの打ち直し（リリース失敗時）
+
+ワークフローが失敗した場合、修正後に同じバージョンのタグを打ち直して再リリースできる。
+
+```bash
+# 1. develop で修正をコミット
+git add -A && git commit -m "fix: ..."
+
+# 2. ローカルとリモートのタグを削除
+git tag -d v0.1.1
+git push origin :v0.1.1
+
+# 3. 新しいコミットにタグを打ち直す
+git tag v0.1.1
+
+# 4. develop を push → main にマージ → タグを push
+git push origin develop
+git checkout main
+git merge develop
+git push origin main
+git push origin v0.1.1
+
+# 5. develop に戻る
+git checkout develop
+```
+
+GitHub Releases に前回の失敗したドラフトが残っている場合は手動で削除する。
 
 ## 6. セキュリティに関する注意
 
