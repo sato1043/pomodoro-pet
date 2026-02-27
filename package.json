@@ -50,7 +50,6 @@
     },
     "nsis": {
       "oneClick": true,
-      "allowToChangeInstallationDirectory": true,
       "license": "licenses/EULA.txt"
     }
   },
