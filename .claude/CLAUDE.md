@@ -233,6 +233,7 @@ vanilla-extractのハッシュ化クラス名を回避するため、テスト�
 - [e2e-coverage-gaps.md](.claude/memories/e2e-coverage-gaps.md) — E2Eテストカバレッジ分析（カバー済み/未カバー/テスト不可能の分類）
 - [gcp-update-server.md](.claude/memories/gcp-update-server.md) — GCPバックエンド仕様書（API仕様、Firestoreスキーマ、デプロイ手順、キー登録ルール、管理スクリプト）
 - [feature-license-map.md](.claude/memories/feature-license-map.md) — 全機能一覧とライセンス制限マップ（FeatureNameマッピング・制限不要機能の根拠）
+- [ci-release-setup.md](.claude/memories/ci-release-setup.md) — GitHub Actionsリリースワークフローのセットアップ手順（Deploy Key・Secrets設定・リリース実行方法）
 - [CLA.md](CLA.md) — コントリビューターライセンス契約（著作権譲渡型、英語本文+日本語参考訳）
 - [CONTRIBUTING.md](CONTRIBUTING.md) — コントリビューションガイドライン（CLA要件・手順・コーディング規約）
 - [PRIVACY_POLICY.txt](licenses/PRIVACY_POLICY.txt) — プライバシーポリシー（英語本文+日本語参考訳）

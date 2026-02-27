@@ -1,0 +1,50 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          ssh-key: ${{ secrets.ASSETS_DEPLOY_KEY }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: 'npm'
+
+      - name: Use bash for npm scripts
+        run: npm config set script-shell "C:\Program Files\Git\bin\bash.exe"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Create .env.production
+        shell: bash
+        run: |
+          echo "VITE_HEARTBEAT_URL=${{ secrets.VITE_HEARTBEAT_URL }}" > .env.production
+          echo "VITE_STORE_URL=${{ secrets.VITE_STORE_URL }}" >> .env.production
+
+      - name: Build and package
+        run: npm run package
+
+      - name: Upload to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            release/*.exe
+            release/*.yml
+            release/*.blockmap
+          generate_release_notes: true

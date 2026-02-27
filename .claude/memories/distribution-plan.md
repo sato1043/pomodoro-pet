@@ -159,7 +159,7 @@
 - [x] プレースホルダーアセットを用意し、素材なしでもビルドが通るようにする → SfxPlayerにフォールバック追加（FBXは既存のPlaceholderCharacterで対応済み）
 - [ ] コード署名証明書の取得・設定（任意。署名なしでも配布可能）
 - [x] GitHubリポジトリの構成方式を決定する → submodule方式に決定
-- [ ] GitHub Actions: リリースワークフロー構築（タグプッシュ → ビルド → GitHub Releasesへアップロード）
+- [x] GitHub Actions: リリースワークフロー構築 → `.github/workflows/release.yml` 作成済み。セットアップ手順は [ci-release-setup.md](ci-release-setup.md) を参照
 - [x] package.jsonのbuild.publishのowner/repoをプレースホルダーから実際の値に変更
 
 ### 販売ページ・ドキュメント
