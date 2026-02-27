@@ -159,7 +159,7 @@
 - [ ] コード署名証明書の取得・設定（任意。署名なしでも配布可能）
 - [ ] GitHubリポジトリの構成方式を決定する（プライベートストレージ/submodule/リリースバイナリのみ）
 - [ ] GitHub Actions: リリースワークフロー構築（タグプッシュ → ビルド → GitHub Releasesへアップロード）
-- [ ] package.jsonのbuild.publishのowner/repoをプレースホルダーから実際の値に変更
+- [x] package.jsonのbuild.publishのowner/repoをプレースホルダーから実際の値に変更
 
 ### 販売ページ・ドキュメント
 - [ ] 特定商取引法に基づく表示の内容の準備

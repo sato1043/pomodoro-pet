@@ -32,8 +32,8 @@
     ],
     "publish": {
       "provider": "github",
-      "owner": "OWNER",
-      "repo": "REPO"
+      "owner": "sato1043",
+      "repo": "pomodoro-pet"
     },
     "extraResources": [
       "licenses/THIRD_PARTY_LICENSES.txt",
