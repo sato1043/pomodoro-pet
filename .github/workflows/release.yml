@@ -38,12 +38,7 @@ jobs:
           echo "VITE_STORE_URL=${{ secrets.VITE_STORE_URL }}" >> .env.production
 
       - name: Build and package
-        shell: bash
-        run: |
-          npm run licenses
-          npm run clean:zone
-          npx electron-vite build
-          npx electron-builder --win --publish never
+        run: npm run package
 
       - name: Upload to GitHub Releases
         uses: softprops/action-gh-release@v2

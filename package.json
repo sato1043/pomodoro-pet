@@ -10,7 +10,7 @@
     "build": "npm run clean:zone && electron-vite build",
     "preview": "electron-vite preview",
     "clean:zone": "find assets -name '*Zone.Identifier' -delete 2>/dev/null; true",
-    "package": "npm run licenses && npm run clean:zone && electron-vite build && electron-builder --win",
+    "package": "npm run licenses && npm run clean:zone && electron-vite build && electron-builder --win --publish never",
     "package:dir": "npm run licenses && npm run clean:zone && electron-vite build && electron-builder --win --dir",
     "test": "vitest run",
     "test:watch": "vitest",
