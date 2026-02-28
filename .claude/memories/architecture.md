@@ -86,7 +86,12 @@ EventBus（UI/インフラ通知）:
 ## ファイルマップ
 
 ### desktop/ — Electronプロセス
-- `main/index.ts` — メインプロセス（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御、設定永続化IPC、`notification:show` IPCハンドラ、`statistics:load`/`statistics:save` IPCハンドラ、`about:load` IPCハンドラ、`license:status`/`license:register`/`license:check` IPCハンドラ、`update:check`/`update:download`/`update:install` IPCハンドラ）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）。`__DEBUG_LICENSE__`でライセンスモード固定（ハートビートスキップ）。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
+- `main/index.ts` — エントリポイント（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）。起動後10秒でライセンスチェック+アップデートチェック
+- `main/types.ts` — 型定義（JwtPayload、HeartbeatResponse、LicenseState、UpdateStatus）
+- `main/settings.ts` — 設定I/O（load/saveSettings、load/saveStatistics、getOrCreateDeviceId）。`app.getPath('userData')`配下のsettings.json/statistics.jsonを読み書き
+- `main/license.ts` — ライセンス管理。RS256公開鍵によるJWT検証（decodeJwtPayload/verifyJwt）、2段階オンラインチェック（checkConnectivity→heartbeat）、ライセンス状態解決（resolveLicense）。getter/setterパターンで`currentLicenseState`を管理（getLicenseState/setLicenseState）。`__DEBUG_LICENSE__`でライセンスモード固定（ハートビートスキップ）
+- `main/updater.ts` — autoUpdaterイベントハンドラ（initAutoUpdater）。checking/available/downloading/downloaded/errorの各状態をレンダラーに通知
+- `main/ipc-handlers.ts` — 全IPCハンドラ登録（registerIpcHandlers）。設定永続化IPC、`notification:show`、`about:load`、`registration-guide:load`、`license:status`/`license:register`/`license:check`、`update:check`/`update:download`/`update:install`、`shell:openExternal`。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
 - `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged公開）
 
 ### src/domain/ — ドメインモデル
@@ -221,6 +226,7 @@ EventBus（UI/インフラ通知）:
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
 - `application/license/LicenseState.test.ts` — ライセンス判定ロジック（58テスト）
 - `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
+- `desktop/main/license.test.ts` — メインプロセスライセンスモジュール（decodeJwtPayload正常/異常、verifyJwt署名拒否、getLicenseState/setLicenseState状態管理）
 
 #### フェイクタイマー検討結果
 
