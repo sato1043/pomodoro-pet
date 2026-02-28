@@ -276,6 +276,13 @@
 - MCPクライアント機能の上に構築する、またはスタンドアロンで実装する選択肢あり
 - プライバシーポリシーの策定が必要（Googleユーザーデータポリシー準拠）
 
+### OSスリープ抑制設定
+- ポモドーロ実行中にOSがスリープ/サスペンドしないようにする機能
+- Electronの`powerSaveBlocker.start('prevent-app-suspension')`で実現
+- ポモドーロ開始時にブロッカーを有効化、完了/中断時に`powerSaveBlocker.stop(id)`で解除
+- 設定UIでON/OFF切替可能にする（デフォルトON）
+- settings.jsonに永続化（`power.preventSleep`等）
+
 ### 環境シーンのバリエーション（残課題）
 - シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等
 - `EnvironmentChunk` のオブジェクト生成ロジックをプリセットごとに分離
