@@ -5,6 +5,21 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.1] - 2026-02-27
+
+### Added
+- GitHub Actionsリリースワークフロー（タグ push → Windows ビルド → GitHub Releases）
+- SfxPlayerに音声ファイル欠損時のサイレントフォールバック（submodule未初期化でも動作可能）
+- リリースセットアップ手順書（ci-release-setup.md）
+
+### Changed
+- assets/をprivate submodule（pomodoro-pet-assets）に移行 — ソースコードpublic化に対応
+- git履歴から購入素材を完全除去（git filter-repo）
+- electron-builderに--publish neverを追加（アップロードはsoftprops/action-gh-releaseに委譲）
+
+### Fixed
+- NSIS oneClick設定の矛盾を修正（allowToChangeInstallationDirectoryを削除）
+
 ## [0.1.0] - 2026-02-27
 
 ### Added
