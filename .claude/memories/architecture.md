@@ -150,7 +150,7 @@ EventBus（UI/インフラ通知）:
 - `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
 - `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
-- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+CharacterNameEditor+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
 - `ui/OverlayGallery.tsx` — ギャラリーモードオーバーレイ。createPortalでdocument.bodyに描画。CompactHeader+GalleryTopBar+GallerySideBarを統合。Clips/States/Rulesモード切替+2行構成情報バー（description+詳細）。モード別のinfoBar表示制御（clips: State非表示、rules: State/Clip非表示）
 - `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用
@@ -178,6 +178,7 @@ EventBus（UI/インフラ通知）:
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
+- `ui/CharacterNameEditor.tsx` — キャラクター名の表示+インライン編集UI。名前テキスト（28px、textSecondary、ドロップシャドウ）をセンタリング表示し、右に鉛筆アイコンボタン（absolute配置）を配置。鉛筆ボタンクリックのみで編集モードに遷移。Enter/blur確定、Escキャンセル。最大20文字、空文字→デフォルト名'Wildboar'復帰。AppSettingsService.updateCharacterConfig()で永続化
 - `ui/PromptInput.tsx` — プロンプト入力UI
 - `ui/RegistrationContent.tsx` — 登録パネル（download key入力、Registration Guide表示）
 - `ui/UpdateNotification.tsx` — アップデート通知バナー
@@ -186,7 +187,7 @@ EventBus（UI/インフラ通知）:
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator, character-name-editor）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー

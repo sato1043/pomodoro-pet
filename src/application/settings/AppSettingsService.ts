@@ -27,6 +27,10 @@ export interface EmotionConfigInput {
   readonly affinity: number
 }
 
+export interface CharacterConfigInput {
+  readonly name: string
+}
+
 export interface LicenseSettingsInput {
   readonly deviceId: string | null
   readonly downloadKey: string | null
@@ -39,6 +43,7 @@ export interface AppSettingsService {
   readonly backgroundConfig: BackgroundConfigInput
   readonly weatherConfig: WeatherConfig
   readonly emotionConfig: EmotionConfigInput
+  readonly characterConfig: CharacterConfigInput
   readonly licenseSettings: LicenseSettingsInput
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
@@ -47,6 +52,7 @@ export interface AppSettingsService {
   updateBackgroundConfig(input: BackgroundConfigInput): void
   updateWeatherConfig(partial: Partial<WeatherConfig>): void
   updateEmotionConfig(input: EmotionConfigInput): void
+  updateCharacterConfig(input: CharacterConfigInput): void
   resetToDefault(): void
 }
 
@@ -70,10 +76,11 @@ function saveAllToStorage(
   theme: ThemePreference,
   background: BackgroundConfigInput,
   weather: WeatherConfig,
-  emotion: EmotionConfigInput
+  emotion: EmotionConfigInput,
+  character: CharacterConfigInput
 ): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion })
+    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion, character })
   }
 }
 
@@ -82,6 +89,7 @@ const DEFAULT_THEME: ThemePreference = 'system'
 const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
 const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
 const DEFAULT_EMOTION: EmotionConfigInput = { affinity: 0 }
+const DEFAULT_CHARACTER: CharacterConfigInput = { name: 'Wildboar' }
 const DEFAULT_LICENSE: LicenseSettingsInput = { deviceId: null, downloadKey: null, jwt: null }
 
 export function createAppSettingsService(
@@ -95,6 +103,7 @@ export function createAppSettingsService(
   let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
   let currentWeather: WeatherConfig = { ...DEFAULT_WEATHER }
   let currentEmotion: EmotionConfigInput = { ...DEFAULT_EMOTION }
+  let currentCharacter: CharacterConfigInput = { ...DEFAULT_CHARACTER }
   let currentLicense: LicenseSettingsInput = { ...DEFAULT_LICENSE }
 
   function publishSettingsChanged(config: TimerConfig): void {
@@ -142,8 +151,17 @@ export function createAppSettingsService(
     bus.publish(event.type, event)
   }
 
+  function publishCharacterConfigChanged(character: CharacterConfigInput): void {
+    const event: SettingsEvent = {
+      type: 'CharacterConfigChanged',
+      character,
+      timestamp: Date.now()
+    }
+    bus.publish(event.type, event)
+  }
+
   function save(): void {
-    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion)
+    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion, currentCharacter)
   }
 
   return {
@@ -152,6 +170,7 @@ export function createAppSettingsService(
     get backgroundConfig() { return currentBackground },
     get weatherConfig() { return currentWeather },
     get emotionConfig() { return currentEmotion },
+    get characterConfig() { return currentCharacter },
     get licenseSettings() { return currentLicense },
 
     async loadFromStorage(): Promise<void> {
@@ -209,6 +228,15 @@ export function createAppSettingsService(
         const em = data.emotion as Record<string, unknown>
         if (typeof em.affinity === 'number') {
           currentEmotion = { affinity: em.affinity }
+        }
+      }
+
+      // キャラクター設定の復元
+      if (data.character) {
+        const ch = data.character as Record<string, unknown>
+        if (typeof ch.name === 'string' && ch.name.length > 0) {
+          currentCharacter = { name: ch.name }
+          publishCharacterConfigChanged(currentCharacter)
         }
       }
 
@@ -278,6 +306,12 @@ export function createAppSettingsService(
       save()
     },
 
+    updateCharacterConfig(input: CharacterConfigInput): void {
+      currentCharacter = input
+      publishCharacterConfigChanged(currentCharacter)
+      save()
+    },
+
     resetToDefault(): void {
       currentConfig = createDefaultConfig()
       currentSound = { ...DEFAULT_SOUND }
@@ -285,7 +319,9 @@ export function createAppSettingsService(
       currentBackground = { ...DEFAULT_BACKGROUND }
       currentWeather = { ...DEFAULT_WEATHER }
       currentEmotion = { ...DEFAULT_EMOTION }
+      currentCharacter = { ...DEFAULT_CHARACTER }
       publishSettingsChanged(currentConfig)
+      publishCharacterConfigChanged(currentCharacter)
       save()
     }
   }

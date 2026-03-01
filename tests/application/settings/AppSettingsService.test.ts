@@ -291,6 +291,54 @@ describe('AppSettingsService', () => {
     })
   })
 
+  describe('characterConfig', () => {
+    it('初期状態でデフォルト名Wildboarを保持する', () => {
+      expect(service.characterConfig).toEqual({ name: 'Wildboar' })
+    })
+
+    it('updateCharacterConfigで名前を変更できる', () => {
+      service.updateCharacterConfig({ name: 'Taro' })
+      expect(service.characterConfig).toEqual({ name: 'Taro' })
+    })
+
+    it('updateCharacterConfigでCharacterConfigChangedイベントを発行する', () => {
+      const received: SettingsEvent[] = []
+      bus.subscribe<SettingsEvent>('CharacterConfigChanged', (event) => {
+        received.push(event)
+      })
+
+      service.updateCharacterConfig({ name: 'Hanako' })
+
+      expect(received).toHaveLength(1)
+      expect(received[0].type).toBe('CharacterConfigChanged')
+      if (received[0].type === 'CharacterConfigChanged') {
+        expect(received[0].character.name).toBe('Hanako')
+      }
+    })
+
+    it('resetToDefaultでデフォルト名に戻す', () => {
+      service.updateCharacterConfig({ name: 'CustomName' })
+      service.resetToDefault()
+      expect(service.characterConfig).toEqual({ name: 'Wildboar' })
+    })
+
+    it('resetToDefaultでCharacterConfigChangedイベントを発行する', () => {
+      service.updateCharacterConfig({ name: 'CustomName' })
+
+      const received: SettingsEvent[] = []
+      bus.subscribe<SettingsEvent>('CharacterConfigChanged', (event) => {
+        received.push(event)
+      })
+
+      service.resetToDefault()
+
+      expect(received).toHaveLength(1)
+      if (received[0].type === 'CharacterConfigChanged') {
+        expect(received[0].character.name).toBe('Wildboar')
+      }
+    })
+  })
+
   describe('resetToDefault', () => {
     it('デフォルト値に戻す', () => {
       service.updateTimerConfig({

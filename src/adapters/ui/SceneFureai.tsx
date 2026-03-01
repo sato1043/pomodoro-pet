@@ -4,6 +4,7 @@ import { OverlayFureai } from './OverlayFureai'
 import { FureaiExitButton } from './FureaiExitButton'
 import { PromptInput } from './PromptInput'
 import { HeartEffect } from './HeartEffect'
+import { CharacterNameEditor } from './CharacterNameEditor'
 import { useEventBusCallback } from './hooks/useEventBus'
 import type { FeedingSuccessEvent } from '../three/FeedingInteractionAdapter'
 
@@ -18,6 +19,7 @@ export function SceneFureai(): JSX.Element {
   return (
     <>
       <OverlayFureai />
+      <CharacterNameEditor />
       <FureaiExitButton />
       <PromptInput />
       <HeartEffect triggerKey={heartKey} />

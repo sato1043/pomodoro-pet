@@ -85,6 +85,7 @@
 | 29 | 撫で操作 | GestureRecognizer.ts | 操作 | character | 左右ストローク→pet状態 |
 | 30 | 摘まみ上げ | ThreeInteractionAdapter.ts | 操作 | character | ドラッグでY軸持ち上げ |
 | 31 | インタラクションロック | BehaviorStateMachine.ts | 自動 | character | work中のインタラクション拒否 |
+| 91 | キャラクター名設定 | CharacterNameEditor.tsx, AppSettingsService.ts | 操作 | fureai | ふれあいモード内でキャラクターに任意の名前を付ける（settings.jsonに永続化） |
 
 ### E. タイマー動作
 
@@ -240,6 +241,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.2.0 | 機能追加 | キャラクター名設定追加（#91）、ふれあいモード内にCharacterNameEditor配置、AppSettingsServiceにcharacterConfig追加 |
 | 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、感情インジケーターUI追加（#90）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加、EmotionStateUpdatedイベント+EmotionIndicator.tsx新規追加 |
 | 0.2.0 | 制限変更 | trial で fureai/gallery を無効化（registered限定のプレミアム機能に変更） |
 | 0.1.1 | バージョン同期 | リリースインフラ整備に伴うバージョン同期（機能変更なし） |

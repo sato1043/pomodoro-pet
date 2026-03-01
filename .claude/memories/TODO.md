@@ -230,11 +230,11 @@
 - `canUse('emotionAccumulation')`によるライセンス制限対応
 - ユニットテスト（5件）+ E2Eテスト（6件）
 
-### キャラクターの名前設定
-- ユーザーがキャラクターに任意の名前を付けられる機能
-- 設定パネルまたはふれあいモードで名前を入力・変更可能
-- 名前はオーバーレイやUIの適切な箇所に表示
-- `{userData}/settings.json`に永続化
+### ~~キャラクターの名前設定~~ — 完了
+- ふれあいモード内にCharacterNameEditorコンポーネント（インライン編集UI）を配置
+- AppSettingsServiceにCharacterConfigInput追加、settings.jsonのcharacter.nameに永続化
+- デフォルト名'Wildboar'、最大20文字、空文字→デフォルト復帰
+- ユニットテスト（5件）+ E2Eテスト（6件）
 
 ### ~~キャラクターのモデル状態ギャラリー~~ — 完了（アニメーションギャラリーとして実装）
 - AppScene `gallery` を追加し、GalleryCoordinatorがシーン遷移+アニメーション再生を協調

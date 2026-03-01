@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- キャラクター名設定機能 — ふれあいモード内でキャラクターに任意の名前を付けられるUI。名前テキスト（28px）をセンタリング表示+鉛筆アイコンボタンで編集遷移。デフォルト名'Wildboar'、最大20文字、空文字時デフォルト復帰。settings.jsonに永続化
+- `CharacterNameEditor` Reactコンポーネント — 鉛筆アイコンボタンクリックでテキスト入力（300px幅）に切替、Enter/blur確定、Escキャンセル。名前テキストのみセンタリング（アイコンはabsolute配置で影響しない）
+- `CharacterConfigInput` インターフェース + `CharacterConfigChanged` イベント — AppSettingsServiceのキャラクター設定管理
+- キャラクター名E2Eテスト（6テスト） — 表示/編集/永続化/復元/デフォルト復帰/モード限定表示
+
 ## [0.2.0] - 2026-03-01
 
 ### Added

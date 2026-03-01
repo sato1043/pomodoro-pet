@@ -10,3 +10,4 @@ export type SettingsEvent =
   | { type: 'ThemeLoaded'; theme: ThemePreference; timestamp: number }
   | { type: 'BackgroundSettingsLoaded'; background: BackgroundConfigInput; timestamp: number }
   | { type: 'WeatherConfigChanged'; weather: WeatherConfig; timestamp: number }
+  | { type: 'CharacterConfigChanged'; character: { readonly name: string }; timestamp: number }
