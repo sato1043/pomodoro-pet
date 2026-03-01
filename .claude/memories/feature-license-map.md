@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.2.0**（= package.json）
+**バージョン: 0.2.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -241,6 +241,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.2.1 | バグ修正 | register APIデバイス自動作成、heartbeat merge:trueレースコンディション対策、ギャラリーUI重なり修正 |
 | 0.2.0 | 機能追加 | キャラクター名設定追加（#91）、ふれあいモード内にCharacterNameEditor配置、AppSettingsServiceにcharacterConfig追加 |
 | 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、感情インジケーターUI追加（#90）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加、EmotionStateUpdatedイベント+EmotionIndicator.tsx新規追加 |
 | 0.2.0 | 制限変更 | trial で fureai/gallery を無効化（registered限定のプレミアム機能に変更） |
