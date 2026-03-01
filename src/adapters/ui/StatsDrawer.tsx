@@ -4,7 +4,9 @@ import type { DailyStats } from '../../domain/statistics/StatisticsTypes'
 import { todayKey, formatDateKey } from '../../domain/statistics/StatisticsTypes'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
 import { useAppDeps } from './AppContext'
+import { useLicenseMode } from './LicenseContext'
 import { OverlayTitle } from './OverlayTitle'
+import { EmotionIndicator } from './EmotionIndicator'
 import * as styles from './styles/stats-drawer.css'
 
 // --- 純粋関数 ---
@@ -384,7 +386,8 @@ interface StatsDrawerProps {
 }
 
 export function StatsDrawer({ onClose }: StatsDrawerProps): JSX.Element {
-  const { statisticsService } = useAppDeps()
+  const { bus, statisticsService } = useAppDeps()
+  const { canUse } = useLicenseMode()
 
   const todayStats = useMemo(() => {
     const key = todayKey()
@@ -416,6 +419,8 @@ export function StatsDrawer({ onClose }: StatsDrawerProps): JSX.Element {
       <CalendarHeatmap service={statisticsService} />
 
       <CumulativeChart service={statisticsService} />
+
+      {canUse('emotionAccumulation') && <EmotionIndicator bus={bus} />}
     </div>,
     document.body
   )

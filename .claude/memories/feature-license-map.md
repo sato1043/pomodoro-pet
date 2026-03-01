@@ -103,6 +103,7 @@
 | 37 | 疲労 | EmotionState.ts | 自動 | emotionAccumulation | work中に蓄積、非work時に回復 |
 | 38 | 好感度 | EmotionState.ts, EmotionService.ts | 永続化 | emotionAccumulation | 餌やり/撫で/完了で上昇、永続化 |
 | 39 | 感情イベント反応 | EmotionState.ts | 自動 | emotionAccumulation | 4イベントの数値変化テーブル |
+| 90 | 感情インジケーターUI | EmotionIndicator.tsx, StatsDrawer.tsx | 自動 | emotionAccumulation | ♥⚡★アイコンのopacity表示（統計パネル内） |
 
 ### G. 統計と記録
 
@@ -239,7 +240,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
-| 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加 |
+| 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、感情インジケーターUI追加（#90）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加、EmotionStateUpdatedイベント+EmotionIndicator.tsx新規追加 |
 | 0.2.0 | 制限変更 | trial で fureai/gallery を無効化（registered限定のプレミアム機能に変更） |
 | 0.1.1 | バージョン同期 | リリースインフラ整備に伴うバージョン同期（機能変更なし） |
 | 0.1.0 | 初版 | 全80機能定義、10項目のFeatureName策定、ライセンス制限マップ策定 |

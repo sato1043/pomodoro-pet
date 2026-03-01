@@ -223,11 +223,12 @@
 - `{userData}/emotion-history.json`等でファイルベース永続化を想定
 - 感情インジケーターUIと連携して可視化
 
-### キャラクターの感情インジケーターUI
-- `EmotionState`（satisfaction/fatigue/affinity）の値をユーザーに可視化するUIコンポーネント
-- キャラクター付近またはオーバーレイ上にアイコン/バー/表情アイコン等で表示
-- 感情パラメータの変化（ポモドーロ完了、餌やり、クリック連打等）がリアルタイムに反映される
-- freeモード・ふれあいモードで表示、pomodoroモード中は非表示を検討
+### ~~キャラクターの感情インジケーターUI~~ — 完了
+- 統計パネル（StatsDrawer）のCumulative Timeグラフ下に♥（satisfaction）⚡（fatigue）★（affinity）の3アイコンを表示
+- 各値をopacity（0.15〜1.0）で表現、CSS transition 0.5sでスムーズに変化
+- `EmotionStateUpdated` EventBusイベント（1秒間隔スロットリング、感情イベント時即時通知）
+- `canUse('emotionAccumulation')`によるライセンス制限対応
+- ユニットテスト（5件）+ E2Eテスト（6件）
 
 ### キャラクターの名前設定
 - ユーザーがキャラクターに任意の名前を付けられる機能

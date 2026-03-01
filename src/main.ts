@@ -17,6 +17,7 @@ import { createEnrichedAnimationResolver } from './domain/character/services/Enr
 import { createEmotionService, type EmotionService } from './application/character/EmotionService'
 import { createInteractionTracker, type InteractionTracker } from './domain/character/services/InteractionTracker'
 import type { PomodoroEvent } from './application/timer/PomodoroEvents'
+import type { EmotionStateUpdatedEvent } from './application/character/EmotionEvents'
 import { createInteractionAdapter } from './adapters/three/ThreeInteractionAdapter'
 import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/environment/value-objects/SceneConfig'
 import { createScrollManager } from './application/environment/ScrollUseCase'
@@ -264,6 +265,23 @@ async function main(): Promise<void> {
   // EmotionService（感情パラメータ管理）
   const emotionService: EmotionService = createEmotionService(settingsService.emotionConfig.affinity)
 
+  // 感情状態UIへのpublishヘルパー（1秒間隔スロットリング）
+  let lastEmotionEmitTime = 0
+  const EMOTION_EMIT_INTERVAL_MS = 1000
+
+  function emitEmotionState(force: boolean = false): void {
+    const now = Date.now()
+    if (!force) {
+      const elapsed = now - lastEmotionEmitTime
+      if (elapsed < EMOTION_EMIT_INTERVAL_MS) return
+    }
+    lastEmotionEmitTime = now
+    bus.publish<EmotionStateUpdatedEvent>('EmotionStateUpdated', {
+      type: 'EmotionStateUpdated',
+      state: emotionService.state,
+    })
+  }
+
   // InteractionTracker（クリック回数・餌やり回数追跡）
   const interactionTracker: InteractionTracker = createInteractionTracker()
 
@@ -273,11 +291,13 @@ async function main(): Promise<void> {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_completed' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+    emitEmotionState(true)
   })
   bus.subscribe<PomodoroEvent>('PomodoroAborted', () => {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_aborted' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+    emitEmotionState(true)
   })
   bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
@@ -287,6 +307,7 @@ async function main(): Promise<void> {
     emotionService.applyEvent({ type: 'fed' })
     interactionTracker.recordFeeding()
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+    emitEmotionState(true)
   })
 
   // AnimationResolver（コンテキスト依存のアニメーション選択）
@@ -402,6 +423,12 @@ async function main(): Promise<void> {
 
   // 初回React UIレンダリング
   renderReactUI()
+
+  // 感情状態の初期値をUIに通知
+  // setTimeout(0)でReactのuseEffect購読開始後に発火させる
+  if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+    setTimeout(() => emitEmotionState(true), 0)
+  }
 
   // インタラクション（ホバー、クリック、摘まみ上げ）
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle, {
@@ -536,6 +563,7 @@ async function main(): Promise<void> {
     if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
       const isWorkPhase = orchestrator.isRunning && session.currentPhase.type === 'work'
       emotionService.tick(deltaMs, isWorkPhase)
+      emitEmotionState()
     }
 
     // インタラクション追跡の時間更新

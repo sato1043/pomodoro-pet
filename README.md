@@ -33,7 +33,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **Weather Settings** — Choose weather type (sunny / cloudy / rainy / snowy), cloud density (6 levels), and time of day (morning / day / evening / night / auto). Live preview with dynamic lighting and effects
 - **Sound** — Procedural ambient sounds (forest / rain / wind), timer SFX, break BGM with crossfade, volume and mute controls
 - **Background Notifications** — System toast notifications for phase completion and cycle completion when the app is in the background
-- **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. Affinity persists across sessions
+- **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. Affinity persists across sessions. Visual indicators (♥ ⚡ ★) in the Statistics panel show current emotion state via opacity
 - **Auto Update** — Check, download, and install updates via electron-updater with in-app notification banner
 
 ## Architecture

@@ -132,6 +132,7 @@ EventBus（UI/インフラ通知）:
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick。StateMachine遷移 + AnimationResolver経由のアニメーション選択 + ScrollManager経由で背景スクロール制御。`UpdateBehaviorOptions`でリゾルバ・phaseProgress・emotion・interaction・timeOfDay・todayCompletedCyclesを注入
 - `character/EmotionService.ts` — 感情パラメータ管理サービス。tick(deltaMs, isWorking)で自然変化、applyEvent()でイベント適用、loadAffinity()で永続化値復元
+- `character/EmotionEvents.ts` — 感情UI通知イベント型。`EmotionStateUpdatedEvent`（type + state: EmotionState）。main.tsのrAFループから1秒間隔スロットリングで発行、感情イベント時は即時発行
 - `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
 - `notification/NotificationBridge.ts` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work)→「休憩の時間」、PhaseCompleted(break)→「作業の時間」、PomodoroCompleted→「サイクル完了！」。long-break/congratsはスキップ。`NotificationPort`インターフェースでElectron Notification APIを抽象化
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
@@ -161,6 +162,7 @@ EventBus（UI/インフラ通知）:
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderを使用
+- `ui/EmotionIndicator.tsx` — 感情インジケーターUI。♥⚡★の3アイコンをopacity（0.15〜1.0）で表示。`EmotionStateUpdated`イベントをuseEventBusCallbackで購読。インラインコンポーネント（StatsDrawerがcanUse('emotionAccumulation')で条件付き描画）
 - `ui/TrialBadge.tsx` — trialモード表示バッジ。右下に「Trial」を薄く常時表示（opacity: 0.55、pointerEvents: none）。licenseMode==='trial'時のみ描画
 - `ui/FeatureLockedOverlay.tsx` — プレミアム機能ロックオーバーレイ。trial中にfureai/galleryボタン押下時に表示。購入インセンティブメッセージ+ストアリンク+Closeボタン。背景クリックで閉じる
 - `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面右下のリンゴSVGアイコン（`right: 10`, `bottom: 112`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
@@ -172,7 +174,7 @@ EventBus（UI/インフラ通知）:
 - `ui/StatsButton.tsx` — 統計パネル表示ボタン。チャートSVGアイコン（`bottom: 168`）
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）
+- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）。Cumulative Timeグラフ下にEmotionIndicator（canUse('emotionAccumulation')で条件付き描画）
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
@@ -184,7 +186,7 @@ EventBus（UI/インフラ通知）:
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -205,7 +207,7 @@ EventBus（UI/インフラ通知）:
 **ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish
 - `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
@@ -274,6 +276,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather非活性・時間帯切替・スナップショット復元・Stats/Weather排他表示
 - `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
+- `e2e/emotion-indicator.spec.ts` — 感情インジケーター表示/非表示・3アイコン存在・opacity整合性・ライセンス制限（6テスト）
 - `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰（setLicenseModeでregistered切替）
 - `e2e/gallery-mode.spec.ts` — ギャラリーモード遷移・ボタン表示制御・States/Rulesモード切替・アニメーション情報表示・freeモード復帰（setLicenseModeでregistered切替）
 - `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元

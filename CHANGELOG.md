@@ -10,6 +10,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-03-01
 
 ### Added
+- 感情インジケーターUI — 統計パネル（StatsDrawer）のCumulative Timeグラフ下に♥（satisfaction）⚡（fatigue）★（affinity）の3アイコンを表示。各値をopacity（0.15〜1.0）で表現。emotionAccumulationライセンス制限に対応
+- `EmotionStateUpdated` EventBusイベント — 感情パラメータの変化をUIに1秒間隔でスロットリング通知。感情イベント発生時は即時通知
+- `EmotionIndicator` インラインReactコンポーネント — CSS transition 0.5sでスムーズなopacity変化
+- 感情インジケーターE2Eテスト（6テスト）— 表示/非表示切替、3アイコン存在確認、opacity整合性、ライセンス制限
 - カスタムタイトルバー（frame: false） — OSネイティブのタイトルバーを除去し、透明背景+右上に最小化・閉じるボタンを配置。ドラッグでウィンドウ移動可能
 - `window:minimize`/`window:close` IPCハンドラ — レンダラーからのウィンドウ操作API
 - WindowTitleBarコンポーネント — インラインSVGアイコン、hover時の赤背景（閉じるボタン、Windows標準準拠）
