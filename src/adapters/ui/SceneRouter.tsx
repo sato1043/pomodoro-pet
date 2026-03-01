@@ -10,6 +10,7 @@ import { SceneGallery } from './SceneGallery'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
 import { UpdateNotification } from './UpdateNotification'
 import { LicenseToast } from './LicenseToast'
+import { TrialBadge } from './TrialBadge'
 
 type ActiveScene = 'free' | 'pomodoro' | 'fureai' | 'gallery'
 
@@ -58,6 +59,7 @@ export function SceneRouter(): JSX.Element {
       <SceneTransition ref={sceneTransitionRef} />
       <UpdateNotification pomodoroActive={activeScene === 'pomodoro'} />
       <LicenseToast licenseMode={licenseMode} serverMessage={serverMessage} />
+      <TrialBadge licenseMode={licenseMode} />
     </>
   )
 }

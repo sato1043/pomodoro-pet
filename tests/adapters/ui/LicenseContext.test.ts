@@ -8,12 +8,11 @@ import type { LicenseMode, FeatureName } from '../../../src/application/license/
  * ここでは Context 固有の null → 'trial' フォールバック動作のみ検証する。
  */
 describe('LicenseContext canUse null handling', () => {
-  const ALL_FEATURES: FeatureName[] = [
+  const TRIAL_ENABLED: FeatureName[] = [
     'pomodoroTimer',
     'timerSettings',
     'character',
     'stats',
-    'fureai',
     'weatherSettings',
     'soundSettings',
     'backgroundNotify',
@@ -21,11 +20,19 @@ describe('LicenseContext canUse null handling', () => {
     'autoUpdate',
   ]
 
-  it('licenseMode が null の場合、trial として全機能有効', () => {
+  const TRIAL_RESTRICTED: FeatureName[] = [
+    'fureai',
+    'gallery',
+  ]
+
+  it('licenseMode が null の場合、trial として fureai/gallery 以外が有効', () => {
     const mode: LicenseMode | null = null
     const effectiveMode: LicenseMode = mode ?? 'trial'
-    for (const feature of ALL_FEATURES) {
+    for (const feature of TRIAL_ENABLED) {
       expect(isFeatureEnabled(effectiveMode, feature)).toBe(true)
+    }
+    for (const feature of TRIAL_RESTRICTED) {
+      expect(isFeatureEnabled(effectiveMode, feature)).toBe(false)
     }
   })
 

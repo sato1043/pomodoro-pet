@@ -462,6 +462,16 @@ bash scripts/service-control.sh status   # 現在の状態を表示
 - インスタンス自体を完全停止するには Cloud Console から手動で max instances = 0 に設定する（CLI の `--max-instances=0` は Knative バリデーションで拒否されるため）
 - アプリ側はハートビート失敗時にオフライン判定にフォールバックするため、サービス停止中もアプリは動作する（JWT有効なら全機能利用可、JWTなしなら初期状態 trial 維持）
 
+## 課金確認
+
+Cloud Console の課金レポートで確認する。billing account ID は `gcloud billing projects describe pomodoro-pet-prod` で取得できる。
+
+```
+https://console.cloud.google.com/billing/<BILLING_ACCOUNT_ID>/reports?project=pomodoro-pet-prod
+```
+
+min-instances=0 のため、リクエストがなければインスタンスは0台にスケールダウンし課金は発生しない。
+
 ## トライアルリセット防止
 
 - 同一IPからの新規デバイス作成を月3回に制限

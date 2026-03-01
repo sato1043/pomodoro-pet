@@ -7,13 +7,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-### Changed
-- メインプロセス（desktop/main/index.ts）を6モジュールに分割 — types/settings/license/updater/ipc-handlers
-- tsconfig.node.jsonにresolveJsonModule追加 — package.json importの型チェックエラーを解消
-
-### Added
-- メインプロセスのライセンスモジュールのユニットテスト（21テスト）— decodeJwtPayload/verifyJwt/getLicenseState/setLicenseState
-
 ## [0.2.0] - 2026-03-01
 
 ### Added
@@ -28,10 +21,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - GallerySideBarコンポーネント — アニメーション選択サイドバー
 - AppScene型に'gallery'追加、GalleryCoordinator（シーン遷移+アニメーション再生の協調）
 - FeatureName型に'gallery'追加 — registered/trialで有効、expired/restrictedで無効
+- TrialBadgeコンポーネント — trialモード中に右下に「Trial」を薄く常時表示
+- FeatureLockedOverlayコンポーネント — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
+- メインプロセスのライセンスモジュールのユニットテスト（21テスト）— decodeJwtPayload/verifyJwt/getLicenseState/setLicenseState
 - GalleryCoordinatorのユニットテスト（13件）、AppSceneManagerのgallery遷移テスト（10件）
 - E2Eテスト（gallery-mode.spec.ts、7件）
+- E2Eテスト trial-restriction.spec.ts（4件）— trial badge表示、fureai/galleryロックオーバーレイ表示/閉じる
+- E2Eヘルパー setLicenseMode() — IPC経由でレンダラーのライセンスモードを切替（registered/trial両モードをテスト可能に）
 
 ### Changed
+- メインプロセス（desktop/main/index.ts）を6モジュールに分割 — types/settings/license/updater/ipc-handlers
+- tsconfig.node.jsonにresolveJsonModule追加 — package.json importの型チェックエラーを解消
+- trialモードでfureai/galleryを無効化 — registered限定のプレミアム機能に変更
+- FureaiEntryButton/GalleryEntryButtonをtrial中も常時表示 — クリック時にFeatureLockedOverlay表示
 - ふれあいモード遷移ボタンを右下（`right: 10`, `bottom: 112`）に移動 — ギャラリーボタンと左右分離
 - キャラクター位置オフセットをSceneGalleryのuseEffectで制御 — 暗転中に移動完了
 

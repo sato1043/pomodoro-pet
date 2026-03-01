@@ -91,7 +91,7 @@ const ALL_FEATURES: readonly FeatureName[] = [
 
 const ENABLED_FEATURES: Readonly<Record<LicenseMode, ReadonlySet<FeatureName>>> = {
   registered: new Set<FeatureName>(ALL_FEATURES),
-  trial:      new Set<FeatureName>(ALL_FEATURES),
+  trial:      new Set<FeatureName>(ALL_FEATURES.filter(f => f !== 'fureai' && f !== 'gallery')),
   expired:    new Set<FeatureName>(['pomodoroTimer', 'character']),
   restricted: new Set<FeatureName>(['pomodoroTimer', 'character']),
 }

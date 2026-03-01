@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback } from 'react'
 import { useLicenseMode } from './LicenseContext'
+import { useAppDeps } from './AppContext'
 import { OverlayFree } from './OverlayFree'
 import { FureaiEntryButton } from './FureaiEntryButton'
 import { StartPomodoroButton } from './StartPomodoroButton'
@@ -12,18 +13,37 @@ import { WeatherButton } from './WeatherButton'
 import { WeatherCloseButton } from './WeatherCloseButton'
 import { WeatherPanel } from './WeatherPanel'
 import { GalleryEntryButton } from './GalleryEntryButton'
+import { FeatureLockedOverlay } from './FeatureLockedOverlay'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
+  const { fureaiCoordinator, galleryCoordinator } = useAppDeps()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [showWeather, setShowWeather] = useState(false)
+  const [showLocked, setShowLocked] = useState(false)
   const toggleSettingsRef = useRef<() => void>(() => {})
   const hideButtons = showStats || settingsExpanded || showWeather
 
   const handleToggleRef = useCallback((toggle: () => void) => {
     toggleSettingsRef.current = toggle
   }, [])
+
+  const handleFureaiClick = (): void => {
+    if (canUse('fureai')) {
+      fureaiCoordinator.enterFureai()
+    } else {
+      setShowLocked(true)
+    }
+  }
+
+  const handleGalleryClick = (): void => {
+    if (canUse('gallery')) {
+      galleryCoordinator.enterGallery()
+    } else {
+      setShowLocked(true)
+    }
+  }
 
   return (
     <>
@@ -42,9 +62,10 @@ export function SceneFree(): JSX.Element {
       {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
       {!hideButtons && <SettingsButton onClick={() => toggleSettingsRef.current()} />}
       {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
-      {!hideButtons && canUse('fureai') && <FureaiEntryButton />}
+      {!hideButtons && <FureaiEntryButton onClick={handleFureaiClick} />}
       {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
-      {!hideButtons && canUse('gallery') && <GalleryEntryButton />}
+      {!hideButtons && <GalleryEntryButton onClick={handleGalleryClick} />}
+      {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
     </>
   )
 }

@@ -1,4 +1,4 @@
-pomodoro-pet v0.1.0
+pomodoro-pet v0.2.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -53,4 +53,19 @@ TypeScript + Electron + Three.js + React + Vite + vanilla-extract
 
 ## Assets
 
-- https://downraindc3d.itch.io/wildboar
+This project is made possible by the following amazing creators and services. Thank you!
+
+### 3D Model
+- **Wildboar** by [downraindc3d](https://downraindc3d.itch.io/wildboar) — 3D character model and animations (itch.io)
+
+### Music & Sound Effects
+- BGM and sound effects from [ElevenLabs](https://elevenlabs.io/) — Break BGM, timer SFX, fanfare
+- Procedural ambient sounds (forest, rain, wind) are generated in-app
+
+## License
+
+This project is **Source Available** (not open source).
+
+Source code is licensed under [PolyForm Noncommercial License 1.0.0](https://polyformproject.org/licenses/noncommercial/1.0.0/) — See [LICENSE](./LICENSE)
+
+Copyright 2026 sato1043@updater.cc

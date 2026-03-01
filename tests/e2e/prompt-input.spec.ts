@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { launchApp, closeApp, type AppContext } from './helpers/launch'
+import { launchApp, closeApp, setLicenseMode, type AppContext } from './helpers/launch'
 
 // VITE_DEBUG_TIMER=3/2/3/2 でビルド済み前提
 
@@ -7,10 +7,11 @@ let app: AppContext
 
 test.beforeAll(async () => {
   app = await launchApp()
+  await setLicenseMode(app, 'registered')
 
   // ふれあいモードに遷移
   await app.page.locator('[data-testid="fureai-entry"]').click()
-  await expect(app.page.locator('[data-testid="overlay-fureai"]')).toBeVisible({ timeout: 5_000 })
+  await expect(app.page.locator('[data-testid="compact-header"]')).toBeVisible({ timeout: 5_000 })
 })
 
 test.afterAll(async () => {

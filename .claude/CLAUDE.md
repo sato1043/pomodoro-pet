@@ -97,8 +97,8 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 - `electron/` ディレクトリ名は使用禁止（`electron` npmパッケージ名と衝突する）。代わりに `desktop/` を使用
 - rendererの root は `src/`（`electron.vite.config.ts` の `renderer.root: 'src'`）
 - **バージョン管理と変更記録**: すべての変更で[CHANGELOG.md](../CHANGELOG.md)への追記を義務付ける
-  - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新
-  - **バグ修正時**: package.json patch bump + feature-license-map.md冒頭バージョン更新+変更履歴1行追加 + CHANGELOG.md追記
+  - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新 + README.md冒頭バージョン更新
+  - **バグ修正時**: package.json patch bump + feature-license-map.md冒頭バージョン更新+変更履歴1行追加 + CHANGELOG.md追記 + README.md冒頭バージョン更新
   - feature-license-map.mdのバージョン = package.jsonのバージョン（常に同期）
 
 ## Known Issues & Tips

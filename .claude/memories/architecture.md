@@ -144,9 +144,9 @@ EventBus（UI/インフラ通知）:
 - `three/FeedingInteractionAdapter.ts` — 餌オブジェクト（キャベツ/リンゴ）のD&D餌やり操作。複数CabbageHandle[]対応。Z平面投影+NDCベースZ制御（べき乗カーブ）。ふれあいモード時カメラ後退。`FeedingSuccess`イベント発行。`isActive`フラグでふれあいモード中のみ動作
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
-- `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い=全機能有効）
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToastに渡す
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+BackButtonを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/FureaiEntryButton/WeatherButton/GalleryEntryButtonの表示を制御
+- `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い。trialではfureai/galleryが無効）
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToast+TrialBadgeに渡す
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
@@ -154,13 +154,15 @@ EventBus（UI/インフラ通知）:
 - `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用
 - `ui/GalleryTopBar.tsx` — ギャラリーモード切替タブバー。Clips/States/Rulesの3モード。GalleryMode型をexport。createPortalでdocument.bodyに描画
 - `ui/GallerySideBar.tsx` — ギャラリーアニメーション選択サイドバー。GallerySideBarItem型（key/label/description）。createPortalでdocument.bodyに描画
-- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。createPortalでdocument.bodyに描画
+- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
 - `ui/GalleryExitButton.tsx` — ギャラリーモードからfreeモードへの戻るボタン。←矢印アイコン
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderを使用
-- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面右下のリンゴSVGアイコン（`right: 10`, `bottom: 112`）。createPortalでdocument.bodyに描画
+- `ui/TrialBadge.tsx` — trialモード表示バッジ。右下に「Trial」を薄く常時表示（opacity: 0.55、pointerEvents: none）。licenseMode==='trial'時のみ描画
+- `ui/FeatureLockedOverlay.tsx` — プレミアム機能ロックオーバーレイ。trial中にfureai/galleryボタン押下時に表示。購入インセンティブメッセージ+ストアリンク+Closeボタン。背景クリックで閉じる
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面右下のリンゴSVGアイコン（`right: 10`, `bottom: 112`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
 - `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置
 - `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）
 - `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル
@@ -177,9 +179,11 @@ EventBus（UI/インフラ通知）:
 - `ui/RegistrationContent.tsx` — 登録パネル（download key入力、Registration Guide表示）
 - `ui/UpdateNotification.tsx` — アップデート通知バナー
 - `ui/LicenseToast.tsx` — ライセンストースト
+- `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
+- `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -260,7 +264,7 @@ EventBus（UI/インフラ通知）:
 #### E2Eテスト（Playwright）
 Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_TIMER=3/2/3/2`で短縮ビルドし、全ポモドーロサイクルを約1.5分で検証。vanilla-extractのハッシュ化クラス名を回避するため`data-testid`属性を使用。
 
-- `e2e/helpers/launch.ts` — Electronアプリ起動/終了ヘルパー
+- `e2e/helpers/launch.ts` — Electronアプリ起動/終了ヘルパー + setLicenseMode()（IPC経由でレンダラーのライセンスモードを切替）
 - `e2e/smoke.spec.ts` — 起動・タイトル表示・Start Pomodoroボタン存在
 - `e2e/free-mode.spec.ts` — 設定パネルトグル・ボタン選択・Set確定・BG Audio/Notifyトグル表示・操作・スナップショット復元
 - `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
@@ -268,13 +272,14 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather非活性・時間帯切替・スナップショット復元・Stats/Weather排他表示
 - `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
-- `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰
-- `e2e/gallery-mode.spec.ts` — ギャラリーモード遷移・ボタン表示制御・States/Rulesモード切替・アニメーション情報表示・freeモード復帰
+- `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰（setLicenseModeでregistered切替）
+- `e2e/gallery-mode.spec.ts` — ギャラリーモード遷移・ボタン表示制御・States/Rulesモード切替・アニメーション情報表示・freeモード復帰（setLicenseModeでregistered切替）
 - `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元
 - `e2e/animation-state.spec.ts` — デバッグインジケーター経由のアニメーション状態・感情パラメータ・プリセット切替・phaseProgress検証
 - `e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示
-- `e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・Sendボタン・空文字無視
+- `e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・Sendボタン・空文字無視（setLicenseModeでregistered切替）
 - `e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー
+- `e2e/trial-restriction.spec.ts` — trial badge表示・fureai/galleryロックオーバーレイ表示/閉じる（4テスト）
 - `e2e/registration.spec.ts` — 登録UI・API存在確認（8テスト）
 
 ##### E2Eフェイクタイマー検討結果

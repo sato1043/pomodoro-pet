@@ -1,14 +1,15 @@
 import { createPortal } from 'react-dom'
-import { useAppDeps } from './AppContext'
 import * as styles from './styles/fureai-entry.css'
 
-export function FureaiEntryButton(): JSX.Element {
-  const { fureaiCoordinator } = useAppDeps()
+interface FureaiEntryButtonProps {
+  readonly onClick: () => void
+}
 
+export function FureaiEntryButton({ onClick }: FureaiEntryButtonProps): JSX.Element {
   return createPortal(
     <button
       className={styles.entryButton}
-      onClick={() => fureaiCoordinator.enterFureai()}
+      onClick={onClick}
       data-testid="fureai-entry"
       title="Fureai Mode"
     >

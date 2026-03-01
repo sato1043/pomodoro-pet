@@ -159,6 +159,10 @@
 - タイマー設定・統計・ふれあい・天気・サウンドプリセット・通知・感情蓄積・自動アップデートを制限
 - ENABLED_FEATURESマップ（デフォルト無効方式）でモード×機能の有効化を一元管理
 - VITE_DEBUG_LICENSEで開発時のモード固定に対応
+- TrialBadge（右下に「Trial」薄表示）でtrialモードを常時視認可能に
+- FeatureLockedOverlay（スクリーンショット+キャッチコピー+Unlockボタン）でtrial中のプレミアム機能ロックを表示
+- fureai/galleryをtrial無効化（registered限定プレミアム機能）、ボタンは常時表示しクリック時にロックオーバーレイ
+- E2Eテスト trial-restriction.spec.ts（4件）+ setLicenseMode()ヘルパー追加
 - 詳細: [feature-license-map.md](feature-license-map.md)
 
 ### ~~素材ライセンス整理・配布方式の決定~~ — 完了
@@ -231,13 +235,14 @@
 - 名前はオーバーレイやUIの適切な箇所に表示
 - `{userData}/settings.json`に永続化
 
-### キャラクターのモデル状態ギャラリー
-- ユーザーがキャラクターの各状態・アニメーションをコレクション的に閲覧できる図鑑UI
-- アンロック済みの状態（idle/wander/march/sit/sleep/happy/reaction/dragged/pet/refuse/feeding）を一覧表示
-- 各状態のアニメーションをサムネイルまたはプレビュー再生で確認できる
-- 未発見の状態はシルエットやロック表示で存在を示唆し、探索意欲を促す
-- 状態の発見条件（例: ポモドーロ完了でhappy、ふれあいモードでfeeding）のヒントを表示
-- freeモードからアクセス可能なパネルとして配置
+### ~~キャラクターのモデル状態ギャラリー~~ — 完了（アニメーションギャラリーとして実装）
+- AppScene `gallery` を追加し、GalleryCoordinatorがシーン遷移+アニメーション再生を協調
+- Clipsモード: 13クリップのFBXアニメーション個別再生（クリップ名+FBXファイル名表示）
+- Statesモード: 全11状態アニメーションの個別再生（loop個別オーバーライド対応）
+- Rulesモード: 14ルールのEnrichedAnimationResolver直接再生
+- 2行構成の情報バー + GalleryTopBar（モード切替タブ）+ GallerySidebar（アニメーション選択）
+- freeモードから左下ボタンでアクセス（registered限定、trialではFeatureLockedOverlay表示）
+- GalleryCoordinatorのユニットテスト（13件）、E2Eテスト gallery-mode.spec.ts（7件）
 
 ### キャラクターの感情・バイオリズム統計
 - 感情パラメータ（satisfaction/fatigue/affinity）やバイオリズム履歴を統計情報として集計・可視化

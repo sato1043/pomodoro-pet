@@ -14,8 +14,8 @@
 | timerSettings | o | o | x | x | タイマー設定（Work/Break/Long Break/Sets） |
 | character | o | o | o | o | キャラクター行動（自律行動/march/インタラクション） |
 | stats | o | o | x | x | 統計表示（ヒートマップ/日別集計） |
-| fureai | o | o | x | x | ふれあいモード（餌やり/プロンプト入力） |
-| gallery | o | o | x | x | アニメーションギャラリー（クリップ/状態/ルール一覧プレビュー） |
+| fureai | o | - | x | x | ふれあいモード（餌やり/プロンプト入力） |
+| gallery | o | - | x | x | アニメーションギャラリー（クリップ/状態/ルール一覧プレビュー） |
 | weatherSettings | o | o | x | x | 天気設定UI（天気タイプ/雲量/時間帯選択） |
 | soundSettings | o | o | x | x | サウンドプリセット選択 |
 | backgroundNotify | o | o | x | x | バックグラウンド時のシステム通知 |
@@ -181,7 +181,14 @@
 | 75 | 統計データ自動保存 | desktop/main/index.ts | 自動 | （制限不要） | statistics.json保存 |
 | 76 | 起動時設定復元 | AppSettingsService.ts | 自動 | （制限不要） | loadFromStorage() |
 
-### O. ユーティリティ
+### O. ライセンスUI
+
+| # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
+|---|---|---|---|---|---|
+| 87 | トライアルバッジ | TrialBadge.tsx | 自動 | （制限不要） | trial中に右下に「Trial」を薄く常時表示 |
+| 88 | プレミアム機能ロックオーバーレイ | FeatureLockedOverlay.tsx | 操作 | （制限不要） | trial中のfureai/galleryボタン押下時に購入インセンティブ表示 |
+
+### P. ユーティリティ
 
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
@@ -232,5 +239,6 @@
 | バージョン | 種別 | 概要 |
 |---|---|---|
 | 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加 |
+| 0.2.0 | 制限変更 | trial で fureai/gallery を無効化（registered限定のプレミアム機能に変更） |
 | 0.1.1 | バージョン同期 | リリースインフラ整備に伴うバージョン同期（機能変更なし） |
 | 0.1.0 | 初版 | 全80機能定義、10項目のFeatureName策定、ライセンス制限マップ策定 |

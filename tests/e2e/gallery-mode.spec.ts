@@ -1,23 +1,25 @@
 import { test, expect } from '@playwright/test'
-import { launchApp, closeApp, type AppContext } from './helpers/launch'
+import { launchApp, closeApp, setLicenseMode, type AppContext } from './helpers/launch'
 
 let app: AppContext
 
 test.beforeAll(async () => {
   app = await launchApp()
+  await setLicenseMode(app, 'registered')
 })
 
 test.afterAll(async () => {
   await closeApp(app)
 })
 
-test('gallery-entryクリックでoverlay-galleryが表示される', async () => {
+test('gallery-entryクリックでgalleryモードに遷移する', async () => {
   const { page } = app
 
   await page.locator('[data-testid="gallery-entry"]').click()
 
-  // blackout遷移（約700ms）を考慮
-  await expect(page.locator('[data-testid="overlay-gallery"]')).toBeVisible({ timeout: 5_000 })
+  // blackout遷移（約700ms）を考慮。gallery-top-barはgalleryモードで表示される
+  await expect(page.locator('[data-testid="gallery-top-bar"]')).toBeVisible({ timeout: 5_000 })
+  await page.waitForSelector('[data-testid="overlay-gallery"]', { state: 'attached', timeout: 5_000 })
 })
 
 test('galleryモード中にfreeモードのボタンが非表示でgallery-exitが表示', async () => {

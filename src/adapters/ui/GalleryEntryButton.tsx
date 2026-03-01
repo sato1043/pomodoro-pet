@@ -1,14 +1,15 @@
 import { createPortal } from 'react-dom'
-import { useAppDeps } from './AppContext'
 import * as styles from './styles/gallery.css'
 
-export function GalleryEntryButton(): JSX.Element {
-  const { galleryCoordinator } = useAppDeps()
+interface GalleryEntryButtonProps {
+  readonly onClick: () => void
+}
 
+export function GalleryEntryButton({ onClick }: GalleryEntryButtonProps): JSX.Element {
   return createPortal(
     <button
       className={styles.entryButton}
-      onClick={() => galleryCoordinator.enterGallery()}
+      onClick={onClick}
       data-testid="gallery-entry"
       title="Animation Gallery"
     >

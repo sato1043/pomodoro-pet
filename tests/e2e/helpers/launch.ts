@@ -28,3 +28,21 @@ export async function launchApp(): Promise<AppContext> {
 export async function closeApp(ctx: AppContext): Promise<void> {
   await ctx.electronApp.close()
 }
+
+/**
+ * レンダラーのライセンスモードを強制切り替えする。
+ * メインプロセスから 'license:changed' IPCを送信し、LicenseProviderの状態を更新する。
+ */
+export async function setLicenseMode(ctx: AppContext, mode: string): Promise<void> {
+  await ctx.electronApp.evaluate(({ BrowserWindow }, m) => {
+    const win = BrowserWindow.getAllWindows()[0]
+    if (win && !win.isDestroyed()) {
+      win.webContents.send('license:changed', { mode: m })
+    }
+  }, mode)
+  // React再レンダリング完了を待つ: registered なら trial-badge が消える
+  if (mode === 'registered') {
+    await ctx.page.waitForSelector('[data-testid="trial-badge"]', { state: 'hidden', timeout: 5_000 }).catch(() => {})
+  }
+  await ctx.page.waitForTimeout(300)
+}

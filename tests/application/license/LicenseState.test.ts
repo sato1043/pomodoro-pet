@@ -204,9 +204,18 @@ describe('isFeatureEnabled', () => {
     })
   })
 
+  const TRIAL_RESTRICTED: FeatureName[] = ['fureai', 'gallery']
+  const TRIAL_ENABLED: FeatureName[] = ALL_FEATURES.filter(
+    f => !TRIAL_RESTRICTED.includes(f)
+  )
+
   describe('trialモード', () => {
-    it.each(ALL_FEATURES)('%s が利用可能', (feature) => {
+    it.each(TRIAL_ENABLED)('%s が利用可能', (feature) => {
       expect(isFeatureEnabled('trial', feature)).toBe(true)
+    })
+
+    it.each(TRIAL_RESTRICTED)('%s が利用不可', (feature) => {
+      expect(isFeatureEnabled('trial', feature)).toBe(false)
     })
   })
 

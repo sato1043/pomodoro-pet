@@ -88,6 +88,38 @@ Viteは`NODE_ENV`に応じてenvファイルを選択する:
 
 `.env.development`、`.env.production`、`.env.local` はすべて `.gitignore` に含まれるためコミットされない。
 
+### ライセンス管理（GCPバックエンド）
+
+サーバー上のキー・デバイス状態の確認や操作には `gcp-update-server/` の admin スクリプトを使う。
+前提: `gcloud auth application-default login` 済み。
+
+```bash
+cd gcp-update-server
+
+# デバイス操作
+npm run admin device:list                    # 全デバイス一覧
+npm run admin device:get <deviceId>          # デバイス詳細
+
+# キー操作（平文 download key を指定。内部でSHA256ハッシュ化）
+npm run admin key:list                       # 全キー一覧
+npm run admin key:get <downloadKey>          # キー詳細
+
+# デバッグ用キー登録（itch.io検証スキップ中のため任意文字列で可）
+curl -X POST $API_URL/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"<deviceId>","downloadKey":"debug-key-xxx"}'
+```
+
+# サービス状態確認
+bash scripts/service-control.sh status
+
+# 課金確認（ブラウザで Cloud Console 課金レポートを開く）
+# billing account ID は gcloud billing projects describe pomodoro-pet-prod で確認
+# https://console.cloud.google.com/billing/<BILLING_ACCOUNT_ID>/reports?project=pomodoro-pet-prod
+```
+
+詳細（全コマンド・ユーザー問い合わせ対応例）は [gcp-update-server.md](gcp-update-server.md) を参照。
+
 ## テスト
 
 ### ユニットテスト（Vitest）
