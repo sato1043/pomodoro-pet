@@ -13,7 +13,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 4層の階層的状態マシンでアプリケーション状態を管理する。
 
 ```
-Layer 1: AppScene          — free | pomodoro | settings | fureai
+Layer 1: AppScene          — free | pomodoro | settings | fureai | gallery
 Layer 2: PomodoroState     — work | break | long-break | congrats （+ running）
 Layer 3: CharacterBehavior — autonomous | march-cycle | rest-cycle | joyful-rest | celebrate | fureai-idle
 Layer 4: CharacterState    — idle | wander | march | sit | sleep | happy | ...
@@ -118,12 +118,14 @@ EventBus（UI/インフラ通知）:
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
 ### src/application/ — ユースケース
-- `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings/fureai）とAppSceneEvent型
-- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro/enterFureai/exitFureai）。純粋な状態ホルダー（EventBus不要）
+- `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings/fureai/gallery）とAppSceneEvent型
+- `app-scene/AppSceneManager.ts` — アプリケーションシーン管理（enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery）。純粋な状態ホルダー（EventBus不要）
 - `fureai/FureaiCoordinator.ts` — ふれあいモードのシーン遷移+プリセット切替+餌やり制御を協調。enterFureai()でfureai-idleプリセット+FeedingAdapter活性化、exitFureai()でautonomousプリセット+FeedingAdapter非活性化。feedCharacter()でfeeding状態遷移。PomodoroOrchestratorとは独立
+- `gallery/GalleryCoordinator.ts` — ギャラリーモードのシーン遷移+アニメーション再生の協調。enterGallery()でgalleryシーン遷移、exitGallery()でfreeシーン遷移+autonomousプリセット復帰。playState()/playAnimationSelection()でstopAnimation()+再生。applyCharacterOffset()/resetCharacterOffset()でキャラクター位置オフセット制御
+- `gallery/GalleryAnimationData.ts` — 13クリップ（GalleryClipItem）+11状態（GalleryStateItem、loopオーバーライド対応）+14ルール（GalleryRuleItem）の表示データ定義。ルールのAnimationSelectionはEnrichedAnimationResolverの結果をハードコード
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
 - `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
-- `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）。`ENABLED_FEATURES`マップ（デフォルト無効方式）でモード×機能の有効化を一元管理。registered/trialは全機能有効、expired/restrictedはpomodoroTimer+characterのみ
+- `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）。`ENABLED_FEATURES`マップ（デフォルト無効方式）でモード×機能の有効化を一元管理。registered/trialは全機能有効（gallery含む）、expired/restrictedはpomodoroTimer+characterのみ
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
 - `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
@@ -143,15 +145,22 @@ EventBus（UI/インフラ通知）:
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い=全機能有効）
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureaiを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToastに渡す
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+StatsDrawer+WeatherPanel+BackButtonを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/FureaiEntryButton/WeatherButtonの表示を制御
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToastに渡す
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+BackButtonを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/FureaiEntryButton/WeatherButton/GalleryEntryButtonの表示を制御
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
+- `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
+- `ui/OverlayGallery.tsx` — ギャラリーモードオーバーレイ。createPortalでdocument.bodyに描画。CompactHeader+GalleryTopBar+GallerySideBarを統合。Clips/States/Rulesモード切替+2行構成情報バー（description+詳細）。モード別のinfoBar表示制御（clips: State非表示、rules: State/Clip非表示）
+- `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用
+- `ui/GalleryTopBar.tsx` — ギャラリーモード切替タブバー。Clips/States/Rulesの3モード。GalleryMode型をexport。createPortalでdocument.bodyに描画
+- `ui/GallerySideBar.tsx` — ギャラリーアニメーション選択サイドバー。GallerySideBarItem型（key/label/description）。createPortalでdocument.bodyに描画
+- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。createPortalでdocument.bodyに描画
+- `ui/GalleryExitButton.tsx` — ギャラリーモードからfreeモードへの戻るボタン。←矢印アイコン
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
-- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。コンパクト表示（タイトル+時計）
-- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面左下のリンゴSVGアイコン（`bottom: 232`）。createPortalでdocument.bodyに描画
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderを使用
+- `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面右下のリンゴSVGアイコン（`right: 10`, `bottom: 112`）。createPortalでdocument.bodyに描画
 - `ui/FureaiExitButton.tsx` — ふれあいモードからfreeモードへの戻るボタン。←矢印アイコン。FureaiEntryButtonと同位置
 - `ui/StartPomodoroButton.tsx` — Start Pomodoroボタン。画面下部固定（`bottom: 20`）
 - `ui/SetButton.tsx` — 設定確定ボタン。StartPomodoroButtonと同位置・同スタイル
@@ -170,7 +179,7 @@ EventBus（UI/インフラ通知）:
 - `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -213,8 +222,9 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
 - `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
-- `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai・全サイクル
+- `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
 - `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
+- `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
@@ -224,7 +234,7 @@ EventBus（UI/インフラ通知）:
 - `domain/statistics/StatisticsTypes.test.ts` — emptyDailyStats・todayKey・formatDateKey
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
-- `application/license/LicenseState.test.ts` — ライセンス判定ロジック（58テスト）
+- `application/license/LicenseState.test.ts` — ライセンス判定ロジック（62テスト）
 - `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
 - `desktop/main/license.test.ts` — メインプロセスライセンスモジュール（decodeJwtPayload正常/異常、verifyJwt署名拒否、getLicenseState/setLicenseState状態管理）
 
@@ -259,6 +269,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
 - `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰
+- `e2e/gallery-mode.spec.ts` — ギャラリーモード遷移・ボタン表示制御・States/Rulesモード切替・アニメーション情報表示・freeモード復帰
 - `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元
 - `e2e/animation-state.spec.ts` — デバッグインジケーター経由のアニメーション状態・感情パラメータ・プリセット切替・phaseProgress検証
 - `e2e/free-display.spec.ts` — freeモード時刻表示・タイムラインバー・設定サマリー・終了時刻表示

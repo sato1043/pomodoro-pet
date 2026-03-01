@@ -30,6 +30,7 @@ import { createStatisticsService } from './application/statistics/StatisticsServ
 import { bridgeTimerToStatistics } from './application/statistics/StatisticsBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
+import { createGalleryCoordinator, type GalleryCoordinator } from './application/gallery/GalleryCoordinator'
 import { createCabbageObject } from './infrastructure/three/CabbageObject'
 import { createAppleObject } from './infrastructure/three/AppleObject'
 import { createFeedingInteractionAdapter, DEFAULT_CAMERA, FUREAI_CAMERA, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
@@ -307,13 +308,25 @@ async function main(): Promise<void> {
     bus, sceneManager, onBehaviorChange: switchPreset, behaviorSM, feedingAdapter
   })
 
+  // GalleryCoordinator（アニメーションギャラリーのシーン遷移+アニメーション再生）
+  const galleryCharHandle = {
+    playState: charHandle.playState,
+    playAnimation: charHandle.playAnimation,
+    stopAnimation: () => charHandle.animationController.stop(),
+    setPosition: charHandle.setPosition,
+  }
+  let galleryCoordinator: GalleryCoordinator = createGalleryCoordinator({
+    bus, sceneManager, onBehaviorChange: switchPreset, charHandle: galleryCharHandle
+  })
+
   // React UIマウント
   const appRoot: Root = createRoot(document.getElementById('app-root')!)
   function renderReactUI(): void {
     const deps: AppDeps = {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
-      character, behaviorSM, charHandle, statisticsService, fureaiCoordinator
+      character, behaviorSM, charHandle, statisticsService, fureaiCoordinator,
+      galleryCoordinator
     }
     appRoot.render(createElement(App, { deps }))
   }
@@ -327,6 +340,9 @@ async function main(): Promise<void> {
     })
     fureaiCoordinator = createFureaiCoordinator({
       bus, sceneManager, onBehaviorChange: switchPreset, behaviorSM, feedingAdapter
+    })
+    galleryCoordinator = createGalleryCoordinator({
+      bus, sceneManager, onBehaviorChange: switchPreset, charHandle: galleryCharHandle
     })
     renderReactUI()
   })
@@ -525,11 +541,14 @@ async function main(): Promise<void> {
     // インタラクション追跡の時間更新
     interactionTracker.tick(deltaMs)
 
-    updateBehavior(
-      character, behaviorSM, charHandle, deltaMs,
-      scrollManager, (state) => scrollRenderer.update(state),
-      behaviorOptions
-    )
+    // galleryシーン中はBehaviorStateMachineの自律行動をスキップ
+    if (sceneManager.currentScene !== 'gallery') {
+      updateBehavior(
+        character, behaviorSM, charHandle, deltaMs,
+        scrollManager, (state) => scrollRenderer.update(state),
+        behaviorOptions
+      )
+    }
     rainEffect.update(deltaMs)
     snowEffect.update(deltaMs)
     cloudEffect.update(deltaMs)

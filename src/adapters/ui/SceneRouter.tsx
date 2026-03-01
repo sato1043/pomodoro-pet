@@ -6,15 +6,17 @@ import type { AppSceneEvent } from '../../application/app-scene/AppScene'
 import { SceneFree } from './SceneFree'
 import { ScenePomodoro } from './ScenePomodoro'
 import { SceneFureai } from './SceneFureai'
+import { SceneGallery } from './SceneGallery'
 import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
 import { UpdateNotification } from './UpdateNotification'
 import { LicenseToast } from './LicenseToast'
 
-type ActiveScene = 'free' | 'pomodoro' | 'fureai'
+type ActiveScene = 'free' | 'pomodoro' | 'fureai' | 'gallery'
 
 function toActiveScene(scene: string): ActiveScene {
   if (scene === 'pomodoro') return 'pomodoro'
   if (scene === 'fureai') return 'fureai'
+  if (scene === 'gallery') return 'gallery'
   return 'free'
 }
 
@@ -52,6 +54,7 @@ export function SceneRouter(): JSX.Element {
       {activeScene === 'free' && <SceneFree />}
       {activeScene === 'pomodoro' && <ScenePomodoro />}
       {activeScene === 'fureai' && <SceneFureai />}
+      {activeScene === 'gallery' && <SceneGallery />}
       <SceneTransition ref={sceneTransitionRef} />
       <UpdateNotification pomodoroActive={activeScene === 'pomodoro'} />
       <LicenseToast licenseMode={licenseMode} serverMessage={serverMessage} />

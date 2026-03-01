@@ -6,6 +6,8 @@ export interface AppSceneManager {
   exitPomodoro(): AppSceneEvent[]
   enterFureai(): AppSceneEvent[]
   exitFureai(): AppSceneEvent[]
+  enterGallery(): AppSceneEvent[]
+  exitGallery(): AppSceneEvent[]
 }
 
 export function createAppSceneManager(): AppSceneManager {
@@ -38,6 +40,18 @@ export function createAppSceneManager(): AppSceneManager {
 
     exitFureai(): AppSceneEvent[] {
       if (currentScene !== 'fureai') return []
+      currentScene = 'free'
+      return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
+    },
+
+    enterGallery(): AppSceneEvent[] {
+      if (currentScene !== 'free') return []
+      currentScene = 'gallery'
+      return [{ type: 'AppSceneChanged', scene: 'gallery', timestamp: now() }]
+    },
+
+    exitGallery(): AppSceneEvent[] {
+      if (currentScene !== 'gallery') return []
       currentScene = 'free'
       return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
     }

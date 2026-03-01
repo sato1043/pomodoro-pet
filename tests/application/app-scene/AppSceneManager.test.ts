@@ -111,6 +111,58 @@ describe('AppSceneManager', () => {
     })
   })
 
+  describe('enterGallery', () => {
+    it('galleryに遷移する', () => {
+      manager.enterGallery()
+      expect(manager.currentScene).toBe('gallery')
+    })
+
+    it('AppSceneChanged(gallery)イベントを返す', () => {
+      const events = manager.enterGallery()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'gallery' })
+      )
+    })
+
+    it('既にgalleryの時は空配列を返す', () => {
+      manager.enterGallery()
+      const events = manager.enterGallery()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('gallery')
+    })
+
+    it('pomodoroからは遷移できない', () => {
+      manager.enterPomodoro()
+      const events = manager.enterGallery()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('pomodoro')
+    })
+  })
+
+  describe('exitGallery', () => {
+    it('freeに遷移する', () => {
+      manager.enterGallery()
+      manager.exitGallery()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('AppSceneChanged(free)イベントを返す', () => {
+      manager.enterGallery()
+      const events = manager.exitGallery()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'free' })
+      )
+    })
+
+    it('gallery以外の時は空配列を返す', () => {
+      const events = manager.exitGallery()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('free')
+    })
+  })
+
   describe('状態遷移の全サイクル', () => {
     it('free → pomodoro → free の全遷移が正常に動作する', () => {
       expect(manager.currentScene).toBe('free')
@@ -137,6 +189,30 @@ describe('AppSceneManager', () => {
       const events = manager.enterPomodoro()
       expect(events).toHaveLength(0)
       expect(manager.currentScene).toBe('fureai')
+    })
+
+    it('free → gallery → free の全遷移が正常に動作する', () => {
+      expect(manager.currentScene).toBe('free')
+
+      manager.enterGallery()
+      expect(manager.currentScene).toBe('gallery')
+
+      manager.exitGallery()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('galleryからpomodoroへは直接遷移できない', () => {
+      manager.enterGallery()
+      const events = manager.enterPomodoro()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('gallery')
+    })
+
+    it('galleryからfureaiへは直接遷移できない', () => {
+      manager.enterGallery()
+      const events = manager.enterFureai()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('gallery')
     })
   })
 })

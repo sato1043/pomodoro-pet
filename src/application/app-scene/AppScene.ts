@@ -1,4 +1,4 @@
-export type AppScene = 'free' | 'pomodoro' | 'settings' | 'fureai'
+export type AppScene = 'free' | 'pomodoro' | 'settings' | 'fureai' | 'gallery'
 
 export type AppSceneEvent = {
   type: 'AppSceneChanged'

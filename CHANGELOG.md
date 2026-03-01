@@ -14,6 +14,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - メインプロセスのライセンスモジュールのユニットテスト（21テスト）— decodeJwtPayload/verifyJwt/getLicenseState/setLicenseState
 
+## [0.2.0] - 2026-03-01
+
+### Added
+- アニメーションギャラリー機能 — 13種のクリップ、11種のキャラクター状態、14種のEnrichedAnimationResolverルールを一覧プレビュー
+  - Clipsモード: 13クリップのFBXアニメーション個別再生（クリップ名+FBXファイル名表示）
+  - Statesモード: 全11状態アニメーションの個別再生（loop個別オーバーライド対応）
+  - Rulesモード: 14ルールのAnimationSelection直接再生
+  - 2行構成の情報バー（1行目: 説明テキスト、2行目: モード別詳細情報）
+  - サイドバークリックで現在の再生を停止して最初から再生し直す
+- CompactHeaderコンポーネント — ふれあい/ギャラリー共通のコンパクトヘッダー（タイトル+時計）
+- GalleryTopBarコンポーネント — Clips/States/Rulesモード切替タブバー
+- GallerySideBarコンポーネント — アニメーション選択サイドバー
+- AppScene型に'gallery'追加、GalleryCoordinator（シーン遷移+アニメーション再生の協調）
+- FeatureName型に'gallery'追加 — registered/trialで有効、expired/restrictedで無効
+- GalleryCoordinatorのユニットテスト（13件）、AppSceneManagerのgallery遷移テスト（10件）
+- E2Eテスト（gallery-mode.spec.ts、7件）
+
+### Changed
+- ふれあいモード遷移ボタンを右下（`right: 10`, `bottom: 112`）に移動 — ギャラリーボタンと左右分離
+- キャラクター位置オフセットをSceneGalleryのuseEffectで制御 — 暗転中に移動完了
+
 ## [0.1.1] - 2026-02-27
 
 ### Added

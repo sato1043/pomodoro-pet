@@ -181,6 +181,7 @@ describe('isFeatureEnabled', () => {
     'character',
     'stats',
     'fureai',
+    'gallery',
     'weatherSettings',
     'soundSettings',
     'backgroundNotify',

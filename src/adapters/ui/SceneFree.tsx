@@ -11,6 +11,7 @@ import { StatsDrawer } from './StatsDrawer'
 import { WeatherButton } from './WeatherButton'
 import { WeatherCloseButton } from './WeatherCloseButton'
 import { WeatherPanel } from './WeatherPanel'
+import { GalleryEntryButton } from './GalleryEntryButton'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
@@ -43,6 +44,7 @@ export function SceneFree(): JSX.Element {
       {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
       {!hideButtons && canUse('fureai') && <FureaiEntryButton />}
       {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
+      {!hideButtons && canUse('gallery') && <GalleryEntryButton />}
     </>
   )
 }

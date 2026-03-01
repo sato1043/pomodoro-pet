@@ -37,6 +37,7 @@ export type FeatureName =
   | 'character'
   | 'stats'
   | 'fureai'
+  | 'gallery'
   | 'weatherSettings'
   | 'soundSettings'
   | 'backgroundNotify'
@@ -84,7 +85,7 @@ export function resolveLicenseMode(ctx: LicenseContext): LicenseMode {
 
 const ALL_FEATURES: readonly FeatureName[] = [
   'pomodoroTimer', 'timerSettings', 'character', 'stats', 'fureai',
-  'weatherSettings', 'soundSettings', 'backgroundNotify',
+  'gallery', 'weatherSettings', 'soundSettings', 'backgroundNotify',
   'emotionAccumulation', 'autoUpdate',
 ] as const
 

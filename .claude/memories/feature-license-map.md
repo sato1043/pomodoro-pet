@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.1.1**（= package.json）
+**バージョン: 0.2.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -15,6 +15,7 @@
 | character | o | o | o | o | キャラクター行動（自律行動/march/インタラクション） |
 | stats | o | o | x | x | 統計表示（ヒートマップ/日別集計） |
 | fureai | o | o | x | x | ふれあいモード（餌やり/プロンプト入力） |
+| gallery | o | o | x | x | アニメーションギャラリー（クリップ/状態/ルール一覧プレビュー） |
 | weatherSettings | o | o | x | x | 天気設定UI（天気タイプ/雲量/時間帯選択） |
 | soundSettings | o | o | x | x | サウンドプリセット選択 |
 | backgroundNotify | o | o | x | x | バックグラウンド時のシステム通知 |
@@ -59,6 +60,17 @@
 | 20 | プロンプト入力 | PromptInput.tsx | 操作 | fureai | キーワード→行動遷移 |
 | 21 | 餌やり | FeedingInteractionAdapter.ts | 操作 | fureai | ドラッグ＆ドロップ→feeding状態 |
 | 22 | ハートエフェクト | HeartEffect.tsx | 自動 | fureai | 餌やり成功時のパーティクル |
+
+### C2. ギャラリーモードUI操作
+
+| # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
+|---|---|---|---|---|---|
+| 81 | ギャラリーモード開始 | GalleryEntryButton.tsx | 操作 | gallery | 左下グリッドアイコンで遷移 |
+| 82 | ギャラリーモード終了 | GalleryExitButton.tsx | 操作 | gallery | ←矢印で戻る |
+| 83 | クリップモード一覧 | OverlayGallery.tsx | 操作 | gallery | 13クリップFBXアニメーション個別再生 |
+| 84 | 状態モード一覧 | OverlayGallery.tsx | 操作 | gallery | 11状態アニメーション個別再生（loopオーバーライド対応） |
+| 85 | ルールモード一覧 | OverlayGallery.tsx | 操作 | gallery | 14ルールAnimationSelection再生 |
+| 86 | アニメーション情報表示 | OverlayGallery.tsx | 自動 | gallery | 2行構成情報バー（description+モード別詳細） |
 
 ### D. キャラクター動作
 
@@ -158,7 +170,7 @@
 
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
-| 72 | AppScene遷移 | SceneRouter.tsx, DisplayTransition.ts | 自動 | （制限不要） | free/pomodoro/fureai切替 |
+| 72 | AppScene遷移 | SceneRouter.tsx, DisplayTransition.ts | 自動 | （制限不要） | free/pomodoro/fureai/gallery切替 |
 | 73 | ブラックアウトトランジション | SceneTransition.tsx | 自動 | （制限不要） | 暗転エフェクト |
 
 ### N. 設定永続化
@@ -219,5 +231,6 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加 |
 | 0.1.1 | バージョン同期 | リリースインフラ整備に伴うバージョン同期（機能変更なし） |
 | 0.1.0 | 初版 | 全80機能定義、10項目のFeatureName策定、ライセンス制限マップ策定 |
