@@ -28,7 +28,7 @@ export const entryButton = style({
 
 export const overlayContainer = style({
   position: 'fixed',
-  top: 96,
+  top: 118,
   right: 10,
   bottom: 66,
   display: 'flex',
@@ -42,7 +42,7 @@ export const overlayContainer = style({
 
 export const topBar = style({
   position: 'fixed',
-  top: 56,
+  top: 78,
   left: 10,
   right: 10,
   display: 'flex',
