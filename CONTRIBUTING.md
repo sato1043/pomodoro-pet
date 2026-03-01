@@ -79,6 +79,10 @@ cd pomodoro-pet
 npm install
 ```
 
+> **Note:** The `assets/` directory is a private submodule containing purchased assets (3D models, textures, audio). External contributors cannot access it. The app builds and runs without it — a placeholder character and silent audio are used as fallbacks. See [development.md](.claude/memories/development.md#static-assets) for details.
+
+> **注意:** `assets/` は購入素材（3Dモデル・テクスチャ・音声）を含むprivate submoduleである。外部コントリビューターはアクセスできない。素材なしでもビルド・起動は可能で、プレースホルダーキャラクターとサイレント音声がフォールバックとして使用される。詳細は [development.md](.claude/memories/development.md#static-assets) を参照。
+
 ### 2. Create a Branch / ブランチの作成
 
 ```bash
@@ -139,8 +143,8 @@ See the Architecture section in [.claude/CLAUDE.md](.claude/CLAUDE.md) for detai
 
 ## Purchased Assets / 購入素材について
 
-This project uses some purchased assets (FBX models, BGM, sound effects, etc.). These are not included in the repository. If your changes involve assets, please discuss in an Issue beforehand.
+This project uses purchased assets (FBX models, BGM, sound effects) managed as a private submodule. These are not included in the public repository. If your changes involve assets, please discuss in an Issue beforehand. See [development.md](.claude/memories/development.md#static-assets) for asset structure and fallback behavior.
 
 ---
 
-本プロジェクトは一部に購入素材（FBXモデル、BGM、効果音等）を使用している。これらはリポジトリに含まれない。素材に関わる変更を行う場合は事前に Issue で相談してほしい。
+本プロジェクトは購入素材（FBXモデル・BGM・効果音）をprivate submoduleとして管理している。publicリポジトリには含まれない。素材に関わる変更を行う場合は事前にIssueで相談してほしい。アセット構造とフォールバック動作は [development.md](.claude/memories/development.md#static-assets) を参照。

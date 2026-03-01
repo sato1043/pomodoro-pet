@@ -82,11 +82,7 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 
 ## Static Assets
 
-`assets/` は private submodule（`sato1043/pomodoro-pet-assets`）として管理されている。購入素材（FBXモデル・テクスチャ・音声）を含むため、ソースコード（public）と分離している。
-
-- 初回clone後に `git submodule update --init` でアセットを取得する（privateリポジトリへのSSHアクセス権が必要）
-- submodule未初期化でもビルドは通る。FBXモデルはPlaceholderCharacter、音声はサイレントバッファにフォールバックする
-- `assets/` は Vite の `publicDir`（`electron.vite.config.ts`）。FBXモデルやテクスチャは `/models/ファイル名`、音声ファイルは `/audio/ファイル名` でアクセスできる
+`assets/` はprivate submodule。submoduleなしビルド・自前assets配置の手順を含む詳細は [development.md](./memories/development.md#static-assets) を参照。
 
 FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読めない。`ThreeCharacterAdapter` でPNGテクスチャを手動適用し、`mat.color.set(0xffffff)` でFBXLoaderが設定する暗いベースカラーをリセットする必要がある。
 

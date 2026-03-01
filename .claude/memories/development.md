@@ -33,6 +33,75 @@ rm -rf ~/.wine && wineboot --init
 sudo apt install -y imagemagick
 ```
 
+## Static Assets
+
+`assets/` はprivate submodule（`sato1043/pomodoro-pet-assets`）として管理されている。購入素材（FBXモデル・テクスチャ・音声）の著作権は第三者が保持するため、ソースコード（public）と分離している。
+
+`assets/` はViteの`publicDir`（`electron.vite.config.ts`）に設定されている。配下のファイルは `./models/ファイル名`、`./audio/ファイル名` でランタイムからアクセスされる。
+
+### パターンA: submoduleありビルド
+
+privateリポジトリ `sato1043/pomodoro-pet-assets` へのSSHアクセス権が必要。
+
+```bash
+git clone git@github.com:sato1043/pomodoro-pet.git
+cd pomodoro-pet
+git submodule update --init   # assets/ を取得
+npm install
+npm run dev
+```
+
+### パターンB: assetsなしビルド
+
+submoduleを取得しなくてもビルド・起動は通る。以下のフォールバックが動作する。
+
+- **3Dモデル**: FBXの読み込みに失敗すると `PlaceholderCharacter`（ピンクの球体+プロシージャルアニメーション）が表示される（`src/infrastructure/three/PlaceholderCharacter.ts`）
+- **音声**: MP3ファイルのfetch失敗時に `SfxPlayer` がサイレントバッファ（無音）を返す（`src/infrastructure/audio/SfxPlayer.ts`）
+- **環境音**: `ProceduralSounds`（forest/rain/wind）はコード生成のため素材不要
+
+```bash
+git clone https://github.com/sato1043/pomodoro-pet.git
+cd pomodoro-pet
+# git submodule update --init は省略可
+npm install
+npm run dev
+```
+
+### パターンC: 自前assetsを配置してビルド
+
+submoduleを使わず、自分で入手した素材を配置する場合。`assets/` ディレクトリに以下の構造でファイルを配置する。
+
+```
+assets/
+├── models/
+│   ├── ms07_Wildboar.FBX          # ベースモデル
+│   ├── ms07_Idle.FBX              # アニメーション（idle）
+│   ├── ms07_Walk.FBX              # アニメーション（walk/wander）
+│   ├── ms07_Stunned.FBX           # アニメーション（sit）
+│   ├── ms07_Die.FBX               # アニメーション（sleep）
+│   ├── ms07_Jump.FBX              # アニメーション（happy/pet）
+│   ├── ms07_Attack_01.FBX         # アニメーション（wave/refuse）
+│   ├── ms07_Run.FBX               # アニメーション（run）
+│   ├── ms07_Attack_02.FBX         # アニメーション（attack2）
+│   ├── ms07_Damage_01.FBX         # アニメーション（damage1）
+│   ├── ms07_Damage_02.FBX         # アニメーション（damage2）
+│   ├── ms07_GetUp.FBX             # アニメーション（getUp）
+│   └── ms07_Wildboar_1〜6.png     # テクスチャ（6枚）
+└── audio/
+    ├── work-start.mp3             # work開始音
+    ├── work-complete.mp3          # work完了音
+    ├── break-start.mp3            # break開始音
+    ├── break-chill.mp3            # break BGMループ
+    ├── break-getset.mp3           # break残り30秒BGM
+    ├── fanfare.mp3                # サイクル完了ファンファーレ
+    ├── pomodoro-exit.mp3          # ポモドーロ手動中断音
+    └── test.mp3                   # 音量テスト用
+```
+
+ファイル名はコード内でハードコードされている（`src/main.ts`、`src/application/timer/TimerSfxBridge.ts`）。名前を変える場合はコード側も修正が必要。
+
+素材の入手先は [asset-licensing-distribution.md](asset-licensing-distribution.md) を参照。
+
 ## デバッグ設定
 
 `.env.development` で開発用の設定を行う。
