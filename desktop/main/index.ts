@@ -23,6 +23,13 @@ function createWindow(): void {
   const mainWindow = new BrowserWindow({
     width: 390,
     height: 844,
+    resizable: false,
+    maximizable: false,
+    fullscreenable: false,
+    minWidth: 390,
+    maxWidth: 390,
+    minHeight: 844,
+    maxHeight: 844,
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -37,7 +44,7 @@ function createWindow(): void {
   }
 
   if (process.env.VITE_DEV_TOOLS === '1') {
-    mainWindow.webContents.openDevTools()
+    mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
 
   // autoUpdater初期化

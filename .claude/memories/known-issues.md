@@ -25,6 +25,7 @@
 - 設定ファイル保存先: `{userData}/settings.json`（Windowsなら`%APPDATA%/pomodoro-pet/settings.json`）
 - WSL2で音声を再生するには`libpulse0`が必要。WSLgのPulseServerソケット経由でWindows側に音声出力する
 - WSL2のPulseAudio環境ではWeb Audio APIのAudioNode生成・破棄を繰り返すとストリームリソースがリークし、音声が途切れる。約10分のアイドルで自動復旧する。`pkill -f pulseaudio`で即座にリセット可能。Windowsネイティブ実行では発生しない
+- WSLg（WSL2のGUI環境）はElectronの`resizable: false`を無視する。ドラッグリサイズ・最大化ボタン・タイトルバーダブルクリックすべてが効いてしまう。対策として`minWidth/maxWidth/minHeight/maxHeight`を同値に設定してウィンドウマネージャーレベルで制約する。Windowsネイティブビルドでは`resizable: false`のみで正常動作する
 - `document.hasFocus()`はElectronで信頼できない（最小化してもtrueを返す場合がある）。バックグラウンド検出にはblur/focusイベントのフラグ管理を使用する
 - `requestAnimationFrame`はブラウザ/Electronのバックグラウンドタブで停止する。バックグラウンドでもタイマーを進めるにはsetIntervalを併用する。ただしElectronではrAFがバックグラウンドでも低頻度（1fps程度）で継続する場合があり、setIntervalとrAFの両方が`orchestrator.tick`を呼ぶとタイマーが2倍速で進む。対策としてrAFループ内の`orchestrator.tick`は`windowFocused`が`true`のときのみ実行する
 - Windowsのトースト通知には`app.setAppUserModelId()`が必須。未設定だと通知が表示されない
