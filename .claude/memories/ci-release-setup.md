@@ -100,6 +100,10 @@ git push origin main --follow-tags
 
 # 5. develop に戻る
 git checkout develop
+
+# 6. Firestore の latestVersion を更新（gcp-update-server ディレクトリで実行）
+cd gcp-update-server
+GOOGLE_CLOUD_PROJECT=pomodoro-pet-prod npm run admin config:set latestVersion X.X.X
 ```
 
 `npm version` は以下を自動実行する:

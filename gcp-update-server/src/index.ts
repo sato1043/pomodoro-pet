@@ -124,15 +124,15 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
 
   if (!deviceDoc.exists) {
     // 新規デバイス → トライアル開始
+    // merge: true でregister APIが先にデバイスを作成済みの場合にregisteredKeyを上書きしない
     await deviceRef.set({
       trialStartDate: now,
-      registeredKey: null,
       appVersion,
       lastHeartbeat: now,
       createdAt: now,
       heartbeatCount: 1,
       heartbeatDate: todayStr,
-    })
+    }, { merge: true })
 
     res.json({
       registered: false,
@@ -239,12 +239,20 @@ async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> 
   const keyHash = createHash('sha256').update(downloadKey).digest('hex')
   const keyHint = buildKeyHint(downloadKey)
 
-  // デバイス存在確認
+  // デバイス存在確認（未作成ならheartbeat到達前でも自動作成して登録を継続）
   const deviceRef = db.collection('devices').doc(deviceId)
   const deviceDoc = await deviceRef.get()
   if (!deviceDoc.exists) {
-    res.status(400).json({ error: 'Device not found. Please launch the app first.' })
-    return
+    const now = Timestamp.now()
+    await deviceRef.set({
+      trialStartDate: now,
+      registeredKey: null,
+      appVersion: 'unknown',
+      lastHeartbeat: now,
+      createdAt: now,
+      heartbeatCount: 0,
+      heartbeatDate: new Date().toISOString().slice(0, 10),
+    })
   }
 
   // 旧キーからデバイスを除外（キー変更時のクリーンアップ）

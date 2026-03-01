@@ -71,15 +71,16 @@ Cloud Functions (2nd gen, Node.js 22)
 
 処理フロー:
 1. download keyのハッシュ化（SHA256）
-2. 旧キーのクリーンアップ（デバイスが別キーに紐づいていた場合、旧キーのdevices[]からデバイスを除外）
-3. keys/{hash}確認
+2. デバイス存在確認（未作成ならheartbeat到達前でも自動作成して登録を継続。appVersion='unknown'、heartbeatCount=0）
+3. 旧キーのクリーンアップ（デバイスが別キーに紐づいていた場合、旧キーのdevices[]からデバイスを除外）
+4. keys/{hash}確認
    - 未登録 → itch.io APIで検証（初期段階ではスキップ）→ 新規作成
    - 登録済み + 同デバイス → JWT再発行（データ変更なし）
    - 登録済み + 別デバイス → 古いデバイスの自動除外 → 台数チェック
-4. devices/{deviceId}.registeredKey = hash, keyHint更新
-5. keys/{hash}.devicesにdeviceId追加
-6. JWT発行（RS256署名）
-7. レスポンス返却
+5. devices/{deviceId}.registeredKey = hash, keyHint更新
+6. keys/{hash}.devicesにdeviceId追加
+7. JWT発行（RS256署名）
+8. レスポンス返却
 
 ## Firestoreスキーマ
 

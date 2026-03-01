@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - ギャラリーモードでCompactHeaderとGalleryTopBarのオーバーレイが重なる問題を修正
+- register APIでheartbeat未到達時に「Device not found」エラーになる問題を修正（デバイス自動作成で対応）
 
 ## [0.2.0] - 2026-03-01
 
