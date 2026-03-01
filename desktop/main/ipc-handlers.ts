@@ -160,6 +160,16 @@ export function registerIpcHandlers(): void {
     autoUpdater.quitAndInstall()
   })
 
+  // --- ウィンドウ操作 ---
+
+  ipcMain.handle('window:minimize', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.minimize()
+  })
+
+  ipcMain.handle('window:close', (event) => {
+    BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+
   // --- ブラウザリンク ---
 
   ipcMain.handle('shell:openExternal', async (_event, url: string) => {

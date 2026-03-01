@@ -42,6 +42,10 @@ interface ElectronAPI {
   downloadUpdate(): Promise<void>
   installUpdate(): Promise<void>
 
+  // ウィンドウ操作
+  windowMinimize(): Promise<void>
+  windowClose(): Promise<void>
+
   // ブラウザリンク
   openExternal(url: string): Promise<void>
 

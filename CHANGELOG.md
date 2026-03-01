@@ -10,6 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [0.2.0] - 2026-03-01
 
 ### Added
+- カスタムタイトルバー（frame: false） — OSネイティブのタイトルバーを除去し、透明背景+右上に最小化・閉じるボタンを配置。ドラッグでウィンドウ移動可能
+- `window:minimize`/`window:close` IPCハンドラ — レンダラーからのウィンドウ操作API
+- WindowTitleBarコンポーネント — インラインSVGアイコン、hover時の赤背景（閉じるボタン、Windows標準準拠）
 - アニメーションギャラリー機能 — 13種のクリップ、11種のキャラクター状態、14種のEnrichedAnimationResolverルールを一覧プレビュー
   - Clipsモード: 13クリップのFBXアニメーション個別再生（クリップ名+FBXファイル名表示）
   - Statesモード: 全11状態アニメーションの個別再生（loop個別オーバーライド対応）
@@ -24,9 +27,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - TrialBadgeコンポーネント — trialモード中に右下に「Trial」を薄く常時表示
 - FeatureLockedOverlayコンポーネント — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - メインプロセスのライセンスモジュールのユニットテスト（21テスト）— decodeJwtPayload/verifyJwt/getLicenseState/setLicenseState
+- ウィンドウ操作IPCハンドラのユニットテスト window.test.ts（6テスト）— 登録・呼び出し・null安全性
 - GalleryCoordinatorのユニットテスト（13件）、AppSceneManagerのgallery遷移テスト（10件）
 - E2Eテスト（gallery-mode.spec.ts、7件）
 - E2Eテスト trial-restriction.spec.ts（4件）— trial badge表示、fureai/galleryロックオーバーレイ表示/閉じる
+- E2Eテスト window-controls.spec.ts（5テスト）— ボタン存在確認・API公開確認・Minimize動作継続・frame: false確認
 - E2Eヘルパー setLicenseMode() — IPC経由でレンダラーのライセンスモードを切替（registered/trial両モードをテスト可能に）
 
 ### Changed
@@ -36,6 +41,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - FureaiEntryButton/GalleryEntryButtonをtrial中も常時表示 — クリック時にFeatureLockedOverlay表示
 - ふれあいモード遷移ボタンを右下（`right: 10`, `bottom: 112`）に移動 — ギャラリーボタンと左右分離
 - キャラクター位置オフセットをSceneGalleryのuseEffectで制御 — 暗転中に移動完了
+- overlayCompactのtop位置を12px→36pxに変更（カスタムタイトルバー32pxとの重なり回避）
 
 ## [0.1.1] - 2026-02-27
 

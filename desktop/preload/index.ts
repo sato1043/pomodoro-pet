@@ -33,6 +33,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   installUpdate: (): Promise<void> =>
     ipcRenderer.invoke('update:install'),
 
+  // ウィンドウ操作
+  windowMinimize: (): Promise<void> =>
+    ipcRenderer.invoke('window:minimize'),
+  windowClose: (): Promise<void> =>
+    ipcRenderer.invoke('window:close'),
+
   // ブラウザリンク
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('shell:openExternal', url),

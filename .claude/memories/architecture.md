@@ -91,8 +91,8 @@ EventBus（UI/インフラ通知）:
 - `main/settings.ts` — 設定I/O（load/saveSettings、load/saveStatistics、getOrCreateDeviceId）。`app.getPath('userData')`配下のsettings.json/statistics.jsonを読み書き
 - `main/license.ts` — ライセンス管理。RS256公開鍵によるJWT検証（decodeJwtPayload/verifyJwt）、2段階オンラインチェック（checkConnectivity→heartbeat）、ライセンス状態解決（resolveLicense）。getter/setterパターンで`currentLicenseState`を管理（getLicenseState/setLicenseState）。`__DEBUG_LICENSE__`でライセンスモード固定（ハートビートスキップ）
 - `main/updater.ts` — autoUpdaterイベントハンドラ（initAutoUpdater）。checking/available/downloading/downloaded/errorの各状態をレンダラーに通知
-- `main/ipc-handlers.ts` — 全IPCハンドラ登録（registerIpcHandlers）。設定永続化IPC、`notification:show`、`about:load`、`registration-guide:load`、`license:status`/`license:register`/`license:check`、`update:check`/`update:download`/`update:install`、`shell:openExternal`。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
-- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged公開）
+- `main/ipc-handlers.ts` — 全IPCハンドラ登録（registerIpcHandlers）。設定永続化IPC、`notification:show`、`about:load`、`registration-guide:load`、`license:status`/`license:register`/`license:check`、`update:check`/`update:download`/`update:install`、`window:minimize`/`window:close`、`shell:openExternal`。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
+- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, windowMinimize, windowClose, openExternal, onUpdateStatus, onLicenseChanged公開）
 
 ### src/domain/ — ドメインモデル
 - `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応、phaseProgressゲッター）
@@ -145,7 +145,8 @@ EventBus（UI/インフラ通知）:
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い。trialではfureai/galleryが無効）
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToast+TrialBadgeに渡す
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToast+TrialBadgeに渡す。WindowTitleBarをグローバル配置
+- `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
 - `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
@@ -241,6 +242,7 @@ EventBus（UI/インフラ通知）:
 - `application/license/LicenseState.test.ts` — ライセンス判定ロジック（62テスト）
 - `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
 - `desktop/main/license.test.ts` — メインプロセスライセンスモジュール（decodeJwtPayload正常/異常、verifyJwt署名拒否、getLicenseState/setLicenseState状態管理）
+- `desktop/main/window.test.ts` — ウィンドウ操作IPCハンドラ（window:minimize/window:close登録・BrowserWindow.minimize()/close()呼び出し・fromWebContents null安全性）
 
 #### フェイクタイマー検討結果
 
@@ -281,6 +283,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー
 - `e2e/trial-restriction.spec.ts` — trial badge表示・fureai/galleryロックオーバーレイ表示/閉じる（4テスト）
 - `e2e/registration.spec.ts` — 登録UI・API存在確認（8テスト）
+- `e2e/window-controls.spec.ts` — カスタムタイトルバーのMinimize/Closeボタン存在確認・windowMinimize/windowClose API公開確認・Minimize後アプリ継続・frame: false確認（5テスト）
 
 ##### E2Eフェイクタイマー検討結果
 

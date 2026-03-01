@@ -193,6 +193,7 @@
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
 | 77 | 外部リンク | desktop/main/index.ts | 操作 | （制限不要） | shell.openExternal() |
+| 89 | カスタムタイトルバー | WindowTitleBar.tsx, ipc-handlers.ts | 操作 | （制限不要） | frame: false + 最小化/閉じるボタン + ドラッグ移動 |
 | 78 | デバッグインジケーター | main.ts | 開発用 | — | E2Eテスト用DOM |
 | 79 | デバッグタイマー | TimerConfig.ts | 開発用 | — | VITE_DEBUG_TIMER |
 | 80 | DevTools自動起動 | desktop/main/index.ts | 開発用 | — | VITE_DEV_TOOLS |
@@ -238,7 +239,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
-| 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加 |
+| 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加 |
 | 0.2.0 | 制限変更 | trial で fureai/gallery を無効化（registered限定のプレミアム機能に変更） |
 | 0.1.1 | バージョン同期 | リリースインフラ整備に伴うバージョン同期（機能変更なし） |
 | 0.1.0 | 初版 | 全80機能定義、10項目のFeatureName策定、ライセンス制限マップ策定 |
