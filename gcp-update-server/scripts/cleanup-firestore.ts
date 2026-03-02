@@ -1,17 +1,17 @@
 /**
  * スモークテストで作成した Firestore ドキュメントを削除する
  *
- * 使い方: npx tsx scripts/cleanup-firestore.ts <deviceId> <keyHash>
+ * 使い方: npx tsx scripts/cleanup-firestore.ts <keyHash> <deviceId1> [deviceId2] ...
  */
 
 import { initializeApp, applicationDefault } from 'firebase-admin/app'
 import { getFirestore } from 'firebase-admin/firestore'
 
-const deviceId = process.argv[2]
-const keyHash = process.argv[3]
+const keyHash = process.argv[2]
+const deviceIds = process.argv.slice(3)
 
-if (!deviceId || !keyHash) {
-  console.error('Usage: npx tsx scripts/cleanup-firestore.ts <deviceId> <keyHash>')
+if (!keyHash || deviceIds.length === 0) {
+  console.error('Usage: npx tsx scripts/cleanup-firestore.ts <keyHash> <deviceId1> [deviceId2] ...')
   process.exit(1)
 }
 
@@ -19,8 +19,10 @@ initializeApp({ credential: applicationDefault() })
 const db = getFirestore()
 
 async function main(): Promise<void> {
-  await db.collection('devices').doc(deviceId).delete()
-  console.log(`  deleted devices/${deviceId}`)
+  for (const deviceId of deviceIds) {
+    await db.collection('devices').doc(deviceId).delete()
+    console.log(`  deleted devices/${deviceId}`)
+  }
   await db.collection('keys').doc(keyHash).delete()
   console.log(`  deleted keys/${keyHash}`)
 }

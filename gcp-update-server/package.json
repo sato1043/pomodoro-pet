@@ -11,7 +11,8 @@
     "gcp-build": "npm run build",
     "init-firestore": "npx tsx scripts/init-firestore.ts",
     "admin": "npx tsx scripts/admin.ts",
-    "dev": "npx tsx src/index.ts"
+    "dev": "npx tsx src/index.ts",
+    "test": "vitest run"
   },
   "dependencies": {
     "@google-cloud/functions-framework": "^3.4.0",
@@ -20,6 +21,7 @@
   "devDependencies": {
     "@types/node": "^20.0.0",
     "tsx": "^4.0.0",
-    "typescript": "^5.7.0"
+    "typescript": "^5.7.0",
+    "vitest": "^3.0.0"
   }
 }

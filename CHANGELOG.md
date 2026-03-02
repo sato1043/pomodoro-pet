@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- register APIのデバイス台数制限（3台）をキー単位の日次レート制限（1日3回）+ 累計登録数制限（50デバイス）に変更
+- staleデバイス自動除外の閾値を90日→30日に短縮
+- 新規キー作成時のmaxDevicesフィールド設定を廃止（既存データは互換性のため残存）
+- register APIのユニットテスト追加（vitest、12テストケース）
+
 ## [0.2.1] - 2026-03-01
 
 ### Fixed

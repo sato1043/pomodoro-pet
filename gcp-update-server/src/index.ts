@@ -228,7 +228,7 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
 
 // --- register ---
 
-async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> {
+export async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> {
   const { deviceId, downloadKey } = req.body as { deviceId?: string; downloadKey?: string }
   if (!deviceId || !downloadKey) {
     res.status(400).json({ error: 'deviceId and downloadKey are required' })
@@ -256,7 +256,8 @@ async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> 
   }
 
   // 旧キーからデバイスを除外（キー変更時のクリーンアップ）
-  const oldKeyHash = deviceDoc.data()?.registeredKey as string | null
+  const deviceData = deviceDoc.exists ? deviceDoc.data()! : null
+  const oldKeyHash = deviceData?.registeredKey as string | null
   if (oldKeyHash && oldKeyHash !== keyHash) {
     const oldKeyRef = db.collection('keys').doc(oldKeyHash)
     const oldKeyDoc = await oldKeyRef.get()
@@ -270,15 +271,15 @@ async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> 
   // keys コレクション確認
   const keyRef = db.collection('keys').doc(keyHash)
   const keyDoc = await keyRef.get()
+  const todayStr = new Date().toISOString().slice(0, 10)
 
   if (keyDoc.exists) {
     const keyData = keyDoc.data()!
     const devices = (keyData.devices as string[]) ?? []
-    const maxDevices = (keyData.maxDevices as number) ?? 3
 
-    // 既に登録済みのデバイスか確認
+    // 既に登録済みのデバイスか確認（再登録はレート制限カウント消費しない）
     if (devices.includes(deviceId)) {
-      // 再登録 → JWT再発行
+      // 再登録 → JWT再発行のみ
       const config = await getConfig()
       const nowSec = Math.floor(Date.now() / 1000)
       const jwt = signJwt({
@@ -291,8 +292,33 @@ async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> 
       return
     }
 
-    // 古いデバイスの自動除外（lastHeartbeat が90日以上前）
-    const STALE_THRESHOLD_MS = 90 * 86400 * 1000
+    // 日次レート制限チェック（1キーにつき1日3回まで）
+    const regDate = keyData.registerDate as string | undefined
+    let regCount = (keyData.registerCount as number) ?? 0
+    if (regDate === todayStr) {
+      if (regCount >= 3) {
+        res.status(429).json({
+          success: false,
+          error: 'Daily registration limit reached. Please try again tomorrow!',
+        })
+        return
+      }
+    } else {
+      regCount = 0
+    }
+
+    // 累計登録数チェック（1キーにつき最大50デバイス）
+    const totalRegs = (keyData.totalRegistrations as number) ?? devices.length
+    if (totalRegs >= 50) {
+      res.status(403).json({
+        success: false,
+        error: 'Maximum lifetime registrations reached (50). Please contact support.',
+      })
+      return
+    }
+
+    // 古いデバイスの自動除外（lastHeartbeat が30日以上前）
+    const STALE_THRESHOLD_MS = 30 * 86400 * 1000
     const nowMs = Date.now()
     const staleDeviceIds: string[] = []
     for (const did of devices) {
@@ -311,30 +337,25 @@ async function handleRegister(req: ff.Request, res: ff.Response): Promise<void> 
         devices: FieldValue.arrayRemove(...staleDeviceIds),
       })
     }
-    const activeDeviceCount = devices.length - staleDeviceIds.length
 
-    // 台数チェック（除外後の台数で判定）
-    if (activeDeviceCount >= maxDevices) {
-      res.status(403).json({
-        success: false,
-        error: `Device limit reached (${maxDevices} devices). Please contact support.`,
-      })
-      return
-    }
-
-    // デバイス追加
+    // デバイス追加 + レート制限カウント更新 + 累計登録数インクリメント
     await keyRef.update({
       devices: FieldValue.arrayUnion(deviceId),
+      registerCount: regCount + 1,
+      registerDate: todayStr,
+      totalRegistrations: totalRegs + 1,
     })
   } else {
-    // 新規キー登録
+    // 新規キー登録（初回なのでレート制限・累計チェック不要）
     // TODO: itch.io API で download key を検証する（初期テスト段階ではスキップ）
     await keyRef.set({
       devices: [deviceId],
-      maxDevices: 3,
       validatedAt: Timestamp.now(),
       valid: true,
       createdAt: Timestamp.now(),
+      registerCount: 1,
+      registerDate: todayStr,
+      totalRegistrations: 1,
     })
   }
 

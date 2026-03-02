@@ -7,6 +7,9 @@ import pkg from './package.json'
 const env = loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 export default defineConfig({
+  test: {
+    exclude: ['gcp-update-server/**', 'node_modules/**'],
+  },
   main: {
     plugins: [externalizeDepsPlugin()],
     define: {

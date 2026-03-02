@@ -19,8 +19,12 @@ fi
 HEARTBEAT_URL="$API_URL/api/heartbeat"
 REGISTER_URL="$API_URL/api/register"
 
-DEVICE_ID="smoke-test-$(date +%s)"
-DOWNLOAD_KEY="smoke-key-$(date +%s)"
+TS=$(date +%s)
+DEVICE_ID="smoke-test-$TS"
+DEVICE_ID_2="smoke-test-$TS-2"
+DEVICE_ID_3="smoke-test-$TS-3"
+DEVICE_ID_4="smoke-test-$TS-4"
+DOWNLOAD_KEY="smoke-key-$TS"
 PASS=0
 FAIL=0
 
@@ -40,6 +44,22 @@ check() {
   fi
 }
 
+check_status() {
+  local label="$1"
+  local expected="$2"
+  local actual="$3"
+
+  if [ "$actual" = "$expected" ]; then
+    echo "  PASS: $label"
+    PASS=$((PASS + 1))
+  else
+    echo "  FAIL: $label"
+    echo "    expected: $expected"
+    echo "    actual: $actual"
+    FAIL=$((FAIL + 1))
+  fi
+}
+
 echo "=== Smoke Test ==="
 echo "Heartbeat: $HEARTBEAT_URL"
 echo "Register:  $REGISTER_URL"
@@ -48,76 +68,105 @@ echo ""
 
 # --- Test 1: heartbeat（新規デバイス → トライアル開始） ---
 echo "[1] heartbeat - 新規デバイス"
-RES1=$(curl -s -X POST "$HEARTBEAT_URL" \
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\"}")
-echo "  Response: $RES1"
-check "trialValid=true" '"trialValid":true' "$RES1"
-check "registered=false" '"registered":false' "$RES1"
-check "trialDaysRemaining>0" '"trialDaysRemaining":30' "$RES1"
+echo "  Response: $RES"
+check "trialValid=true" '"trialValid":true' "$RES"
+check "registered=false" '"registered":false' "$RES"
+check "trialDaysRemaining>0" '"trialDaysRemaining":30' "$RES"
 echo ""
 
 # --- Test 2: heartbeat（同じデバイス → トライアル継続） ---
 echo "[2] heartbeat - 既存デバイス（トライアル継続）"
-RES2=$(curl -s -X POST "$HEARTBEAT_URL" \
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\"}")
-echo "  Response: $RES2"
-check "trialValid=true" '"trialValid":true' "$RES2"
+echo "  Response: $RES"
+check "trialValid=true" '"trialValid":true' "$RES"
 echo ""
 
-# --- Test 3: register（download key 登録） ---
-echo "[3] register - download key 登録"
-RES3=$(curl -s -X POST "$REGISTER_URL" \
+# --- Test 3: register（download key 登録 — 1台目） ---
+echo "[3] register - download key 登録（1台目）"
+RES=$(curl -s -X POST "$REGISTER_URL" \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEVICE_ID\",\"downloadKey\":\"$DOWNLOAD_KEY\"}")
-echo "  Response: $RES3"
-check "success=true" '"success":true' "$RES3"
-check "jwt存在" '"jwt":"ey' "$RES3"
-check "keyHint存在" '"keyHint":"smok' "$RES3"
+echo "  Response: $RES"
+check "success=true" '"success":true' "$RES"
+check "jwt存在" '"jwt":"ey' "$RES"
+check "keyHint存在" '"keyHint":"smok' "$RES"
 echo ""
 
-# --- Test 4: heartbeat（登録済みデバイス → registered + JWT） ---
-echo "[4] heartbeat - 登録済みデバイス"
-RES4=$(curl -s -X POST "$HEARTBEAT_URL" \
+# --- Test 4: register（同じキー・別デバイス — 2台目、日次レート制限内） ---
+echo "[4] register - 同じキーで2台目"
+RES=$(curl -s -X POST "$REGISTER_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID_2\",\"downloadKey\":\"$DOWNLOAD_KEY\"}")
+echo "  Response: $RES"
+check "success=true" '"success":true' "$RES"
+echo ""
+
+# --- Test 5: register（同じキー・別デバイス — 3台目、日次レート制限ギリギリ） ---
+echo "[5] register - 同じキーで3台目"
+RES=$(curl -s -X POST "$REGISTER_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID_3\",\"downloadKey\":\"$DOWNLOAD_KEY\"}")
+echo "  Response: $RES"
+check "success=true" '"success":true' "$RES"
+echo ""
+
+# --- Test 6: register（同じキー・別デバイス — 4台目、日次レート制限超過 → 429） ---
+echo "[6] register - 同じキーで4台目（日次レート超過 → 429）"
+HTTP_CODE=$(curl -s -o /tmp/smoke-test-res.json -w "%{http_code}" -X POST "$REGISTER_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID_4\",\"downloadKey\":\"$DOWNLOAD_KEY\"}")
+RES=$(cat /tmp/smoke-test-res.json)
+echo "  Response: $HTTP_CODE $RES"
+check_status "HTTP 429" "429" "$HTTP_CODE"
+check "Daily registration limit" '"Daily registration limit reached' "$RES"
+echo ""
+
+# --- Test 7: heartbeat（登録済みデバイス → registered + JWT） ---
+echo "[7] heartbeat - 登録済みデバイス"
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\"}")
-echo "  Response: $RES4"
-check "registered=true" '"registered":true' "$RES4"
-check "jwt存在" '"jwt":"ey' "$RES4"
+echo "  Response: $RES"
+check "registered=true" '"registered":true' "$RES"
+check "jwt存在" '"jwt":"ey' "$RES"
 echo ""
 
-# --- Test 5: register（同じキー・同じデバイス → 再登録成功） ---
-echo "[5] register - 同じキーで再登録"
-RES5=$(curl -s -X POST "$REGISTER_URL" \
+# --- Test 8: register（同じキー・同じデバイス → 再登録成功、カウント消費しない） ---
+echo "[8] register - 同じキーで再登録（カウント消費しない）"
+RES=$(curl -s -X POST "$REGISTER_URL" \
   -H "Content-Type: application/json" \
   -d "{\"deviceId\":\"$DEVICE_ID\",\"downloadKey\":\"$DOWNLOAD_KEY\"}")
-echo "  Response: $RES5"
-check "success=true" '"success":true' "$RES5"
+echo "  Response: $RES"
+check "success=true" '"success":true' "$RES"
 echo ""
 
-# --- Test 6: register（バリデーションエラー） ---
-echo "[6] register - deviceId 未指定"
-RES6=$(curl -s -X POST "$REGISTER_URL" \
+# --- Test 9: register（バリデーションエラー） ---
+echo "[9] register - deviceId 未指定"
+RES=$(curl -s -X POST "$REGISTER_URL" \
   -H "Content-Type: application/json" \
   -d '{"downloadKey":"some-key"}')
-echo "  Response: $RES6"
-check "error存在" '"error"' "$RES6"
+echo "  Response: $RES"
+check "error存在" '"error"' "$RES"
 echo ""
 
-# --- Test 7: heartbeat（バリデーションエラー） ---
-echo "[7] heartbeat - appVersion 未指定"
-RES7=$(curl -s -X POST "$HEARTBEAT_URL" \
+# --- Test 10: heartbeat（バリデーションエラー） ---
+echo "[10] heartbeat - appVersion 未指定"
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
   -H "Content-Type: application/json" \
   -d '{"deviceId":"some-device"}')
-echo "  Response: $RES7"
-check "error存在" '"error"' "$RES7"
+echo "  Response: $RES"
+check "error存在" '"error"' "$RES"
 echo ""
 
 # --- クリーンアップ: テストで作成した Firestore ドキュメントを削除 ---
 echo "[cleanup] Firestore テストデータを削除中..."
 KEY_HASH=$(echo -n "$DOWNLOAD_KEY" | sha256sum | cut -d' ' -f1)
-npx tsx scripts/cleanup-firestore.ts "$DEVICE_ID" "$KEY_HASH" || echo "  cleanup skipped (ADC not set or error)"
+npx tsx scripts/cleanup-firestore.ts "$KEY_HASH" "$DEVICE_ID" "$DEVICE_ID_2" "$DEVICE_ID_3" "$DEVICE_ID_4" || echo "  cleanup skipped (ADC not set or error)"
 echo ""
 
 # --- 結果 ---
