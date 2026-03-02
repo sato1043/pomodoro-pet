@@ -1,4 +1,4 @@
-pomodoro-pet v0.2.1
+pomodoro-pet v0.3.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -34,6 +34,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **Sound** — Procedural ambient sounds (forest / rain / wind), timer SFX, break BGM with crossfade, volume and mute controls
 - **Background Notifications** — System toast notifications for phase completion and cycle completion when the app is in the background
 - **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. Affinity persists across sessions. Visual indicators (♥ ⚡ ★) in the Statistics panel show current emotion state via opacity
+- **Biorhythm** — Daily periodic state variation (activity 5-day / sociability 7-day / focus 11-day sine wave cycles) that affects character behavior duration, idle animations, and march speed. Feeding and petting provide temporary boosts. Neon-colored sine curve graph with animated dots in the Statistics panel (registered license only)
 - **Auto Update** — Check, download, and install updates via electron-updater with in-app notification banner
 
 ## Architecture

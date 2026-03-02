@@ -43,6 +43,7 @@ export type FeatureName =
   | 'backgroundNotify'
   | 'emotionAccumulation'
   | 'autoUpdate'
+  | 'biorhythm'
 
 // --- 判定ロジック ---
 
@@ -86,12 +87,12 @@ export function resolveLicenseMode(ctx: LicenseContext): LicenseMode {
 const ALL_FEATURES: readonly FeatureName[] = [
   'pomodoroTimer', 'timerSettings', 'character', 'stats', 'fureai',
   'gallery', 'weatherSettings', 'soundSettings', 'backgroundNotify',
-  'emotionAccumulation', 'autoUpdate',
+  'emotionAccumulation', 'autoUpdate', 'biorhythm',
 ] as const
 
 const ENABLED_FEATURES: Readonly<Record<LicenseMode, ReadonlySet<FeatureName>>> = {
   registered: new Set<FeatureName>(ALL_FEATURES),
-  trial:      new Set<FeatureName>(ALL_FEATURES.filter(f => f !== 'fureai' && f !== 'gallery')),
+  trial:      new Set<FeatureName>(ALL_FEATURES.filter(f => f !== 'fureai' && f !== 'gallery' && f !== 'biorhythm')),
   expired:    new Set<FeatureName>(['pomodoroTimer', 'character']),
   restricted: new Set<FeatureName>(['pomodoroTimer', 'character']),
 }

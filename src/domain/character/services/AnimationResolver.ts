@@ -4,6 +4,7 @@ import type { CharacterBehavior } from '../value-objects/BehaviorPreset'
 import type { EmotionState } from '../value-objects/EmotionState'
 import type { InteractionHistory } from '../services/InteractionTracker'
 import type { TimeOfDay } from '../../environment/value-objects/WeatherConfig'
+import type { BiorhythmState } from '../value-objects/BiorhythmState'
 
 export interface AnimationContext {
   readonly state: CharacterStateName
@@ -14,6 +15,7 @@ export interface AnimationContext {
   readonly interaction?: InteractionHistory
   readonly timeOfDay?: TimeOfDay
   readonly todayCompletedCycles?: number
+  readonly biorhythm?: BiorhythmState
 }
 
 export interface AnimationSelection {

@@ -37,6 +37,10 @@ export interface LicenseSettingsInput {
   readonly jwt: string | null
 }
 
+export interface BiorhythmConfigInput {
+  readonly originDay: number
+}
+
 export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
@@ -45,6 +49,7 @@ export interface AppSettingsService {
   readonly emotionConfig: EmotionConfigInput
   readonly characterConfig: CharacterConfigInput
   readonly licenseSettings: LicenseSettingsInput
+  readonly biorhythmConfig: BiorhythmConfigInput
   loadFromStorage(): Promise<void>
   updateTimerConfig(input: TimerConfigInput): void
   updateSoundConfig(input: SoundConfigInput): void
@@ -53,6 +58,7 @@ export interface AppSettingsService {
   updateWeatherConfig(partial: Partial<WeatherConfig>): void
   updateEmotionConfig(input: EmotionConfigInput): void
   updateCharacterConfig(input: CharacterConfigInput): void
+  updateBiorhythmConfig(input: BiorhythmConfigInput): void
   resetToDefault(): void
 }
 
@@ -77,10 +83,11 @@ function saveAllToStorage(
   background: BackgroundConfigInput,
   weather: WeatherConfig,
   emotion: EmotionConfigInput,
-  character: CharacterConfigInput
+  character: CharacterConfigInput,
+  biorhythm: BiorhythmConfigInput
 ): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion, character })
+    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion, character, biorhythm })
   }
 }
 
@@ -91,6 +98,7 @@ const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
 const DEFAULT_EMOTION: EmotionConfigInput = { affinity: 0 }
 const DEFAULT_CHARACTER: CharacterConfigInput = { name: 'Wildboar' }
 const DEFAULT_LICENSE: LicenseSettingsInput = { deviceId: null, downloadKey: null, jwt: null }
+const DEFAULT_BIORHYTHM: BiorhythmConfigInput = { originDay: Date.now() }
 
 export function createAppSettingsService(
   bus: EventBus,
@@ -105,6 +113,7 @@ export function createAppSettingsService(
   let currentEmotion: EmotionConfigInput = { ...DEFAULT_EMOTION }
   let currentCharacter: CharacterConfigInput = { ...DEFAULT_CHARACTER }
   let currentLicense: LicenseSettingsInput = { ...DEFAULT_LICENSE }
+  let currentBiorhythm: BiorhythmConfigInput = { ...DEFAULT_BIORHYTHM }
 
   function publishSettingsChanged(config: TimerConfig): void {
     const event: SettingsEvent = {
@@ -161,7 +170,7 @@ export function createAppSettingsService(
   }
 
   function save(): void {
-    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion, currentCharacter)
+    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion, currentCharacter, currentBiorhythm)
   }
 
   return {
@@ -172,6 +181,7 @@ export function createAppSettingsService(
     get emotionConfig() { return currentEmotion },
     get characterConfig() { return currentCharacter },
     get licenseSettings() { return currentLicense },
+    get biorhythmConfig() { return currentBiorhythm },
 
     async loadFromStorage(): Promise<void> {
       const data = await loadStoredData()
@@ -237,6 +247,14 @@ export function createAppSettingsService(
         if (typeof ch.name === 'string' && ch.name.length > 0) {
           currentCharacter = { name: ch.name }
           publishCharacterConfigChanged(currentCharacter)
+        }
+      }
+
+      // バイオリズム設定の復元（originDay）
+      if (data.biorhythm) {
+        const br = data.biorhythm as Record<string, unknown>
+        if (typeof br.originDay === 'number') {
+          currentBiorhythm = { originDay: br.originDay }
         }
       }
 
@@ -309,6 +327,11 @@ export function createAppSettingsService(
     updateCharacterConfig(input: CharacterConfigInput): void {
       currentCharacter = input
       publishCharacterConfigChanged(currentCharacter)
+      save()
+    },
+
+    updateBiorhythmConfig(input: BiorhythmConfigInput): void {
+      currentBiorhythm = input
       save()
     },
 

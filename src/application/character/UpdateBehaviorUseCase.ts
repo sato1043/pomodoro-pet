@@ -4,6 +4,7 @@ import type { AnimationResolverFn, AnimationContext } from '../../domain/charact
 import type { EmotionState } from '../../domain/character/value-objects/EmotionState'
 import type { InteractionHistory } from '../../domain/character/services/InteractionTracker'
 import type { TimeOfDay } from '../../domain/environment/value-objects/WeatherConfig'
+import type { BiorhythmState } from '../../domain/character/value-objects/BiorhythmState'
 import type { ThreeCharacterHandle } from '../../adapters/three/ThreeCharacterAdapter'
 import type { ScrollManager, ScrollState } from '../environment/ScrollUseCase'
 
@@ -14,6 +15,7 @@ export interface UpdateBehaviorOptions {
   readonly getInteraction?: () => InteractionHistory
   readonly getTimeOfDay?: () => TimeOfDay
   readonly getTodayCompletedCycles?: () => number
+  readonly getBiorhythm?: () => BiorhythmState
 }
 
 export function updateBehavior(
@@ -41,6 +43,7 @@ export function updateBehavior(
         interaction: options.getInteraction?.(),
         timeOfDay: options.getTimeOfDay?.(),
         todayCompletedCycles: options.getTodayCompletedCycles?.(),
+        biorhythm: options.getBiorhythm?.(),
       }
       const selection = options.resolveAnimation(ctx)
       charHandle.playAnimation(selection)

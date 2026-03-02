@@ -133,7 +133,7 @@
 - `{userData}/statistics.json`にファイルベース永続化（settings.jsonとは別ファイル）
 - Electron IPC（`statistics:load`/`statistics:save`）→ preload contextBridge → renderer
 - `StatisticsService`（アプリケーション層）がCRUD+永続化。`StatisticsBridge`がEventBus購読→統計記録
-- `StatsDrawer`（UIアダプター層）: サマリー3カード（Today/7Days/30Days）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間折れ線グラフ（SVG、最終点に脈動アニメーション付き）
+- `StatsDrawer`（UIアダプター層）: サマリー3カード（Today/7Days/30Days）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間折れ線グラフ（SVG、最終点に脈動アニメーション付き）、バイオリズムグラフ（3軸ネオンカラーサインカーブ+カーブ上移動アニメーション、registered限定）
 - FreeTimerPanel右上にチャートアイコンで統計ドロワーを切替表示
 
 ## 優先度: リリースに必須
@@ -214,15 +214,6 @@
 - autoTimeOfDayのプレビュー中interval一時停止（保存値上書き防止）
 - 設定永続化（settings.json）
 
-### キャラクターのバイオリズム永続トラッキング
-- キャラクターの「機嫌」を長期的に記録・追跡する仕組みの導入
-- 現在の`EmotionState`（satisfaction/fatigue/affinity）はセッション中の一時的な値（affinityのみ永続化）
-- satisfaction/fatigueも含めた全感情パラメータの履歴を永続化し、起動間を跨いで連続性を持たせる
-- 日次・時間帯ごとのバイオリズム変動を記録（例: 最終ポモドーロ完了時刻、最終餌やり時刻、連続利用日数）
-- 長時間放置で機嫌が下がる、毎日使うと親密度が上がる等の時間経過に基づく感情変化
-- `{userData}/emotion-history.json`等でファイルベース永続化を想定
-- 感情インジケーターUIと連携して可視化
-
 ### ~~キャラクターの感情インジケーターUI~~ — 完了
 - 統計パネル（StatsDrawer）のCumulative Timeグラフ下に♥（satisfaction）⚡（fatigue）★（affinity）の3アイコンを表示
 - 各値をopacity（0.15〜1.0）で表現、CSS transition 0.5sでスムーズに変化
@@ -245,13 +236,73 @@
 - freeモードから左下ボタンでアクセス（registered限定、trialではFeatureLockedOverlay表示）
 - GalleryCoordinatorのユニットテスト（13件）、E2Eテスト gallery-mode.spec.ts（7件）
 
-### キャラクターの感情・バイオリズム統計
-- 感情パラメータ（satisfaction/fatigue/affinity）やバイオリズム履歴を統計情報として集計・可視化
-- 既存の`StatsDrawer`（ポモドーロ統計）と並列または統合した表示
+### ~~バイオリズムグラフの統計パネル表示~~ — 完了
+- StatsDrawerにバイオリズム3軸（activity/sociability/focus）のサインカーブグラフを追加
+- ネオンカラー（シアン/マゼンタ/ライム）+グローエフェクト、カーブ上を移動するドットアニメーション
+- `canUse('biorhythm')`でregistered限定表示
+
+### キャラクターの感情統計・永続トラッキング
+- 感情パラメータ（satisfaction/fatigue/affinity）の履歴を永続化し、起動間を跨いで連続性を持たせる
+- 現在のEmotionState（satisfaction/fatigue/affinity）はセッション中の一時的な値（affinityのみ永続化）
+- satisfaction/fatigueも含めた全感情パラメータの履歴を永続化
+- 日次・時間帯ごとの変動を記録（最終ポモドーロ完了時刻、最終餌やり時刻、連続利用日数）
+- 長時間放置で機嫌が下がる、毎日使うと親密度が上がる等の時間経過に基づく感情変化
+- `{userData}/emotion-history.json`等でファイルベース永続化
 - 日次・週次・月次の感情推移グラフ（折れ線/エリアチャート）
 - affinity成長曲線、satisfaction/fatigueの変動パターン
-- ポモドーロ完了数や餌やり回数との相関表示（例: ポモドーロ完了が多い日はsatisfactionが高い）
-- バイオリズム永続トラッキングの履歴データを統計ソースとして利用
+- ポモドーロ完了数や餌やり回数との相関表示
+- 感情インジケーターUIと連携して可視化
+
+### OSスリープ抑制設定
+- ポモドーロ実行中にOSがスリープ/サスペンドしないようにする機能
+- Electronの`powerSaveBlocker.start('prevent-app-suspension')`で実現
+- ポモドーロ開始時にブロッカーを有効化、完了/中断時に`powerSaveBlocker.stop(id)`で解除
+- 設定UIでON/OFF切替可能にする（デフォルトON）
+- settings.jsonに永続化（`power.preventSleep`等）
+
+### 環境シーンのバリエーション（残課題）
+- シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等
+- `EnvironmentChunk` のオブジェクト生成ロジックをプリセットごとに分離
+- 天気「Auto」ボタン: 天気API連携で自動天気切替（現在は非活性）
+- 時間帯遷移のlerp補間（現在はinstant切替）
+
+### 環境映像（背景動画）
+- 要件定義でnice-to-haveとされた機能
+- Three.jsのVideoTextureで背景に動画を投影
+- または360度パノラマ画像をSkyboxとして使用
+- フリー素材: Pexels, Pixabay等
+
+### 設定・統計のクラウド保存
+- 設定（settings.json）と統計（statistics.json）をサーバー側に保存し、デバイス間で同期する仕組み
+- 登録済みユーザー（download key認証済み）のみ利用可能
+- Firestoreの`devices/{deviceId}/settings`および`devices/{deviceId}/statistics`に保存
+- 同期方式の選択肢:
+  - 最終更新タイムスタンプによるlast-write-wins（シンプル、衝突リスク低）
+  - 差分マージ（複雑、デバイス間の同時利用に対応）
+- ハートビート時にサーバー側の設定・統計を取得し、ローカルと比較して新しい方を適用
+- 初回登録時にローカルデータをサーバーにアップロード（既存データの引き継ぎ）
+- オフライン時はローカルのみで動作し、次回オンライン時に同期
+- プライバシーポリシーの更新が必要（サーバー保存データの追記）
+
+### リリースバージョンとベータ/アルファバージョンの機能セット切替
+- リリースチャネル（stable/beta/alpha）に応じて有効化する機能セットを切り替える仕組みの導入
+- 現在の`LicenseMode`（registered/trial/expired/restricted）による機能制限とは別軸の制御
+- チャネル定義: stable（正式リリース機能のみ）、beta（次期リリース候補機能を含む）、alpha（実験的機能を含む）
+- `FeatureName`型と`ENABLED_FEATURES`マップを拡張し、チャネル×ライセンスモードの2軸で機能有効化を判定
+- ビルド時にチャネルを決定（環境変数`VITE_RELEASE_CHANNEL`等）し、`import.meta.env`経由でレンダラーに埋め込み
+- ベータ/アルファ機能にはUIに「Beta」「Alpha」バッジを表示して試験的機能であることを明示
+- 自動アップデートのチャネル分離（stable/betaで異なるアップデートフィードを参照）
+
+## 優先度: 低 (LLM)
+
+### チャットUIの改善
+- 現在のPromptInputは単純なテキスト入力＋Sendボタンのみ
+- 会話履歴の表示（キャラクターの応答・行動結果のフィードバック）
+- 吹き出し風UIでキャラクターとの対話感を演出
+- 入力候補・コマンドパレット（スラッシュコマンドやサジェスト）
+- ポモドーロ中のインタラクションロック時に入力不可状態を視覚的に表示
+- キャラクターの状態や感情に応じた応答メッセージの生成
+- モバイル/小画面対応（レスポンシブレイアウト）
 
 ### LLMによる感情・バイオリズム解釈と行動フィードバック
 - キャラクターの感情状態（EmotionState）やバイオリズム履歴をLLMに入力し、行動を決定する仕組み
@@ -273,69 +324,11 @@
 - MCPサーバー設定を`{userData}/mcp-config.json`等で管理
 - 「LLMによる感情・バイオリズム解釈」「プロンプト解釈のLLM化」の基盤技術として位置付け
 
-### Googleカレンダー連携
-- ポモドーロの実績をGoogleカレンダーに自動記録
-- work/break完了、サイクル完了をカレンダーイベントとして登録
-- カレンダーの予定を読み取り、次のタスクをオーバーレイに表示する等の連携
-- Google Calendar API（OAuth 2.0認証）を利用
-- 認証フローはElectronのBrowserWindowで実装（デスクトップアプリ向けOAuthフロー）
-- MCPクライアント機能の上に構築する、またはスタンドアロンで実装する選択肢あり
-- プライバシーポリシーの策定が必要（Googleユーザーデータポリシー準拠）
-
-### OSスリープ抑制設定
-- ポモドーロ実行中にOSがスリープ/サスペンドしないようにする機能
-- Electronの`powerSaveBlocker.start('prevent-app-suspension')`で実現
-- ポモドーロ開始時にブロッカーを有効化、完了/中断時に`powerSaveBlocker.stop(id)`で解除
-- 設定UIでON/OFF切替可能にする（デフォルトON）
-- settings.jsonに永続化（`power.preventSleep`等）
-
-### 環境シーンのバリエーション（残課題）
-- シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等
-- `EnvironmentChunk` のオブジェクト生成ロジックをプリセットごとに分離
-- 天気「Auto」ボタン: 天気API連携で自動天気切替（現在は非活性）
-- 時間帯遷移のlerp補間（現在はinstant切替）
-
-### 環境映像（背景動画）
-- 要件定義でnice-to-haveとされた機能
-- Three.jsのVideoTextureで背景に動画を投影
-- または360度パノラマ画像をSkyboxとして使用
-- フリー素材: Pexels, Pixabay等
-
-### チャットUIの改善
-- 現在のPromptInputは単純なテキスト入力＋Sendボタンのみ
-- 会話履歴の表示（キャラクターの応答・行動結果のフィードバック）
-- 吹き出し風UIでキャラクターとの対話感を演出
-- 入力候補・コマンドパレット（スラッシュコマンドやサジェスト）
-- ポモドーロ中のインタラクションロック時に入力不可状態を視覚的に表示
-- キャラクターの状態や感情に応じた応答メッセージの生成
-- モバイル/小画面対応（レスポンシブレイアウト）
-
-### 設定・統計のクラウド保存
-- 設定（settings.json）と統計（statistics.json）をサーバー側に保存し、デバイス間で同期する仕組み
-- 登録済みユーザー（download key認証済み）のみ利用可能
-- Firestoreの`devices/{deviceId}/settings`および`devices/{deviceId}/statistics`に保存
-- 同期方式の選択肢:
-  - 最終更新タイムスタンプによるlast-write-wins（シンプル、衝突リスク低）
-  - 差分マージ（複雑、デバイス間の同時利用に対応）
-- ハートビート時にサーバー側の設定・統計を取得し、ローカルと比較して新しい方を適用
-- 初回登録時にローカルデータをサーバーにアップロード（既存データの引き継ぎ）
-- オフライン時はローカルのみで動作し、次回オンライン時に同期
-- プライバシーポリシーの更新が必要（サーバー保存データの追記）
-
 ### プロンプト解釈のLLM化
 - 現在はキーワードマッチング
 - ローカルLLM（llama.cpp等）やAPI（Claude等）で自然言語解釈
 - 「ちょっと疲れた」→sleep、「元気出して」→happy のような曖昧な入力に対応
 - コスト・レイテンシ・オフライン対応のトレードオフを検討
-
-### リリースバージョンとベータ/アルファバージョンの機能セット切替
-- リリースチャネル（stable/beta/alpha）に応じて有効化する機能セットを切り替える仕組みの導入
-- 現在の`LicenseMode`（registered/trial/expired/restricted）による機能制限とは別軸の制御
-- チャネル定義: stable（正式リリース機能のみ）、beta（次期リリース候補機能を含む）、alpha（実験的機能を含む）
-- `FeatureName`型と`ENABLED_FEATURES`マップを拡張し、チャネル×ライセンスモードの2軸で機能有効化を判定
-- ビルド時にチャネルを決定（環境変数`VITE_RELEASE_CHANNEL`等）し、`import.meta.env`経由でレンダラーに埋め込み
-- ベータ/アルファ機能にはUIに「Beta」「Alpha」バッジを表示して試験的機能であることを明示
-- 自動アップデートのチャネル分離（stable/betaで異なるアップデートフィードを参照）
 
 ## 優先度: 低
 
@@ -370,4 +363,13 @@
   - `desktop/preload/index.ts`はCJSのまま維持（contextBridgeの制約）
 - メリット: ESM専用パッケージの利用、top-level await、renderer側との統一
 - リスク: preloadとの境界整理、electron-viteのESM出力の安定性
+
+### Googleカレンダー連携
+- ポモドーロの実績をGoogleカレンダーに自動記録
+- work/break完了、サイクル完了をカレンダーイベントとして登録
+- カレンダーの予定を読み取り、次のタスクをオーバーレイに表示する等の連携
+- Google Calendar API（OAuth 2.0認証）を利用
+- 認証フローはElectronのBrowserWindowで実装（デスクトップアプリ向けOAuthフロー）
+- MCPクライアント機能の上に構築する、またはスタンドアロンで実装する選択肢あり
+- プライバシーポリシーの策定が必要（Googleユーザーデータポリシー準拠）
 

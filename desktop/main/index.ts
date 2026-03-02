@@ -11,6 +11,7 @@ app.commandLine.appendSwitch('enable-unsafe-swiftshader')
 // Windowsトースト通知に必須。ビルド時にpackage.jsonのbuild.appIdから埋め込まれる
 declare const __APP_ID__: string
 declare const __HEARTBEAT_URL__: string
+declare const __DEV_TOOLS__: string
 
 if (__APP_ID__) {
   app.setAppUserModelId(__APP_ID__)
@@ -44,7 +45,7 @@ function createWindow(): void {
     mainWindow.loadFile(join(__dirname, '../renderer/index.html'))
   }
 
-  if (process.env.VITE_DEV_TOOLS === '1') {
+  if (__DEV_TOOLS__ === '1') {
     mainWindow.webContents.openDevTools({ mode: 'detach' })
   }
 

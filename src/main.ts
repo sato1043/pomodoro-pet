@@ -15,6 +15,8 @@ import { createBehaviorStateMachine } from './domain/character/services/Behavior
 import { updateBehavior, type UpdateBehaviorOptions } from './application/character/UpdateBehaviorUseCase'
 import { createEnrichedAnimationResolver } from './domain/character/services/EnrichedAnimationResolver'
 import { createEmotionService, type EmotionService } from './application/character/EmotionService'
+import { createBiorhythmService } from './application/character/BiorhythmService'
+import { NEUTRAL_BIORHYTHM } from './domain/character/value-objects/BiorhythmState'
 import { createInteractionTracker, type InteractionTracker } from './domain/character/services/InteractionTracker'
 import type { PomodoroEvent } from './application/timer/PomodoroEvents'
 import type { EmotionStateUpdatedEvent } from './application/character/EmotionEvents'
@@ -213,7 +215,35 @@ async function main(): Promise<void> {
     }
   }
   const charHandle: ThreeCharacterHandle = await createThreeCharacter(scene, character, fbxConfig)
-  const behaviorSM = createBehaviorStateMachine({ fixedWanderDirection: sceneConfig.direction })
+
+  // ライセンスモード（レンダラー側の制限判定用）
+  // VITE_DEBUG_LICENSE が有効値なら初期値を固定（メインプロセスからのpushでも上書きされる）
+  const debugLicense = (import.meta.env.VITE_DEBUG_LICENSE ?? '') as string
+  const validModes: LicenseMode[] = ['registered', 'trial', 'expired', 'restricted']
+  const initialLicenseMode: LicenseMode = validModes.includes(debugLicense as LicenseMode)
+    ? debugLicense as LicenseMode
+    : 'trial'
+  let currentLicenseMode: LicenseMode = initialLicenseMode
+  if (window.electronAPI?.onLicenseChanged) {
+    window.electronAPI.onLicenseChanged((state) => {
+      currentLicenseMode = (state as { mode: LicenseMode }).mode
+    })
+    if (window.electronAPI.checkLicenseStatus) {
+      window.electronAPI.checkLicenseStatus().then((s) => {
+        currentLicenseMode = (s as { mode: LicenseMode }).mode
+      })
+    }
+  }
+
+  // BiorhythmService（バイオリズム管理 — registeredのみ有効）
+  // settingsService.loadFromStorage()後にoriginDayを再設定する
+  const biorhythmService = createBiorhythmService(Date.now())
+
+  const behaviorSM = createBehaviorStateMachine({
+    fixedWanderDirection: sceneConfig.direction,
+    getDurationModifier: () => isFeatureEnabled(currentLicenseMode, 'biorhythm')
+      ? biorhythmService.state.activity : 0,
+  })
   behaviorSM.start()
 
   // キャラクター行動コールバック（Orchestratorが直接呼び出す）
@@ -242,25 +272,6 @@ async function main(): Promise<void> {
   const feedingAdapter: FeedingInteractionAdapter = createFeedingInteractionAdapter(
     renderer, camera, cabbageHandles, charHandle, character, behaviorSM, bus
   )
-
-  // ライセンスモード（レンダラー側の制限判定用）
-  // VITE_DEBUG_LICENSE が有効値なら初期値を固定（メインプロセスからのpushでも上書きされる）
-  const debugLicense = (import.meta.env.VITE_DEBUG_LICENSE ?? '') as string
-  const validModes: LicenseMode[] = ['registered', 'trial', 'expired', 'restricted']
-  const initialLicenseMode: LicenseMode = validModes.includes(debugLicense as LicenseMode)
-    ? debugLicense as LicenseMode
-    : 'trial'
-  let currentLicenseMode: LicenseMode = initialLicenseMode
-  if (window.electronAPI?.onLicenseChanged) {
-    window.electronAPI.onLicenseChanged((state) => {
-      currentLicenseMode = (state as { mode: LicenseMode }).mode
-    })
-    if (window.electronAPI.checkLicenseStatus) {
-      window.electronAPI.checkLicenseStatus().then((s) => {
-        currentLicenseMode = (s as { mode: LicenseMode }).mode
-      })
-    }
-  }
 
   // EmotionService（感情パラメータ管理）
   const emotionService: EmotionService = createEmotionService(settingsService.emotionConfig.affinity)
@@ -302,12 +313,15 @@ async function main(): Promise<void> {
   bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
       interactionTracker.recordFeeding()
-      return
+    } else {
+      emotionService.applyEvent({ type: 'fed' })
+      interactionTracker.recordFeeding()
+      settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+      emitEmotionState(true)
     }
-    emotionService.applyEvent({ type: 'fed' })
-    interactionTracker.recordFeeding()
-    settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
-    emitEmotionState(true)
+    if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+      biorhythmService.applyFeedingBoost()
+    }
   })
 
   // AnimationResolver（コンテキスト依存のアニメーション選択）
@@ -322,6 +336,8 @@ async function main(): Promise<void> {
       const today = new Date().toISOString().slice(0, 10)
       return statisticsService.getDailyStats(today).completedCycles
     },
+    getBiorhythm: () => isFeatureEnabled(currentLicenseMode, 'biorhythm')
+      ? biorhythmService.state : NEUTRAL_BIORHYTHM,
   }
 
   // FureaiCoordinator（ふれあいモードのシーン遷移+プリセット切替+餌やり制御）
@@ -415,6 +431,9 @@ async function main(): Promise<void> {
   // EmotionServiceのaffinity復元（loadFromStorage後に実行）
   emotionService.loadAffinity(settingsService.emotionConfig.affinity)
 
+  // BiorhythmServiceのoriginDay復元（loadFromStorage後に実行）
+  biorhythmService.setOriginDay(settingsService.biorhythmConfig.originDay)
+
   // 保存済み統計データの復元
   await statisticsService.loadFromStorage()
 
@@ -430,9 +449,19 @@ async function main(): Promise<void> {
     setTimeout(() => emitEmotionState(true), 0)
   }
 
-  // インタラクション（ホバー、クリック、摘まみ上げ）
+  // インタラクション（ホバー、クリック、摘まみ上げ、撫でる）
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle, {
     onClickInteraction: () => interactionTracker.recordClick(),
+    onPetCompleted: () => {
+      if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+        emotionService.applyEvent({ type: 'petted' })
+        settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+        emitEmotionState(true)
+      }
+      if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+        biorhythmService.applyPettingBoost()
+      }
+    },
   })
 
   // フォーカス状態フラグ（document.hasFocus()はElectronで信頼できないためblur/focusで管理）
@@ -566,6 +595,11 @@ async function main(): Promise<void> {
       emitEmotionState()
     }
 
+    // バイオリズムの更新（registeredのみ）
+    if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+      biorhythmService.tick(deltaMs)
+    }
+
     // インタラクション追跡の時間更新
     interactionTracker.tick(deltaMs)
 
@@ -594,6 +628,8 @@ async function main(): Promise<void> {
       debugIndicator.dataset.interactionLocked = String(behaviorSM.isInteractionLocked())
       debugIndicator.dataset.recentClicks = String(interactionTracker.history.recentClicks)
       debugIndicator.dataset.totalFeedingsToday = String(interactionTracker.history.totalFeedingsToday)
+      debugIndicator.dataset.biorhythm = JSON.stringify(biorhythmService.state)
+      debugIndicator.dataset.biorhythmBoost = JSON.stringify(biorhythmService.boost)
     }
   }
   animate()

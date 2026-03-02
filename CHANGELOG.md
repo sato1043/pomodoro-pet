@@ -7,11 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-03-02
+
+### Added
+- バイオリズム機能 — キャラクターの行動に日単位の周期的な状態変動（activity=5日/sociability=7日/focus=11日の正弦波周期）を導入。registeredライセンスのみ有効
+- バイオリズムに基づく4つの新アニメーションルール: high-activity-energetic-idle, low-activity-sleepy-idle, high-sociability-reaction, high-focus-march
+- 餌やり/撫でによるバイオリズムブースト（5分間で線形減衰）
+- pet_end時のEmotionService感情イベント発行（petted）を追加
+- 統計パネルにバイオリズムグラフ追加（ネオンカラーのサインカーブ+カーブ上移動アニメーション）
+
 ### Changed
 - register APIのデバイス台数制限（3台）をキー単位の日次レート制限（1日3回）+ 累計登録数制限（50デバイス）に変更
 - staleデバイス自動除外の閾値を90日→30日に短縮
 - 新規キー作成時のmaxDevicesフィールド設定を廃止（既存データは互換性のため残存）
 - register APIのユニットテスト追加（vitest、12テストケース）
+
+### Fixed
+- DevTools自動起動が.env.developmentから効かない問題を修正（mainプロセスのdefineに追加）
+- main.tsのcurrentLicenseMode TDZエラーを修正（宣言順序の修正）
 
 ## [0.2.1] - 2026-03-01
 

@@ -77,6 +77,7 @@ UpdateBehaviorUseCase（毎フレーム）
 | interaction | InteractionHistory? | InteractionTracker.history |
 | timeOfDay | TimeOfDay? | resolveTimeOfDay(hour) |
 | todayCompletedCycles | number? | StatisticsService.getDailyStats(today) |
+| biorhythm | BiorhythmState? | BiorhythmService.state（registeredのみ、それ以外はNEUTRAL） |
 
 ### EnrichedAnimationResolverルール一覧（優先順位順）
 
@@ -89,13 +90,17 @@ UpdateBehaviorUseCase（毎フレーム）
 | 5 | click-irritation | reaction + recentClicks >= 3 | damage1 | ✗ | — |
 | 6 | night-sleepy-reaction | reaction + night + affinity > 0.5 | sleep | ✗ | — |
 | 7 | productive-happy-reaction | reaction + todayCompletedCycles >= 3 | happy | ✗ | — |
-| 8 | march-late-run | march + phaseProgress > 0.7 | run | ○ | — |
-| 9 | march-mid-speed | march + 0.3 < phaseProgress <= 0.7 | walk | ○ | 1.2 |
-| 10 | reaction-variation | reaction + random < 0.5 | attack2 | ✗ | — |
-| 11 | refuse-variation | refuse + random < 0.5 | damage2 | ✗ | — |
-| 12 | getup-from-sleep | idle + previousState=sleep | getUp | ✗ | — |
-| 13 | celebrate-run | happy + celebrate + random < 0.3 | run | ✗ | 1.2 |
-| 14 | affinity-happy | idle + previousState≠sleep + affinity > 0.7 + random < 0.15 | happy | ✗ | — |
+| 8 | high-sociability-reaction | reaction + biorhythm.sociability > 0.5 | happy | ✗ | — |
+| 9 | march-late-run | march + phaseProgress > 0.7 | run | ○ | — |
+| 10 | march-mid-speed | march + 0.3 < phaseProgress <= 0.7 | walk | ○ | 1.2 |
+| 11 | high-focus-march | march + biorhythm.focus > 0.5 + phaseProgress <= 0.3 | walk | ○ | 1.1 |
+| 12 | reaction-variation | reaction + random < 0.5 | attack2 | ✗ | — |
+| 13 | refuse-variation | refuse + random < 0.5 | damage2 | ✗ | — |
+| 14 | getup-from-sleep | idle + previousState=sleep | getUp | ✗ | — |
+| 15 | celebrate-run | happy + celebrate + random < 0.3 | run | ✗ | 1.2 |
+| 16 | high-activity-energetic-idle | idle + autonomous + biorhythm.activity > 0.5 + previousState≠sleep + random < 0.25 | happy | ✗ | — |
+| 17 | low-activity-sleepy-idle | idle + autonomous + biorhythm.activity < -0.5 + random < 0.20 | sleep | ✗ | — |
+| 18 | affinity-happy | idle + previousState≠sleep + affinity > 0.7 + random < 0.15 | happy | ✗ | — |
 | — | デフォルト | 上記いずれにも該当しない | STATE_CONFIGS準拠 | — | — |
 
 ## 感情パラメータシステム

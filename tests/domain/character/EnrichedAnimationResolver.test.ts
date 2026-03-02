@@ -15,6 +15,10 @@ import {
   createNightSleepyReactionRule,
   createProductiveHappyReactionRule,
   createOverfedRefuseRule,
+  createHighActivityEnergeticIdleRule,
+  createLowActivitySleepyIdleRule,
+  createHighSociabilityReactionRule,
+  createHighFocusMarchRule,
   createEnrichedAnimationResolver,
 } from '../../../src/domain/character/services/EnrichedAnimationResolver'
 import { STATE_CONFIGS } from '../../../src/domain/character/value-objects/CharacterState'
@@ -341,6 +345,128 @@ describe('EnrichedAnimationResolver', () => {
     })
   })
 
+  describe('high-activity-energetic-idle rule', () => {
+    const highActivity = { activity: 0.7, sociability: 0, focus: 0 }
+    const lowActivity = { activity: 0.3, sociability: 0, focus: 0 }
+
+    it('idle + autonomous + activity > 0.5 + prevState≠sleep + random < 0.25 でマッチする', () => {
+      const rule = createHighActivityEnergeticIdleRule(() => 0.2)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', previousState: 'wander', biorhythm: highActivity,
+      }))).toBe(true)
+    })
+
+    it('activity <= 0.5 ではマッチしない', () => {
+      const rule = createHighActivityEnergeticIdleRule(() => 0.1)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', previousState: 'wander', biorhythm: lowActivity,
+      }))).toBe(false)
+    })
+
+    it('previousState=sleep ではマッチしない', () => {
+      const rule = createHighActivityEnergeticIdleRule(() => 0.1)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', previousState: 'sleep', biorhythm: highActivity,
+      }))).toBe(false)
+    })
+
+    it('random >= 0.25 ではマッチしない', () => {
+      const rule = createHighActivityEnergeticIdleRule(() => 0.25)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', previousState: 'wander', biorhythm: highActivity,
+      }))).toBe(false)
+    })
+
+    it('happyをloop=falseで返す', () => {
+      const rule = createHighActivityEnergeticIdleRule(() => 0.1)
+      const sel = rule.resolve(makeCtx({ state: 'idle', biorhythm: highActivity }))
+      expect(sel.clipName).toBe('happy')
+      expect(sel.loop).toBe(false)
+    })
+  })
+
+  describe('low-activity-sleepy-idle rule', () => {
+    const lowActivity = { activity: -0.7, sociability: 0, focus: 0 }
+    const normalActivity = { activity: -0.3, sociability: 0, focus: 0 }
+
+    it('idle + autonomous + activity < -0.5 + random < 0.20 でマッチする', () => {
+      const rule = createLowActivitySleepyIdleRule(() => 0.1)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', biorhythm: lowActivity,
+      }))).toBe(true)
+    })
+
+    it('activity >= -0.5 ではマッチしない', () => {
+      const rule = createLowActivitySleepyIdleRule(() => 0.1)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', biorhythm: normalActivity,
+      }))).toBe(false)
+    })
+
+    it('random >= 0.20 ではマッチしない', () => {
+      const rule = createLowActivitySleepyIdleRule(() => 0.20)
+      expect(rule.match(makeCtx({
+        state: 'idle', presetName: 'autonomous', biorhythm: lowActivity,
+      }))).toBe(false)
+    })
+
+    it('sleepをloop=falseで返す', () => {
+      const rule = createLowActivitySleepyIdleRule(() => 0.1)
+      const sel = rule.resolve(makeCtx({ state: 'idle', biorhythm: lowActivity }))
+      expect(sel.clipName).toBe('sleep')
+      expect(sel.loop).toBe(false)
+    })
+  })
+
+  describe('high-sociability-reaction rule', () => {
+    const rule = createHighSociabilityReactionRule()
+    const highSociability = { activity: 0, sociability: 0.7, focus: 0 }
+    const lowSociability = { activity: 0, sociability: 0.3, focus: 0 }
+
+    it('reaction + sociability > 0.5 でマッチする', () => {
+      expect(rule.match(makeCtx({ state: 'reaction', biorhythm: highSociability }))).toBe(true)
+    })
+
+    it('reaction + sociability <= 0.5 ではマッチしない', () => {
+      expect(rule.match(makeCtx({ state: 'reaction', biorhythm: lowSociability }))).toBe(false)
+    })
+
+    it('biorhythm未設定ではマッチしない', () => {
+      expect(rule.match(makeCtx({ state: 'reaction' }))).toBe(false)
+    })
+
+    it('happyをloop=falseで返す', () => {
+      const sel = rule.resolve(makeCtx({ state: 'reaction', biorhythm: highSociability }))
+      expect(sel.clipName).toBe('happy')
+      expect(sel.loop).toBe(false)
+    })
+  })
+
+  describe('high-focus-march rule', () => {
+    const rule = createHighFocusMarchRule()
+    const highFocus = { activity: 0, sociability: 0, focus: 0.7 }
+    const lowFocus = { activity: 0, sociability: 0, focus: 0.3 }
+
+    it('march + focus > 0.5 + phaseProgress <= 0.3 でマッチする', () => {
+      expect(rule.match(makeCtx({ state: 'march', phaseProgress: 0.2, biorhythm: highFocus }))).toBe(true)
+    })
+
+    it('march + focus <= 0.5 ではマッチしない', () => {
+      expect(rule.match(makeCtx({ state: 'march', phaseProgress: 0.2, biorhythm: lowFocus }))).toBe(false)
+    })
+
+    it('march + phaseProgress > 0.3 ではマッチしない', () => {
+      expect(rule.match(makeCtx({ state: 'march', phaseProgress: 0.4, biorhythm: highFocus }))).toBe(false)
+    })
+
+    it('walk speed=1.1をloop=trueで返す', () => {
+      const sel = rule.resolve(makeCtx({ state: 'march', phaseProgress: 0.2, biorhythm: highFocus }))
+      expect(sel.clipName).toBe('walk')
+      expect(sel.loop).toBe(true)
+      expect(sel.speed).toBe(1.1)
+    })
+  })
+
   describe('createEnrichedAnimationResolver (統合)', () => {
     it('ルールにマッチしない場合はデフォルトリゾルバの結果を返す', () => {
       const resolver = createEnrichedAnimationResolver(() => 1.0) // 全ランダムルール不発
@@ -415,6 +541,29 @@ describe('EnrichedAnimationResolver', () => {
       const resolver = createEnrichedAnimationResolver()
       const sel = resolver(makeCtx({ state: 'feeding', interaction: { recentClicks: 0, totalFeedingsToday: 5 } }))
       expect(sel.clipName).toBe('attack2')
+    })
+
+    it('high sociabilityのreactionではhappyを返す（productiveより低優先）', () => {
+      const resolver = createEnrichedAnimationResolver(() => 1.0) // ランダムルール不発
+      const highSociability = { activity: 0, sociability: 0.7, focus: 0 }
+      const sel = resolver(makeCtx({ state: 'reaction', biorhythm: highSociability }))
+      expect(sel.clipName).toBe('happy')
+    })
+
+    it('high focusのmarch序盤ではwalk speed=1.1を返す', () => {
+      const resolver = createEnrichedAnimationResolver()
+      const highFocus = { activity: 0, sociability: 0, focus: 0.7 }
+      const sel = resolver(makeCtx({ state: 'march', phaseProgress: 0.2, biorhythm: highFocus }))
+      expect(sel.clipName).toBe('walk')
+      expect(sel.speed).toBe(1.1)
+    })
+
+    it('march序盤でfocus高でもphaseProgress > 0.3ではhigh-focusよりmid-speedが優先', () => {
+      const resolver = createEnrichedAnimationResolver()
+      const highFocus = { activity: 0, sociability: 0, focus: 0.7 }
+      const sel = resolver(makeCtx({ state: 'march', phaseProgress: 0.5, biorhythm: highFocus }))
+      expect(sel.clipName).toBe('walk')
+      expect(sel.speed).toBe(1.2) // mid-speedが勝つ
     })
   })
 })

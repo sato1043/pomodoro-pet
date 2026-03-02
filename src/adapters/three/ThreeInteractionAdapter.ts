@@ -28,6 +28,7 @@ const DEFAULT_HOVER_CURSORS: Record<CharacterStateName, string> = {
 export interface InteractionConfig {
   readonly hoverCursors?: HoverCursors
   readonly onClickInteraction?: () => void
+  readonly onPetCompleted?: () => void
 }
 
 const MAX_LIFT_HEIGHT = 3
@@ -226,6 +227,7 @@ export function createInteractionAdapter(
       character.setState(nextState)
       charHandle.playState(nextState)
       stateMachine.start()
+      config?.onPetCompleted?.()
       return
     }
   }

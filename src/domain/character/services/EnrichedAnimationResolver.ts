@@ -119,27 +119,79 @@ export function createOverfedRefuseRule(): EnrichedAnimationRule {
   }
 }
 
+export function createHighActivityEnergeticIdleRule(random: () => number = Math.random): EnrichedAnimationRule {
+  return {
+    name: 'high-activity-energetic-idle',
+    match: (ctx) =>
+      ctx.state === 'idle' &&
+      ctx.presetName === 'autonomous' &&
+      (ctx.biorhythm?.activity ?? 0) > 0.5 &&
+      ctx.previousState !== 'sleep' &&
+      random() < 0.25,
+    resolve: () => ({ clipName: 'happy', loop: false }),
+  }
+}
+
+export function createLowActivitySleepyIdleRule(random: () => number = Math.random): EnrichedAnimationRule {
+  return {
+    name: 'low-activity-sleepy-idle',
+    match: (ctx) =>
+      ctx.state === 'idle' &&
+      ctx.presetName === 'autonomous' &&
+      (ctx.biorhythm?.activity ?? 0) < -0.5 &&
+      random() < 0.20,
+    resolve: () => ({ clipName: 'sleep', loop: false }),
+  }
+}
+
+export function createHighSociabilityReactionRule(): EnrichedAnimationRule {
+  return {
+    name: 'high-sociability-reaction',
+    match: (ctx) =>
+      ctx.state === 'reaction' &&
+      (ctx.biorhythm?.sociability ?? 0) > 0.5,
+    resolve: () => ({ clipName: 'happy', loop: false }),
+  }
+}
+
+export function createHighFocusMarchRule(): EnrichedAnimationRule {
+  return {
+    name: 'high-focus-march',
+    match: (ctx) =>
+      ctx.state === 'march' &&
+      (ctx.biorhythm?.focus ?? 0) > 0.5 &&
+      ctx.phaseProgress <= 0.3,
+    resolve: () => ({ clipName: 'walk', loop: true, speed: 1.1 }),
+  }
+}
+
 export function createEnrichedAnimationResolver(
   random: () => number = Math.random
 ): AnimationResolverFn {
   const fallback = createDefaultAnimationResolver()
   const rules: EnrichedAnimationRule[] = [
-    // 感情ルール（fatigue/affinity/satisfaction）
+    // 感情ルール（fatigue/satisfaction/overfeeding）
     createFatigueMarchRule(),
     createFullFeedingRefuseRule(),
     createOverfedRefuseRule(),
-    // リアクションルール（click spam → irritation → night → productive → variation）
+    // リアクションルール（click spam → irritation → night → productive → sociability → variation）
     createClickSpamReactionRule(),
     createClickIrritationRule(),
     createNightSleepyReactionRule(),
     createProductiveHappyReactionRule(),
-    // Phase 2ルール
+    createHighSociabilityReactionRule(),
+    // marchルール（late run → mid speed → focus boost）
     createMarchLateRunRule(),
     createMarchMidSpeedRule(),
+    createHighFocusMarchRule(),
+    // バリエーション・遷移ルール
     createReactionVariationRule(random),
     createRefuseVariationRule(random),
     createGetUpRule(),
     createCelebrateRunRule(random),
+    // バイオリズムidle変化（affinity happyより前）
+    createHighActivityEnergeticIdleRule(random),
+    createLowActivitySleepyIdleRule(random),
     // affinityルールは最後（他ルールより優先度低い）
     createAffinityHappyRule(random),
   ]

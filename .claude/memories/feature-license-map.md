@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.2.1**（= package.json）
+**バージョン: 0.3.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -21,6 +21,7 @@
 | backgroundNotify | o | o | x | x | バックグラウンド時のシステム通知 |
 | emotionAccumulation | o | o | x | x | 感情パラメータの蓄積・永続化 |
 | autoUpdate | o | o | x | x | 自動アップデートチェック・ダウンロード |
+| biorhythm | o | - | x | x | バイオリズム（activity/sociability/focus周期変動） |
 
 ## 全機能一覧と FeatureName マッピング
 
@@ -86,6 +87,11 @@
 | 30 | 摘まみ上げ | ThreeInteractionAdapter.ts | 操作 | character | ドラッグでY軸持ち上げ |
 | 31 | インタラクションロック | BehaviorStateMachine.ts | 自動 | character | work中のインタラクション拒否 |
 | 91 | キャラクター名設定 | CharacterNameEditor.tsx, AppSettingsService.ts | 操作 | fureai | ふれあいモード内でキャラクターに任意の名前を付ける（settings.jsonに永続化） |
+| 92 | バイオリズム周期変動 | BiorhythmState.ts, BiorhythmService.ts | 自動 | biorhythm | activity(5日)/sociability(7日)/focus(11日)の正弦波周期で行動が変化 |
+| 93 | バイオリズムブースト | BiorhythmState.ts, BiorhythmService.ts | 自動 | biorhythm | 餌やり/撫でで一時的にactivity/sociabilityをブースト（5分間で線形減衰） |
+| 94 | バイオリズム行動変化 | EnrichedAnimationResolver.ts | 自動 | biorhythm | 4新ルール: energetic-idle, sleepy-idle, sociability-reaction, focus-march |
+| 95 | バイオリズム持続時間変調 | BehaviorStateMachine.ts | 自動 | biorhythm | activity値による状態持続時間の変調（0.7x〜1.3x） |
+| 96 | バイオリズムグラフ | StatsDrawer.tsx | 統計パネル | biorhythm | 3軸ネオンカラーサインカーブ+カーブ上移動アニメーション |
 
 ### E. タイマー動作
 
@@ -241,6 +247,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.3.0 | 機能追加 | バイオリズム機能追加（#92-96）、FeatureName 'biorhythm' 追加、registeredのみ有効（trial無効）。統計パネルにバイオリズムグラフ追加（#96） |
 | 0.2.1 | バグ修正 | register APIデバイス自動作成、heartbeat merge:trueレースコンディション対策、ギャラリーUI重なり修正 |
 | 0.2.0 | 機能追加 | キャラクター名設定追加（#91）、ふれあいモード内にCharacterNameEditor配置、AppSettingsServiceにcharacterConfig追加 |
 | 0.2.0 | 機能追加 | ギャラリーモード追加（#81-86）、カスタムタイトルバー追加（#89）、感情インジケーターUI追加（#90）、frame: false化、ウィンドウ操作IPC追加、Clips/States/Rulesの3モード、CompactHeader共通化、ふれあいボタン右下移動、FeatureName 'gallery' 追加、EmotionStateUpdatedイベント+EmotionIndicator.tsx新規追加 |

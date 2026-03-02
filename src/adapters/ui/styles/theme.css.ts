@@ -120,6 +120,12 @@ globalStyle(`.${darkThemeClass}`, {
     '--theme-work-rgb': '76, 175, 80',
     '--theme-heatmap-empty': 'rgba(255, 255, 255, 0.08)',
     '--theme-heatmap-today-stroke': 'rgba(255, 255, 255, 0.6)',
+    // バイオリズムグラフ用ネオンカラー
+    '--bio-activity': '#00e5ff',
+    '--bio-sociability': '#e040fb',
+    '--bio-focus': '#76ff03',
+    '--bio-grid': 'rgba(255, 255, 255, 0.12)',
+    '--bio-today': 'rgba(255, 255, 255, 0.5)',
   },
 })
 
@@ -129,5 +135,11 @@ globalStyle(`.${lightThemeClass}`, {
     '--theme-work-rgb': '56, 152, 60',
     '--theme-heatmap-empty': 'rgba(0, 0, 0, 0.06)',
     '--theme-heatmap-today-stroke': 'rgba(0, 0, 0, 0.4)',
+    // バイオリズムグラフ用カラー
+    '--bio-activity': '#00838f',
+    '--bio-sociability': '#8e24aa',
+    '--bio-focus': '#558b2f',
+    '--bio-grid': 'rgba(0, 0, 0, 0.1)',
+    '--bio-today': 'rgba(0, 0, 0, 0.35)',
   },
 })

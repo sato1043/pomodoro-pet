@@ -40,11 +40,15 @@ function randomRange(min: number, max: number): number {
 
 export interface BehaviorStateMachineOptions {
   readonly fixedWanderDirection?: { x: number; z: number }
+  readonly getDurationModifier?: () => number
 }
 
 export function createBehaviorStateMachine(
   options?: BehaviorStateMachineOptions
 ): BehaviorStateMachine {
+  const fixedDir = options?.fixedWanderDirection ?? null
+  const getDurationModifier = options?.getDurationModifier
+
   let preset: BehaviorPreset = BEHAVIOR_PRESETS['autonomous']
   let currentState: CharacterStateName = 'idle'
   let previousState: CharacterStateName | null = null
@@ -52,15 +56,23 @@ export function createBehaviorStateMachine(
   let currentDurationMs = randomDuration(currentState)
   let wanderTarget: Position3D | null = null
   let wanderDirection: Position3D = { x: 0, y: 0, z: 0 }
-  const fixedDir = options?.fixedWanderDirection ?? null
 
   function randomDuration(state: CharacterStateName): number {
     const override = preset.durationOverrides?.[state]
+    let duration: number
     if (override) {
-      return randomRange(override.minMs, override.maxMs)
+      duration = randomRange(override.minMs, override.maxMs)
+    } else {
+      const config = STATE_CONFIGS[state]
+      duration = randomRange(config.minDurationMs, config.maxDurationMs)
     }
-    const config = STATE_CONFIGS[state]
-    return randomRange(config.minDurationMs, config.maxDurationMs)
+    // activity modifier: high(+1.0)→0.7x (faster transitions), low(-1.0)→1.3x (slower)
+    if (getDurationModifier) {
+      const modifier = getDurationModifier()
+      const multiplier = 1.0 - modifier * 0.3
+      duration *= multiplier
+    }
+    return duration
   }
 
   function resolveTimeoutTarget(from: CharacterStateName): CharacterStateName {

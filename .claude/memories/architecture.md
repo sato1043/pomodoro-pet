@@ -109,6 +109,7 @@ EventBus（UI/インフラ通知）:
 - `character/value-objects/BehaviorPreset.ts` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）
 - `character/value-objects/CharacterState.ts` — 11状態定義+設定（feeding追加）
 - `character/value-objects/EmotionState.ts` — EmotionState値オブジェクト（satisfaction/fatigue/affinity）。applyEmotionEvent()、tickEmotion()純粋関数
+- `character/value-objects/BiorhythmState.ts` — BiorhythmState値オブジェクト（activity/sociability/focus）。calculateBaseBiorhythm()、applyBoost()、tickBoost()等の純粋関数
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
@@ -133,6 +134,7 @@ EventBus（UI/インフラ通知）:
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick。StateMachine遷移 + AnimationResolver経由のアニメーション選択 + ScrollManager経由で背景スクロール制御。`UpdateBehaviorOptions`でリゾルバ・phaseProgress・emotion・interaction・timeOfDay・todayCompletedCyclesを注入
 - `character/EmotionService.ts` — 感情パラメータ管理サービス。tick(deltaMs, isWorking)で自然変化、applyEvent()でイベント適用、loadAffinity()で永続化値復元
 - `character/EmotionEvents.ts` — 感情UI通知イベント型。`EmotionStateUpdatedEvent`（type + state: EmotionState）。main.tsのrAFループから1秒間隔スロットリングで発行、感情イベント時は即時発行
+- `character/BiorhythmService.ts` — バイオリズム管理サービス。tick(deltaMs)でブースト減衰+再計算、applyFeedingBoost()/applyPettingBoost()でケアブースト、setOriginDay()でoriginDay設定
 - `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
 - `notification/NotificationBridge.ts` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work)→「休憩の時間」、PhaseCompleted(break)→「作業の時間」、PomodoroCompleted→「サイクル完了！」。long-break/congratsはスキップ。`NotificationPort`インターフェースでElectron Notification APIを抽象化
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
@@ -174,7 +176,7 @@ EventBus（UI/インフラ通知）:
 - `ui/StatsButton.tsx` — 統計パネル表示ボタン。チャートSVGアイコン（`bottom: 168`）
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）。Cumulative Timeグラフ下にEmotionIndicator（canUse('emotionAccumulation')で条件付き描画）
+- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）。バイオリズムグラフ（3軸ネオンカラーサインカーブ前後3日+カーブ上移動ドットアニメーション、canUse('biorhythm')で条件付き描画）。EmotionIndicator（canUse('emotionAccumulation')で条件付き描画）
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期

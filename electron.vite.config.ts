@@ -17,6 +17,7 @@ export default defineConfig({
       __HEARTBEAT_URL__: JSON.stringify(process.env.HEARTBEAT_URL || env.VITE_HEARTBEAT_URL || ''),
       __STORE_URL__: JSON.stringify(process.env.STORE_URL || env.VITE_STORE_URL || 'https://www.updater.cc'),
       __DEBUG_LICENSE__: JSON.stringify(env.VITE_DEBUG_LICENSE || ''),
+      __DEV_TOOLS__: JSON.stringify(env.VITE_DEV_TOOLS || ''),
     },
     build: {
       rollupOptions: {
