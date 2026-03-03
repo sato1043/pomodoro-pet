@@ -253,12 +253,14 @@
 - ポモドーロ完了数や餌やり回数との相関表示
 - 感情インジケーターUIと連携して可視化
 
-### OSスリープ抑制設定
+### ~~OSスリープ抑制設定~~ — 完了
 - ポモドーロ実行中にOSがスリープ/サスペンドしないようにする機能
 - Electronの`powerSaveBlocker.start('prevent-app-suspension')`で実現
 - ポモドーロ開始時にブロッカーを有効化、完了/中断時に`powerSaveBlocker.stop(id)`で解除
 - 設定UIでON/OFF切替可能にする（デフォルトON）
 - settings.jsonに永続化（`power.preventSleep`等）
+- `SleepPreventionBridge`（アプリケーション層）がAppSceneChanged購読→powerSaveBlocker制御
+- `SleepPreventionPort`でElectron powerSaveBlocker APIを抽象化
 
 ### 環境シーンのバリエーション（残課題）
 - シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等

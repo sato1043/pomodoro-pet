@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.3.2**（= package.json）
+**バージョン: 0.4.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -173,6 +173,7 @@
 |---|---|---|---|---|---|
 | 70 | バックグラウンドタイマー継続 | main.ts | 自動 | pomodoroTimer | setInterval(1秒)でtick |
 | 71 | フォーカス復帰時の時間帯更新 | main.ts | 自動 | （制限不要） | autoTimeOfDay時の反映 |
+| 97 | OSスリープ抑制 | SleepPreventionBridge.ts, ipc-handlers.ts | 自動 | （制限不要） | ポモドーロ中のOS sleep/suspend抑制（設定でON/OFF） |
 
 ### M. シーン遷移
 
@@ -247,6 +248,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.4.0 | 機能追加 | OSスリープ抑制機能追加（#97）。ポモドーロ中のpowerSaveBlocker制御、設定UIトグル、settings.json永続化 |
 | 0.3.2 | UI改善 | ウィンドウボタンのホバー時のみアイコン表示、Galleryモード上部マージン縮小 |
 | 0.3.1 | リファクタ | バイオリズムグラフ・EmotionIndicator・CharacterNameEditorをCompactHeader内に統合、BiorhythmChart独立コンポーネント化、E2Eテスト追従修正 |
 | 0.3.0 | 機能追加 | バイオリズム機能追加（#92-96）、FeatureName 'biorhythm' 追加、registeredのみ有効（trial無効）。統計パネルにバイオリズムグラフ追加（#96） |

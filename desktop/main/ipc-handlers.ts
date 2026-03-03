@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, Notification, shell } from 'electron'
+import { app, BrowserWindow, ipcMain, Notification, powerSaveBlocker, shell } from 'electron'
 import { join } from 'path'
 import { readFile } from 'fs/promises'
 import { autoUpdater } from 'electron-updater'
@@ -7,7 +7,24 @@ import { getLicenseState, setLicenseState, resolveLicense } from './license'
 
 declare const __HEARTBEAT_URL__: string
 
+let sleepBlockerId: number | null = null
+
 export function registerIpcHandlers(): void {
+  // --- スリープ抑制 ---
+
+  ipcMain.handle('sleepBlocker:start', () => {
+    if (sleepBlockerId !== null && powerSaveBlocker.isStarted(sleepBlockerId)) return
+    sleepBlockerId = powerSaveBlocker.start('prevent-app-suspension')
+  })
+
+  ipcMain.handle('sleepBlocker:stop', () => {
+    if (sleepBlockerId === null) return
+    if (powerSaveBlocker.isStarted(sleepBlockerId)) {
+      powerSaveBlocker.stop(sleepBlockerId)
+    }
+    sleepBlockerId = null
+  })
+
   // --- 設定 ---
 
   ipcMain.handle('settings:load', () => {

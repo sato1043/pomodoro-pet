@@ -29,6 +29,7 @@ import type { SoundPreset } from './infrastructure/audio/ProceduralSounds'
 import { createSfxPlayer } from './infrastructure/audio/SfxPlayer'
 import { bridgeTimerToSfx } from './application/timer/TimerSfxBridge'
 import { bridgeTimerToNotification, type NotificationPort } from './application/notification/NotificationBridge'
+import { bridgePomodoroToSleepPrevention, type SleepPreventionPort } from './application/sleep-prevention/SleepPreventionBridge'
 import { createStatisticsService } from './application/statistics/StatisticsService'
 import { bridgeTimerToStatistics } from './application/statistics/StatisticsBridge'
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
@@ -492,6 +493,17 @@ async function main(): Promise<void> {
     () => windowFocused
   )
 
+  // スリープ抑制（ポモドーロ中のOSスリープを防止）
+  const sleepPreventionPort: SleepPreventionPort = {
+    start: () => { window.electronAPI?.startSleepBlocker() },
+    stop: () => { window.electronAPI?.stopSleepBlocker() },
+  }
+  bridgePomodoroToSleepPrevention(
+    bus,
+    sleepPreventionPort,
+    () => settingsService.powerConfig.preventSleep
+  )
+
   // autoTimeOfDay: 1分間隔で時間帯を監視し天気を再適用
   let autoTimeInterval: ReturnType<typeof setInterval> | null = null
   function startAutoTimeInterval(): void {
@@ -628,7 +640,9 @@ async function main(): Promise<void> {
       debugIndicator.dataset.interactionLocked = String(behaviorSM.isInteractionLocked())
       debugIndicator.dataset.recentClicks = String(interactionTracker.history.recentClicks)
       debugIndicator.dataset.totalFeedingsToday = String(interactionTracker.history.totalFeedingsToday)
-      debugIndicator.dataset.biorhythm = JSON.stringify(biorhythmService.state)
+      debugIndicator.dataset.biorhythm = JSON.stringify(
+        isFeatureEnabled(currentLicenseMode, 'biorhythm') ? biorhythmService.state : NEUTRAL_BIORHYTHM
+      )
       debugIndicator.dataset.biorhythmBoost = JSON.stringify(biorhythmService.boost)
     }
   }

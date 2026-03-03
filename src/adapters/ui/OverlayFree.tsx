@@ -154,6 +154,16 @@ function SoundIcon({ on }: { on: boolean }): JSX.Element {
   )
 }
 
+function SleepBlockIcon({ on }: { on: boolean }): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      {on
+        ? <><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /><line x1="16" y1="6" x2="16" y2="10" /><line x1="14" y1="8" x2="18" y2="8" /></>
+        : <><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" /><line x1="1" y1="1" x2="23" y2="23" /></>}
+    </svg>
+  )
+}
+
 function NotifyIcon({ on }: { on: boolean }): JSX.Element {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -472,6 +482,17 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         onAudioChange={editor.setBackgroundAudio}
         onNotifyChange={canUse('backgroundNotify') ? editor.setBackgroundNotify : () => {}}
       />
+      <div className={styles.bgRow}>
+        <label className={styles.bgLabel}>Pomodoro:</label>
+        <button
+          className={`${styles.bgToggle}${editor.preventSleep ? ' active' : ''}`}
+          data-testid="sleep-block-toggle"
+          onClick={() => editor.setPreventSleep(!editor.preventSleep)}
+          title="Prevent Sleep"
+        >
+          <SleepBlockIcon on={editor.preventSleep} />
+        </button>
+      </div>
       <div className={aboutStyles.aboutLink}>
         <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onRegisterClick} data-testid="register-link">

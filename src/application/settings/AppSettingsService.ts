@@ -37,6 +37,10 @@ export interface LicenseSettingsInput {
   readonly jwt: string | null
 }
 
+export interface PowerConfigInput {
+  readonly preventSleep: boolean
+}
+
 export interface BiorhythmConfigInput {
   readonly originDay: number
 }
@@ -45,6 +49,7 @@ export interface AppSettingsService {
   readonly currentConfig: TimerConfig
   readonly themePreference: ThemePreference
   readonly backgroundConfig: BackgroundConfigInput
+  readonly powerConfig: PowerConfigInput
   readonly weatherConfig: WeatherConfig
   readonly emotionConfig: EmotionConfigInput
   readonly characterConfig: CharacterConfigInput
@@ -55,6 +60,7 @@ export interface AppSettingsService {
   updateSoundConfig(input: SoundConfigInput): void
   updateThemeConfig(theme: ThemePreference): void
   updateBackgroundConfig(input: BackgroundConfigInput): void
+  updatePowerConfig(input: PowerConfigInput): void
   updateWeatherConfig(partial: Partial<WeatherConfig>): void
   updateEmotionConfig(input: EmotionConfigInput): void
   updateCharacterConfig(input: CharacterConfigInput): void
@@ -81,19 +87,21 @@ function saveAllToStorage(
   sound: SoundConfigInput,
   theme: ThemePreference,
   background: BackgroundConfigInput,
+  power: PowerConfigInput,
   weather: WeatherConfig,
   emotion: EmotionConfigInput,
   character: CharacterConfigInput,
   biorhythm: BiorhythmConfigInput
 ): void {
   if (typeof window !== 'undefined' && window.electronAPI?.saveSettings) {
-    window.electronAPI.saveSettings({ timer, sound, theme, background, weather, emotion, character, biorhythm })
+    window.electronAPI.saveSettings({ timer, sound, theme, background, power, weather, emotion, character, biorhythm })
   }
 }
 
 const DEFAULT_SOUND: SoundConfigInput = { preset: 'silence', volume: 0.5, isMuted: false }
 const DEFAULT_THEME: ThemePreference = 'system'
 const DEFAULT_BACKGROUND: BackgroundConfigInput = { backgroundAudio: true, backgroundNotify: true }
+const DEFAULT_POWER: PowerConfigInput = { preventSleep: true }
 const DEFAULT_WEATHER: WeatherConfig = createDefaultWeatherConfig()
 const DEFAULT_EMOTION: EmotionConfigInput = { affinity: 0 }
 const DEFAULT_CHARACTER: CharacterConfigInput = { name: 'Wildboar' }
@@ -109,6 +117,7 @@ export function createAppSettingsService(
   let currentSound: SoundConfigInput = { ...DEFAULT_SOUND }
   let currentTheme: ThemePreference = DEFAULT_THEME
   let currentBackground: BackgroundConfigInput = { ...DEFAULT_BACKGROUND }
+  let currentPower: PowerConfigInput = { ...DEFAULT_POWER }
   let currentWeather: WeatherConfig = { ...DEFAULT_WEATHER }
   let currentEmotion: EmotionConfigInput = { ...DEFAULT_EMOTION }
   let currentCharacter: CharacterConfigInput = { ...DEFAULT_CHARACTER }
@@ -170,13 +179,14 @@ export function createAppSettingsService(
   }
 
   function save(): void {
-    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentWeather, currentEmotion, currentCharacter, currentBiorhythm)
+    saveAllToStorage(configToInput(currentConfig), currentSound, currentTheme, currentBackground, currentPower, currentWeather, currentEmotion, currentCharacter, currentBiorhythm)
   }
 
   return {
     get currentConfig() { return currentConfig },
     get themePreference() { return currentTheme },
     get backgroundConfig() { return currentBackground },
+    get powerConfig() { return currentPower },
     get weatherConfig() { return currentWeather },
     get emotionConfig() { return currentEmotion },
     get characterConfig() { return currentCharacter },
@@ -215,6 +225,14 @@ export function createAppSettingsService(
         ) {
           currentBackground = { backgroundAudio: bg.backgroundAudio, backgroundNotify: bg.backgroundNotify }
           publishBackgroundLoaded(currentBackground)
+        }
+      }
+
+      // 電源設定の復元
+      if (data.power) {
+        const pw = data.power as Record<string, unknown>
+        if (typeof pw.preventSleep === 'boolean') {
+          currentPower = { preventSleep: pw.preventSleep }
         }
       }
 
@@ -313,6 +331,11 @@ export function createAppSettingsService(
       save()
     },
 
+    updatePowerConfig(input: PowerConfigInput): void {
+      currentPower = input
+      save()
+    },
+
     updateWeatherConfig(partial: Partial<WeatherConfig>): void {
       currentWeather = { ...currentWeather, ...partial }
       publishWeatherChanged(currentWeather)
@@ -340,6 +363,7 @@ export function createAppSettingsService(
       currentSound = { ...DEFAULT_SOUND }
       currentTheme = DEFAULT_THEME
       currentBackground = { ...DEFAULT_BACKGROUND }
+      currentPower = { ...DEFAULT_POWER }
       currentWeather = { ...DEFAULT_WEATHER }
       currentEmotion = { ...DEFAULT_EMOTION }
       currentCharacter = { ...DEFAULT_CHARACTER }

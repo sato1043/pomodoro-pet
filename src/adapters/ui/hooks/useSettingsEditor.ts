@@ -45,8 +45,10 @@ export interface SettingsEditorResult {
   currentTimerConfig: TimerConfig
   backgroundAudio: boolean
   backgroundNotify: boolean
+  preventSleep: boolean
   setBackgroundAudio(value: boolean): void
   setBackgroundNotify(value: boolean): void
+  setPreventSleep(value: boolean): void
   toggle(): void
   confirm(): void
   updateSetting(key: keyof TimerSettings, value: number): void
@@ -62,6 +64,7 @@ export function useSettingsEditor(): SettingsEditorResult {
   const [volumeKey, setVolumeKey] = useState(0)
   const [backgroundAudio, setBackgroundAudio] = useState(() => settingsService.backgroundConfig.backgroundAudio)
   const [backgroundNotify, setBackgroundNotify] = useState(() => settingsService.backgroundConfig.backgroundNotify)
+  const [preventSleep, setPreventSleep] = useState(() => settingsService.powerConfig.preventSleep)
   const snapshotRef = useRef<{
     settings: TimerSettings
     preset: string
@@ -70,6 +73,7 @@ export function useSettingsEditor(): SettingsEditorResult {
     theme: ThemePreference
     backgroundAudio: boolean
     backgroundNotify: boolean
+    preventSleep: boolean
   } | null>(null)
   const confirmedRef = useRef(false)
 
@@ -92,6 +96,7 @@ export function useSettingsEditor(): SettingsEditorResult {
           theme: themePreference,
           backgroundAudio,
           backgroundNotify,
+          preventSleep,
         }
         confirmedRef.current = false
       } else if (!confirmedRef.current && snapshotRef.current) {
@@ -106,11 +111,12 @@ export function useSettingsEditor(): SettingsEditorResult {
         setThemePreference(snap.theme)
         setBackgroundAudio(snap.backgroundAudio)
         setBackgroundNotify(snap.backgroundNotify)
+        setPreventSleep(snap.preventSleep)
         setVolumeKey(k => k + 1)
       }
       return !prev
     })
-  }, [settings, audio, sfx, themePreference, setThemePreference, backgroundAudio, backgroundNotify])
+  }, [settings, audio, sfx, themePreference, setThemePreference, backgroundAudio, backgroundNotify, preventSleep])
 
   const confirm = useCallback(() => {
     settingsService.updateTimerConfig({
@@ -126,9 +132,10 @@ export function useSettingsEditor(): SettingsEditorResult {
     })
     settingsService.updateThemeConfig(themePreference)
     settingsService.updateBackgroundConfig({ backgroundAudio, backgroundNotify })
+    settingsService.updatePowerConfig({ preventSleep })
     confirmedRef.current = true
     setExpanded(false)
-  }, [settings, settingsService, audio, themePreference, backgroundAudio, backgroundNotify])
+  }, [settings, settingsService, audio, themePreference, backgroundAudio, backgroundNotify, preventSleep])
 
   const handleSoundChange = useCallback(() => {
     if (!expanded) {
@@ -152,8 +159,10 @@ export function useSettingsEditor(): SettingsEditorResult {
     currentTimerConfig,
     backgroundAudio,
     backgroundNotify,
+    preventSleep,
     setBackgroundAudio,
     setBackgroundNotify,
+    setPreventSleep,
     toggle,
     confirm,
     updateSetting,

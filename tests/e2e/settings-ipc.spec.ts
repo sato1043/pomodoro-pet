@@ -171,6 +171,78 @@ test('statistics APIがレンダラーで利用可能', async () => {
   await electronApp.close()
 })
 
+test('Sleep Block設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // 展開
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // Sleep Block OFF（トグルクリック）
+  const sleepToggle = page.locator('[data-testid="sleep-block-toggle"]')
+  // 確実にOFFにする
+  const isActive = await sleepToggle.evaluate(el => el.classList.contains('active'))
+  if (isActive) {
+    await sleepToggle.click()
+  } else {
+    // 既にOFFなら一度ONにしてからOFF
+    await sleepToggle.click()
+    await sleepToggle.click()
+  }
+  await expect(sleepToggle).not.toHaveClass(/active/)
+
+  // Set確定
+  await page.locator('[data-testid="set-button"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page.waitForTimeout(500)
+
+  const settingsPath = join(userDataPath, 'settings.json')
+  expect(existsSync(settingsPath)).toBe(true)
+
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.power?.preventSleep).toBe(false)
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にSleep Block設定が復元される', async () => {
+  // 1回目: Sleep Block OFFにして保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  await page1.locator('[data-testid="settings-toggle"]').click()
+  await expect(page1.locator('[data-testid="set-button"]')).toBeVisible()
+
+  const sleepToggle = page1.locator('[data-testid="sleep-block-toggle"]')
+  // 確実にOFFにする
+  const isActive = await sleepToggle.evaluate(el => el.classList.contains('active'))
+  if (isActive) {
+    await sleepToggle.click()
+  }
+  await expect(sleepToggle).not.toHaveClass(/active/)
+
+  await page1.locator('[data-testid="set-button"]').click()
+  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動して設定が復元されているか確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  await page2.locator('[data-testid="settings-toggle"]').click()
+  await expect(page2.locator('[data-testid="set-button"]')).toBeVisible()
+  await page2.waitForTimeout(500)
+
+  // Sleep Blockのトグルがactive無し（OFF）であることを確認
+  const sleepToggle2 = page2.locator('[data-testid="sleep-block-toggle"]')
+  const classes = await sleepToggle2.getAttribute('class')
+  expect(classes).not.toContain('active')
+
+  await app2.close()
+})
+
 test('天気設定がsettings.jsonに永続化される', async () => {
   const { electronApp, page } = await launchFresh()
 

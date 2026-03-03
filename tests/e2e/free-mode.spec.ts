@@ -132,6 +132,89 @@ test('BG Audioトグル操作でactive状態が切り替わる', async () => {
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
+test('Sleep Blockトグルの表示', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // Sleep Blockトグルが表示される
+  await expect(page.locator('[data-testid="sleep-block-toggle"]')).toBeVisible()
+
+  // 折りたたむ
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('Sleep Blockトグル操作でactive状態が切り替わる', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  const sleepToggle = page.locator('[data-testid="sleep-block-toggle"]')
+
+  // 現在の状態を取得してトグル動作を検証
+  const wasActive = await sleepToggle.evaluate(el => el.classList.contains('active'))
+
+  // クリックで反転
+  await sleepToggle.click()
+  if (wasActive) {
+    await expect(sleepToggle).not.toHaveClass(/active/)
+  } else {
+    await expect(sleepToggle).toHaveClass(/active/)
+  }
+
+  // 再クリックで元に戻る
+  await sleepToggle.click()
+  if (wasActive) {
+    await expect(sleepToggle).toHaveClass(/active/)
+  } else {
+    await expect(sleepToggle).not.toHaveClass(/active/)
+  }
+
+  // Setを押さずに閉じるとスナップショット復元
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
+test('Sleep Block設定のスナップショット復元', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  const sleepToggle = page.locator('[data-testid="sleep-block-toggle"]')
+
+  // 現在の状態を記録
+  const wasActive = await sleepToggle.evaluate(el => el.classList.contains('active'))
+
+  // 反転する
+  await sleepToggle.click()
+  if (wasActive) {
+    await expect(sleepToggle).not.toHaveClass(/active/)
+  } else {
+    await expect(sleepToggle).toHaveClass(/active/)
+  }
+
+  // Setを押さずに閉じる
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+
+  // 再度開くと復元されている（元の状態に戻る）
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+  if (wasActive) {
+    await expect(sleepToggle).toHaveClass(/active/)
+  } else {
+    await expect(sleepToggle).not.toHaveClass(/active/)
+  }
+
+  // 後片付け: 閉じる
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
 test('BG設定のスナップショット復元', async () => {
   const { page } = app
 

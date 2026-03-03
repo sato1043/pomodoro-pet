@@ -339,6 +339,23 @@ describe('AppSettingsService', () => {
     })
   })
 
+  describe('powerConfig', () => {
+    it('初期状態でpreventSleep=true', () => {
+      expect(service.powerConfig).toEqual({ preventSleep: true })
+    })
+
+    it('updatePowerConfigで値が更新される', () => {
+      service.updatePowerConfig({ preventSleep: false })
+      expect(service.powerConfig).toEqual({ preventSleep: false })
+    })
+
+    it('resetToDefaultでデフォルト値に戻す', () => {
+      service.updatePowerConfig({ preventSleep: false })
+      service.resetToDefault()
+      expect(service.powerConfig).toEqual({ preventSleep: true })
+    })
+  })
+
   describe('resetToDefault', () => {
     it('デフォルト値に戻す', () => {
       service.updateTimerConfig({

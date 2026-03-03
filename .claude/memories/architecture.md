@@ -40,6 +40,7 @@ EventBus（UI/インフラ通知）:
   TriggerFired(break-getset/long-break-getset) → TimerSfxBridge（休憩BGM切替）
   PomodoroAborted → TimerSfxBridge（exit音再生）
   PhaseCompleted(work/break)/PomodoroCompleted → NotificationBridge（バックグラウンド通知）
+  AppSceneChanged → SleepPreventionBridge（ポモドーロ中のOSスリープ抑制）
   PhaseCompleted(work/break/long-break)/PomodoroCompleted/PomodoroAborted → StatisticsBridge（統計記録）
   FeedingSuccess → SceneFureai（ハートエフェクト発火）、main.ts（EmotionService fed + InteractionTracker recordFeeding）
   PomodoroCompleted/PomodoroAborted → main.ts（EmotionService pomodoro_completed/pomodoro_aborted）
@@ -125,7 +126,7 @@ EventBus（UI/インフラ通知）:
 - `gallery/GalleryCoordinator.ts` — ギャラリーモードのシーン遷移+アニメーション再生の協調。enterGallery()でgalleryシーン遷移、exitGallery()でfreeシーン遷移+autonomousプリセット復帰。playState()/playAnimationSelection()でstopAnimation()+再生。applyCharacterOffset()/resetCharacterOffset()でキャラクター位置オフセット制御
 - `gallery/GalleryAnimationData.ts` — 13クリップ（GalleryClipItem）+11状態（GalleryStateItem、loopオーバーライド対応）+14ルール（GalleryRuleItem）の表示データ定義。ルールのAnimationSelectionはEnrichedAnimationResolverの結果をハードコード
 - `app-scene/DisplayTransition.ts` — 宣言的シーン遷移グラフ。DisplayScene型（AppScene+PhaseTypeの結合キー）、DISPLAY_SCENE_GRAPH定数（遷移ルールテーブル）、DisplayTransitionState（テーブルルックアップ状態管理）、toDisplayScene()変換ヘルパー
-- `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御
+- `settings/AppSettingsService.ts` — タイマー設定＋サウンド設定＋バックグラウンド設定＋電源設定管理。分→ms変換＋バリデーション＋永続化（Electron IPC経由）。`SettingsChanged`/`SoundSettingsLoaded`/`BackgroundSettingsLoaded`イベント発行。`BackgroundConfigInput`（backgroundAudio/backgroundNotify）でバックグラウンド時のオーディオ再生・通知発行を制御。`PowerConfigInput`（preventSleep）でポモドーロ中のOSスリープ抑制を制御
 - `license/LicenseState.ts` — ライセンス状態の型定義と判定ロジック（resolveLicenseMode, isFeatureEnabled, needsHeartbeat）。`ENABLED_FEATURES`マップ（デフォルト無効方式）でモード×機能の有効化を一元管理。registered/trialは全機能有効（gallery含む）、expired/restrictedはpomodoroTimer+characterのみ
 - `settings/SettingsEvents.ts` — SettingsChanged, SoundSettingsLoaded, BackgroundSettingsLoadedイベント型定義
 - `timer/PomodoroOrchestrator.ts` — AppScene遷移+タイマー操作+キャラクター行動を一元管理。階層間連動は直接コールバック、EventBusはUI/インフラ通知のみ。手動中断時に`PomodoroAborted`、サイクル完了時に`PomodoroCompleted`をEventBus経由で発行
@@ -137,6 +138,7 @@ EventBus（UI/インフラ通知）:
 - `character/BiorhythmService.ts` — バイオリズム管理サービス。tick(deltaMs)でブースト減衰+再計算、applyFeedingBoost()/applyPettingBoost()でケアブースト、setOriginDay()でoriginDay設定
 - `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
 - `notification/NotificationBridge.ts` — EventBus購読でバックグラウンド時にシステム通知を発行。PhaseCompleted(work)→「休憩の時間」、PhaseCompleted(break)→「作業の時間」、PomodoroCompleted→「サイクル完了！」。long-break/congratsはスキップ。`NotificationPort`インターフェースでElectron Notification APIを抽象化
+- `sleep-prevention/SleepPreventionBridge.ts` — AppSceneChanged購読でポモドーロ中のOSスリープを抑制。scene='pomodoro' && preventSleep有効時にport.start()、scene変更時にport.stop()。`SleepPreventionPort`インターフェースでElectron powerSaveBlocker APIを抽象化
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
 - `statistics/StatisticsBridge.ts` — EventBus購読→StatisticsService更新。PhaseCompleted(work/break/long-break)→addWorkPhase/addBreakPhase、PomodoroCompleted→addCompletedCycle、PomodoroAborted→addAbortedCycle。NotificationBridgeと同パターン
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
@@ -212,7 +214,7 @@ EventBus（UI/インフラ通知）:
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish
-- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
+- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
 ### tests/
@@ -238,10 +240,11 @@ EventBus（UI/インフラ通知）:
 - `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
-- `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
+- `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・電源設定（powerConfig）・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行
 - `application/timer/TimerSfxBridge.test.ts` — work完了音/ファンファーレ使い分け・休憩BGMクロスフェード・エラーハンドリング・shouldPlayAudio
 - `application/notification/NotificationBridge.test.ts` — バックグラウンド通知発行・フォアグラウンド時スキップ・無効時スキップ・long-break/congratsスキップ・解除関数
+- `application/sleep-prevention/SleepPreventionBridge.test.ts` — スリープ抑制のstart/stop制御・enabled/disabled判定・二重start防止・解除関数
 - `domain/statistics/StatisticsTypes.test.ts` — emptyDailyStats・todayKey・formatDateKey
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
