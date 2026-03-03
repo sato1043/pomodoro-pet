@@ -4,7 +4,9 @@ import { vars } from './theme.css'
 export const container = style({
   display: 'inline-flex',
   flexDirection: 'row',
+  justifyContent: 'center',
   gap: 6,
+  width: '100%',
   pointerEvents: 'none',
   userSelect: 'none',
 })

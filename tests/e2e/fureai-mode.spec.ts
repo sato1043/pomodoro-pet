@@ -39,6 +39,22 @@ test('ふれあいモード中にfreeモードのボタンが非表示でfureai-
   await expect(page.locator('[data-testid="fureai-entry"]')).not.toBeVisible()
 })
 
+test('ふれあいモードでバイオリズムグラフがcompact-header内に表示される', async () => {
+  const { page } = app
+
+  // 前テストでふれあいモードに入ったまま
+  const bioSvg = page.locator('[data-testid="compact-header"]').locator('svg[aria-label="Biorhythm sine curves for activity, sociability, and focus"]')
+  await expect(bioSvg).toBeVisible()
+})
+
+test('ふれあいモードでキャラクター名エディタがcompact-header内に表示される', async () => {
+  const { page } = app
+
+  // 前テストでふれあいモードに入ったまま
+  const nameEditor = page.locator('[data-testid="compact-header"]').locator('[data-testid="character-name-editor"]')
+  await expect(nameEditor).toBeVisible()
+})
+
 test('fureai-exitクリックでoverlay-freeが再表示される', async () => {
   const { page } = app
 

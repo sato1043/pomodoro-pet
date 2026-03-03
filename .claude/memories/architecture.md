@@ -152,10 +152,10 @@ EventBus（UI/インフラ通知）:
 - `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
 - `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
-- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+CharacterNameEditor+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
+- `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
 - `ui/OverlayGallery.tsx` — ギャラリーモードオーバーレイ。createPortalでdocument.bodyに描画。CompactHeader+GalleryTopBar+GallerySideBarを統合。Clips/States/Rulesモード切替+2行構成情報バー（description+詳細）。モード別のinfoBar表示制御（clips: State非表示、rules: State/Clip非表示）
-- `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用
+- `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示+children prop対応。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用。OverlayFureaiではchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置
 - `ui/GalleryTopBar.tsx` — ギャラリーモード切替タブバー。Clips/States/Rulesの3モード。GalleryMode型をexport。createPortalでdocument.bodyに描画
 - `ui/GallerySideBar.tsx` — ギャラリーアニメーション選択サイドバー。GallerySideBarItem型（key/label/description）。createPortalでdocument.bodyに描画
 - `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
@@ -163,8 +163,9 @@ EventBus（UI/インフラ通知）:
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
 - `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
-- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderを使用
-- `ui/EmotionIndicator.tsx` — 感情インジケーターUI。♥⚡★の3アイコンをopacity（0.15〜1.0）で表示。`EmotionStateUpdated`イベントをuseEventBusCallbackで購読。インラインコンポーネント（StatsDrawerがcanUse('emotionAccumulation')で条件付き描画）
+- `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderのchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置。canUse('biorhythm')/'emotionAccumulation'で条件付き描画
+- `ui/BiorhythmChart.tsx` — バイオリズムグラフコンポーネント。3軸ネオンカラーサインカーブ（activity/sociability/focus）前後3日+カーブ上移動ドットアニメーション。buildBiorhythmCurves/pointsToPathをexport（テスト用）。OverlayFureaiがCompactHeaderのchildrenとして描画
+- `ui/EmotionIndicator.tsx` — 感情インジケーターUI。♥⚡★の3アイコンをopacity（0.15〜1.0）で表示。`EmotionStateUpdated`イベントをuseEventBusCallbackで購読。OverlayFureaiがcanUse('emotionAccumulation')で条件付き描画
 - `ui/TrialBadge.tsx` — trialモード表示バッジ。右下に「Trial」を薄く常時表示（opacity: 0.55、pointerEvents: none）。licenseMode==='trial'時のみ描画
 - `ui/FeatureLockedOverlay.tsx` — プレミアム機能ロックオーバーレイ。trial中にfureai/galleryボタン押下時に表示。購入インセンティブメッセージ+ストアリンク+Closeボタン。背景クリックで閉じる
 - `ui/FureaiEntryButton.tsx` — ふれあいモード遷移ボタン。画面右下のリンゴSVGアイコン（`right: 10`, `bottom: 112`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
@@ -176,7 +177,7 @@ EventBus（UI/インフラ通知）:
 - `ui/StatsButton.tsx` — 統計パネル表示ボタン。チャートSVGアイコン（`bottom: 168`）
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）。バイオリズムグラフ（3軸ネオンカラーサインカーブ前後3日+カーブ上移動ドットアニメーション、canUse('biorhythm')で条件付き描画）。EmotionIndicator（canUse('emotionAccumulation')で条件付き描画）
+- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
@@ -189,7 +190,7 @@ EventBus（UI/インフラ通知）:
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
-- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator, character-name-editor）
+- `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, biorhythm-chart, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator, character-name-editor）
 
 ### src/infrastructure/ — フレームワーク・ドライバ
 - `three/FBXModelLoader.ts` — FBXLoaderラッパー
@@ -245,6 +246,7 @@ EventBus（UI/インフラ通知）:
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
 - `application/license/LicenseState.test.ts` — ライセンス判定ロジック（62テスト）
+- `adapters/ui/BiorhythmChart.test.ts` — buildBiorhythmCurves純粋関数テスト（座標範囲・サンプル数・周期検証）+pointsToPathテスト（SVGパス生成）
 - `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
 - `desktop/main/license.test.ts` — メインプロセスライセンスモジュール（decodeJwtPayload正常/異常、verifyJwt署名拒否、getLicenseState/setLicenseState状態管理）
 - `desktop/main/window.test.ts` — ウィンドウ操作IPCハンドラ（window:minimize/window:close登録・BrowserWindow.minimize()/close()呼び出し・fromWebContents null安全性）

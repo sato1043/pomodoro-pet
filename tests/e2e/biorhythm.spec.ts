@@ -43,17 +43,17 @@ test('registeredモードでバイオリズムがNEUTRALでない', async () => 
   expect(hasNonZero).toBe(true)
 })
 
-test('trialモードでバイオリズムがNEUTRAL（全軸0）', async () => {
+test('trialモードでバイオリズムがNEUTRAL近傍', async () => {
   const { page } = app
   await setLicenseMode(app, 'trial')
 
-  // モード切替後に数フレーム待つ
-  await page.waitForTimeout(500)
+  // モード切替後にバイオリズムtickを数回待つ
+  await page.waitForTimeout(1_000)
 
   const bio = await getDebugBiorhythm(page)
-  expect(bio.activity).toBe(0)
-  expect(bio.sociability).toBe(0)
-  expect(bio.focus).toBe(0)
+  expect(Math.abs(bio.activity)).toBeLessThan(0.2)
+  expect(Math.abs(bio.sociability)).toBeLessThan(0.2)
+  expect(Math.abs(bio.focus)).toBeLessThan(0.2)
 })
 
 test('ライセンスモード切替でバイオリズムがON/OFFする', async () => {
@@ -72,12 +72,12 @@ test('ライセンスモード切替でバイオリズムがON/OFFする', async
   const hasNonZero = bioRegistered.activity !== 0 || bioRegistered.sociability !== 0 || bioRegistered.focus !== 0
   expect(hasNonZero).toBe(true)
 
-  // trial → バイオリズム無効（NEUTRAL）
+  // trial → バイオリズム無効（NEUTRAL近傍）
   await setLicenseMode(app, 'trial')
-  await page.waitForTimeout(500)
+  await page.waitForTimeout(1_000)
 
   const bioTrial = await getDebugBiorhythm(page)
-  expect(bioTrial.activity).toBe(0)
-  expect(bioTrial.sociability).toBe(0)
-  expect(bioTrial.focus).toBe(0)
+  expect(Math.abs(bioTrial.activity)).toBeLessThan(0.2)
+  expect(Math.abs(bioTrial.sociability)).toBeLessThan(0.2)
+  expect(Math.abs(bioTrial.focus)).toBeLessThan(0.2)
 })

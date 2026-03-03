@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import * as overlayStyles from './styles/overlay.css'
 
@@ -13,7 +13,11 @@ function formatClock(date: Date): string {
   return `${y}/${m}/${d} ${day} ${h}:${min}`
 }
 
-export function CompactHeader(): JSX.Element {
+interface CompactHeaderProps {
+  readonly children?: ReactNode
+}
+
+export function CompactHeader({ children }: CompactHeaderProps): JSX.Element {
   const [clock, setClock] = useState(() => formatClock(new Date()))
 
   useEffect(() => {
@@ -25,8 +29,11 @@ export function CompactHeader(): JSX.Element {
 
   return createPortal(
     <div className={overlayStyles.overlayCompact} data-testid="compact-header">
-      <span className={overlayStyles.compactTitle}>Pomodoro Pet</span>
-      <span className={overlayStyles.compactClock}>{clock}</span>
+      <div className={overlayStyles.compactTitleRow}>
+        <span className={overlayStyles.compactTitle}>Pomodoro Pet</span>
+        <span className={overlayStyles.compactClock}>{clock}</span>
+      </div>
+      {children}
     </div>,
     document.body
   )

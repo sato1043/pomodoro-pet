@@ -28,11 +28,11 @@ test('freeモードに感情インジケーターが表示されない', async (
   await expect(page.locator('[data-testid="emotion-indicator"]')).not.toBeVisible()
 })
 
-test('統計パネルを開くと感情インジケーターが表示される', async () => {
+test('ふれあいモードに遷移すると感情インジケーターが表示される', async () => {
   const { page } = app
 
-  await page.locator('[data-testid="stats-toggle"]').click()
-  await expect(page.locator('[data-testid="stats-close"]')).toBeVisible()
+  await page.locator('[data-testid="fureai-entry"]').click()
+  await expect(page.locator('[data-testid="compact-header"]')).toBeVisible({ timeout: 5_000 })
 
   // EmotionStateUpdatedイベント受信を待つ（最大2秒）
   await expect(page.locator('[data-testid="emotion-indicator"]')).toBeVisible({ timeout: 2_000 })
@@ -41,7 +41,7 @@ test('統計パネルを開くと感情インジケーターが表示される',
 test('3アイコン（♥ ⚡ ★）が表示される', async () => {
   const { page } = app
 
-  // 前テストでパネルが開いたまま
+  // 前テストでふれあいモードに入ったまま
   await expect(page.locator('[data-testid="emotion-satisfaction"]')).toBeVisible()
   await expect(page.locator('[data-testid="emotion-fatigue"]')).toBeVisible()
   await expect(page.locator('[data-testid="emotion-affinity"]')).toBeVisible()
@@ -54,7 +54,7 @@ test('3アイコン（♥ ⚡ ★）が表示される', async () => {
 test('opacityがデバッグ感情データと整合する', async () => {
   const { page } = app
 
-  // 前テストでパネルが開いたまま
+  // 前テストでふれあいモードに入ったまま
   const emotion = await getDebugEmotion(page)
 
   // toOpacity(value) = 0.15 + value * 0.85
@@ -77,23 +77,24 @@ test('opacityがデバッグ感情データと整合する', async () => {
   expect(affOpacity).toBeCloseTo(expectedAffOpacity, 1)
 })
 
-test('統計パネルを閉じるとインジケーターが消える', async () => {
+test('ふれあいモードを抜けるとインジケーターが消える', async () => {
   const { page } = app
 
-  // 前テストでパネルが開いたまま → 閉じる
-  await page.locator('[data-testid="stats-close"]').click()
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 前テストでふれあいモードに入ったまま → freeモードに戻る
+  await page.locator('[data-testid="fureai-exit"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible({ timeout: 5_000 })
 
   await expect(page.locator('[data-testid="emotion-indicator"]')).not.toBeVisible()
 })
 
-test('expired モードでは統計パネル自体が開けない', async () => {
+test('expired モードでは感情インジケーターが表示されない', async () => {
   const { page } = app
 
   await setLicenseMode(app, 'expired')
+  await page.waitForTimeout(500)
 
-  // stats ボタンが非表示（statsフィーチャーが無効）
-  await expect(page.locator('[data-testid="stats-toggle"]')).not.toBeVisible()
+  // freeモードのまま — 感情インジケーターは表示されない
+  await expect(page.locator('[data-testid="emotion-indicator"]')).not.toBeVisible()
 
   // registeredに戻す
   await setLicenseMode(app, 'registered')

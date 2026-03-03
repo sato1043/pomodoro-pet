@@ -2,14 +2,10 @@ import { style, globalStyle } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
 export const container = style({
-  position: 'fixed',
-  top: 96,
-  left: 10,
-  right: 10,
   display: 'flex',
   justifyContent: 'center',
-  zIndex: 1000,
   pointerEvents: 'none',
+  marginTop: 4,
 })
 
 export const nameWrapper = style({

@@ -56,6 +56,12 @@ export const overlayCompact = style({
   pointerEvents: 'none',
   transition: 'background 0.3s ease',
   display: 'flex',
+  flexDirection: 'column',
+  gap: 0,
+})
+
+export const compactTitleRow = style({
+  display: 'flex',
   alignItems: 'center',
   gap: 12,
 })
