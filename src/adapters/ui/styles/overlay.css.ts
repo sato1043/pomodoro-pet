@@ -41,7 +41,7 @@ export const title = style({
 
 export const overlayCompact = style({
   position: 'fixed',
-  top: 36,
+  top: 10,
   left: 10,
   right: 10,
   background: vars.color.overlayBg,

@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.3.1**（= package.json）
+**バージョン: 0.3.2**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -247,6 +247,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.3.2 | UI改善 | ウィンドウボタンのホバー時のみアイコン表示、Galleryモード上部マージン縮小 |
 | 0.3.1 | リファクタ | バイオリズムグラフ・EmotionIndicator・CharacterNameEditorをCompactHeader内に統合、BiorhythmChart独立コンポーネント化、E2Eテスト追従修正 |
 | 0.3.0 | 機能追加 | バイオリズム機能追加（#92-96）、FeatureName 'biorhythm' 追加、registeredのみ有効（trial無効）。統計パネルにバイオリズムグラフ追加（#96） |
 | 0.2.1 | バグ修正 | register APIデバイス自動作成、heartbeat merge:trueレースコンディション対策、ギャラリーUI重なり修正 |

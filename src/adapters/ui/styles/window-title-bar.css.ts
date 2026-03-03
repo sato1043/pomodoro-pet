@@ -24,11 +24,12 @@ export const buttonBase = style({
   background: 'transparent',
   cursor: 'pointer',
   padding: 0,
-  color: 'rgba(255, 255, 255, 0.7)',
-  transition: 'background 0.15s ease',
+  color: 'transparent',
+  transition: 'background 0.15s ease, color 0.15s ease',
   pointerEvents: 'auto',
   ':hover': {
     background: 'rgba(255, 255, 255, 0.15)',
+    color: 'rgba(255, 255, 255, 0.7)',
   },
 })
 
