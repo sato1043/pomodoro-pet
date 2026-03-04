@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.1] - 2026-03-04
+
+### Changed
+- Emotion TrendsグラフをCumulative Timeと同じ折れ線グラフスタイルに統一。スプライン曲線→直線折れ線、glowフィルター・イベントバー・Y軸ラベル/グリッド線・X軸日付ラベル・期間選択ボタンを削除。各曲線末尾にドット表示。レイアウト（パディング・高さ・幅）をCumulative Timeと統一
+- Emotion Trendsにデータ未記録日の補間（fillDailyGaps）を追加。startDate〜endDateの全日付を生成し、データがない日は直前の感情値を引き継ぐ
+
+### Fixed
+- EmotionIndicatorが値読み込み前に非表示になる問題を修正。初期状態で最低opacity（0.15）のプレースホルダーアイコンを表示するように変更
+
 ## [0.5.0] - 2026-03-04
 
 ### Added

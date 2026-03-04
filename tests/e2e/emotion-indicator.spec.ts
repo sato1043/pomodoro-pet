@@ -28,14 +28,14 @@ test('freeモードに感情インジケーターが表示されない', async (
   await expect(page.locator('[data-testid="emotion-indicator"]')).not.toBeVisible()
 })
 
-test('ふれあいモードに遷移すると感情インジケーターが表示される', async () => {
+test('ふれあいモードに遷移すると感情インジケーターが即座に表示される', async () => {
   const { page } = app
 
   await page.locator('[data-testid="fureai-entry"]').click()
   await expect(page.locator('[data-testid="compact-header"]')).toBeVisible({ timeout: 5_000 })
 
-  // EmotionStateUpdatedイベント受信を待つ（最大2秒）
-  await expect(page.locator('[data-testid="emotion-indicator"]')).toBeVisible({ timeout: 2_000 })
+  // プレースホルダー表示: EmotionStateUpdatedイベント受信前でも表示される
+  await expect(page.locator('[data-testid="emotion-indicator"]')).toBeVisible({ timeout: 500 })
 })
 
 test('3アイコン（♥ ⚡ ★）が表示される', async () => {

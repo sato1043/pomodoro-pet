@@ -6,39 +6,11 @@ export const section = style({
   paddingLeft: 30,
 })
 
-export const header = style({
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'space-between',
-  marginBottom: 8,
-})
-
 export const title = style({
   fontSize: 13,
   fontWeight: 600,
   color: vars.color.textMuted,
-})
-
-export const periodButtons = style({
-  display: 'flex',
-  gap: 4,
-})
-
-export const periodBtn = style({
-  fontSize: 10,
-  padding: '2px 6px',
-  borderRadius: 4,
-  border: 'none',
-  cursor: 'pointer',
-  background: vars.color.surfaceLight,
-  color: vars.color.textCaption,
-  transition: 'background 0.15s, color 0.15s',
-})
-
-export const periodBtnActive = style({
-  background: vars.color.surfaceLighter,
-  color: vars.color.textSecondary,
-  fontWeight: 600,
+  marginBottom: 8,
 })
 
 export const svg = style({
@@ -51,42 +23,11 @@ export const axisLine = style({
   strokeWidth: 1,
 })
 
-export const gridLine = style({
-  stroke: vars.color.textFaint,
-  strokeWidth: 0.5,
-  strokeDasharray: '2 3',
-  opacity: 0.5,
-})
-
-export const axisLabel = style({
-  fontSize: 9,
-  fill: vars.color.textCaption,
-})
-
-export const dateLabel = style({
-  fontSize: 8,
-  fill: vars.color.textCaption,
-})
-
-export const curveSatisfaction = style({
-  stroke: 'var(--emo-satisfaction)',
+export const chartLine = style({
   strokeWidth: 1.5,
   fill: 'none',
-  filter: 'url(#emo-glow)',
-})
-
-export const curveFatigue = style({
-  stroke: 'var(--emo-fatigue)',
-  strokeWidth: 1.5,
-  fill: 'none',
-  filter: 'url(#emo-glow)',
-})
-
-export const curveAffinity = style({
-  stroke: 'var(--emo-affinity)',
-  strokeWidth: 1.5,
-  fill: 'none',
-  filter: 'url(#emo-glow)',
+  strokeLinejoin: 'round',
+  strokeLinecap: 'round',
 })
 
 export const legend = style({

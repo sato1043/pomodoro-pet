@@ -1,8 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useMemo } from 'react'
 import type { EmotionHistoryData } from '../../domain/character/value-objects/EmotionHistory'
 import type { DailyTrendEntry } from '../../domain/character/value-objects/EmotionHistory'
 import { extractDailyTrendEntries } from '../../domain/character/value-objects/EmotionHistory'
-import { pointsToPath } from './BiorhythmChart'
 import { useAppDeps } from './AppContext'
 import * as styles from './styles/emotion-trend-chart.css'
 
@@ -14,8 +13,6 @@ interface EmotionTrendCurves {
   readonly satisfaction: TrendPoint[]
   readonly fatigue: TrendPoint[]
   readonly affinity: TrendPoint[]
-  readonly dateLabels: Array<{ x: number; label: string }>
-  readonly eventBars: Array<{ x: number; height: number; count: number }>
 }
 
 export type TrendPeriod = '7d' | '30d' | 'all'
@@ -43,6 +40,51 @@ export function computeDateRange(
   return { startDate, endDate }
 }
 
+/** startDate〜endDateの全日付を埋め、データがない日は直前の値を引き継ぐ */
+export function fillDailyGaps(
+  entries: DailyTrendEntry[],
+  startDate: string,
+  endDate: string,
+): DailyTrendEntry[] {
+  const entryMap = new Map<string, DailyTrendEntry>()
+  for (const e of entries) {
+    entryMap.set(e.date, e)
+  }
+
+  const result: DailyTrendEntry[] = []
+  const cursor = new Date(startDate + 'T00:00:00')
+  const end = new Date(endDate + 'T00:00:00')
+
+  let prev: DailyTrendEntry = {
+    date: '', satisfaction: 0, fatigue: 0, affinity: 0,
+    pomodoroCompleted: 0, fed: 0, petted: 0,
+  }
+
+  // 先頭ギャップ用: 最初のデータ値で埋める
+  if (entries.length > 0) {
+    prev = { ...entries[0], pomodoroCompleted: 0, fed: 0, petted: 0 }
+  }
+
+  while (cursor <= end) {
+    const key = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}-${String(cursor.getDate()).padStart(2, '0')}`
+    const existing = entryMap.get(key)
+    if (existing) {
+      result.push(existing)
+      prev = existing
+    } else {
+      result.push({ ...prev, date: key, pomodoroCompleted: 0, fed: 0, petted: 0 })
+    }
+    cursor.setDate(cursor.getDate() + 1)
+  }
+
+  return result
+}
+
+/** TrendPoint配列をM/L形式のSVG pathに変換する */
+function toLinePath(points: TrendPoint[]): string {
+  return points.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ')
+}
+
 /** DailyTrendEntry配列をSVG座標に変換する */
 export function buildEmotionTrendData(
   entries: DailyTrendEntry[],
@@ -53,14 +95,13 @@ export function buildEmotionTrendData(
 ): EmotionTrendCurves {
   const empty: EmotionTrendCurves = {
     satisfaction: [], fatigue: [], affinity: [],
-    dateLabels: [], eventBars: [],
   }
   if (entries.length === 0) return empty
 
   const n = entries.length
 
   function toX(i: number): number {
-    return padLeft + (n === 1 ? chartW / 2 : (i / (n - 1)) * chartW)
+    return padLeft + (n === 1 ? chartW : (i / (n - 1)) * chartW)
   }
 
   function toY(value: number): number {
@@ -71,15 +112,6 @@ export function buildEmotionTrendData(
   const satisfaction: TrendPoint[] = []
   const fatigue: TrendPoint[] = []
   const affinity: TrendPoint[] = []
-  const dateLabels: EmotionTrendCurves['dateLabels'] = []
-  const eventBars: EmotionTrendCurves['eventBars'] = []
-
-  // ポモドーロ最大数を算出（バーの高さ正規化用）
-  const maxPomodoro = Math.max(...entries.map(e => e.pomodoroCompleted), 1)
-
-  // 日付ラベルの間引き: 最大表示数を決定
-  const maxLabels = n <= 10 ? n : Math.min(7, n)
-  const labelStep = n <= 1 ? 1 : Math.max(1, Math.floor((n - 1) / (maxLabels - 1)))
 
   for (let i = 0; i < n; i++) {
     const entry = entries[i]
@@ -88,81 +120,44 @@ export function buildEmotionTrendData(
     satisfaction.push({ x, y: toY(entry.satisfaction) })
     fatigue.push({ x, y: toY(entry.fatigue) })
     affinity.push({ x, y: toY(entry.affinity) })
-
-    // イベントバー
-    if (entry.pomodoroCompleted > 0) {
-      const barMaxH = chartH * 0.3
-      const height = (entry.pomodoroCompleted / maxPomodoro) * barMaxH
-      eventBars.push({ x, height, count: entry.pomodoroCompleted })
-    }
-
-    // 日付ラベル（間引き表示）
-    if (i % labelStep === 0 || i === n - 1) {
-      // 'MM/DD' 形式
-      const parts = entry.date.split('-')
-      const label = `${parseInt(parts[1])}/${parseInt(parts[2])}`
-      dateLabels.push({ x, label })
-    }
   }
 
-  return { satisfaction, fatigue, affinity, dateLabels, eventBars }
+  return { satisfaction, fatigue, affinity }
 }
 
 // --- コンポーネント ---
 
-const PAD_LEFT = 24
-const PAD_RIGHT = 8
-const PAD_TOP = 12
-const PAD_BOTTOM = 20
+const PAD_LEFT = 4
+const PAD_RIGHT = 50
+const PAD_TOP = 8
+const PAD_BOTTOM = 4
 const WIDTH = 320
-const HEIGHT = 120
+const HEIGHT = 80
 const CHART_W = WIDTH - PAD_LEFT - PAD_RIGHT
 const CHART_H = HEIGHT - PAD_TOP - PAD_BOTTOM
 
-const PERIODS: Array<{ value: TrendPeriod; label: string }> = [
-  { value: '7d', label: '7d' },
-  { value: '30d', label: '30d' },
-  { value: 'all', label: 'All' },
+const CURVES = [
+  { key: 'satisfaction' as const, color: 'var(--emo-satisfaction)' },
+  { key: 'fatigue' as const, color: 'var(--emo-fatigue)' },
+  { key: 'affinity' as const, color: 'var(--emo-affinity)' },
 ]
 
 export default function EmotionTrendChart(): JSX.Element {
   const { emotionHistoryService } = useAppDeps()
-  const [period, setPeriod] = useState<TrendPeriod>('7d')
 
   const curves = useMemo(() => {
     const data = emotionHistoryService.getHistory()
-    const { startDate, endDate } = computeDateRange(period, data)
-    const entries = extractDailyTrendEntries(data, startDate, endDate)
+    const { startDate, endDate } = computeDateRange('all', data)
+    const sparse = extractDailyTrendEntries(data, startDate, endDate)
+    const entries = fillDailyGaps(sparse, startDate, endDate)
     return buildEmotionTrendData(entries, CHART_W, CHART_H, PAD_LEFT, PAD_TOP)
-  }, [emotionHistoryService, period])
+  }, [emotionHistoryService])
 
   const hasData = curves.satisfaction.length > 0
 
-  // Y軸グリッド値
-  const yGridValues = [0.25, 0.5, 0.75]
-  const yAxisLabels = [
-    { value: 0, label: '0' },
-    { value: 0.5, label: '0.5' },
-    { value: 1.0, label: '1.0' },
-  ]
-
   return (
     <div className={styles.section} data-testid="emotion-trend">
-      <div className={styles.header}>
-        <div className={styles.title}>Emotion Trends</div>
-        <div className={styles.periodButtons}>
-          {PERIODS.map(p => (
-            <button
-              key={p.value}
-              data-testid={`emotion-trend-period-${p.value}`}
-              className={`${styles.periodBtn} ${period === p.value ? styles.periodBtnActive : ''}`}
-              onClick={() => setPeriod(p.value)}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-      </div>
+      <div className={styles.title}>Emotion Trends</div>
 
       {!hasData ? (
         <div className={styles.noData} data-testid="emotion-trend-no-data">No emotion data yet</div>
@@ -175,29 +170,6 @@ export default function EmotionTrendChart(): JSX.Element {
             aria-label="Emotion trend chart showing satisfaction, fatigue, and affinity over time"
             data-testid="emotion-trend-svg"
           >
-            <defs>
-              <filter id="emo-glow">
-                <feGaussianBlur stdDeviation="1" result="blur" />
-                <feMerge>
-                  <feMergeNode in="blur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            {/* Y軸グリッド線 */}
-            {yGridValues.map(v => {
-              const y = PAD_TOP + (1 - v) * CHART_H
-              return (
-                <line
-                  key={v}
-                  x1={PAD_LEFT} y1={y}
-                  x2={PAD_LEFT + CHART_W} y2={y}
-                  className={styles.gridLine}
-                />
-              )
-            })}
-
             {/* X軸・Y軸 */}
             <line
               x1={PAD_LEFT} y1={PAD_TOP + CHART_H}
@@ -210,54 +182,21 @@ export default function EmotionTrendChart(): JSX.Element {
               className={styles.axisLine}
             />
 
-            {/* イベントバー */}
-            {curves.eventBars.map((bar, i) => (
-              <rect
-                key={i}
-                x={bar.x - 3}
-                y={PAD_TOP + CHART_H - bar.height}
-                width={6}
-                height={bar.height}
-                fill="var(--emo-event-bar)"
-                rx={1}
-              >
-                <title>{`${bar.count} pomodoro${bar.count !== 1 ? 's' : ''}`}</title>
-              </rect>
-            ))}
-
-            {/* 3曲線 */}
-            <path d={pointsToPath(curves.satisfaction)} className={styles.curveSatisfaction} />
-            <path d={pointsToPath(curves.fatigue)} className={styles.curveFatigue} />
-            <path d={pointsToPath(curves.affinity)} className={styles.curveAffinity} />
-
-            {/* Y軸ラベル */}
-            {yAxisLabels.map(({ value, label }) => {
-              const y = PAD_TOP + (1 - value) * CHART_H
+            {/* 3曲線 + 末尾ドット */}
+            {CURVES.map(({ key, color }) => {
+              const points = curves[key]
+              const last = points[points.length - 1]
               return (
-                <text
-                  key={value}
-                  x={PAD_LEFT - 4}
-                  y={y + 3}
-                  textAnchor="end"
-                  className={styles.axisLabel}
-                >
-                  {label}
-                </text>
+                <g key={key}>
+                  <path
+                    d={toLinePath(points)}
+                    className={styles.chartLine}
+                    style={{ stroke: color }}
+                  />
+                  <circle cx={last.x} cy={last.y} r={3} fill={color} />
+                </g>
               )
             })}
-
-            {/* 日付ラベル */}
-            {curves.dateLabels.map((dl, i) => (
-              <text
-                key={i}
-                x={dl.x}
-                y={PAD_TOP + CHART_H + 12}
-                textAnchor="middle"
-                className={styles.dateLabel}
-              >
-                {dl.label}
-              </text>
-            ))}
           </svg>
 
           {/* 凡例 */}

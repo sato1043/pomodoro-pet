@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.5.0**（= package.json）
+**バージョン: 0.5.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -250,6 +250,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |
 | 0.5.0 | 機能追加 | 感情推移グラフUI追加（#98）。StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロイベントバー。期間切替（7d/30d/All）、ダーク/ライト対応 |
 | 0.4.0 | 機能追加 | OSスリープ抑制機能追加（#97）。ポモドーロ中のpowerSaveBlocker制御、設定UIトグル、settings.json永続化 |
 | 0.3.2 | UI改善 | ウィンドウボタンのホバー時のみアイコン表示、Galleryモード上部マージン縮小 |

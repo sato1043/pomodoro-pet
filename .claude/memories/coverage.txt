@@ -3,51 +3,51 @@
  RUN  v2.1.9 /home/sato1043/projects/pomodoro-pet
       Coverage enabled with v8
 
- ✓ tests/domain/character/EmotionHistory.test.ts (35 tests) 27ms
- ✓ tests/domain/character/BiorhythmState.test.ts (29 tests) 37ms
+ ✓ tests/domain/character/EmotionHistory.test.ts (35 tests) 29ms
+ ✓ tests/application/app-scene/AppSceneManager.test.ts (27 tests) 39ms
+ ✓ tests/application/license/LicenseState.test.ts (66 tests) 46ms
+ ✓ tests/domain/character/BiorhythmState.test.ts (29 tests) 50ms
  ✓ tests/application/character/EmotionHistoryService.test.ts (16 tests) 33ms
- ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 35ms
- ✓ tests/application/app-scene/AppSceneManager.test.ts (27 tests) 33ms
- ✓ tests/application/license/LicenseState.test.ts (66 tests) 45ms
- ✓ tests/domain/character/EnrichedAnimationResolver.test.ts (83 tests) 67ms
- ✓ tests/domain/character/BehaviorStateMachine.test.ts (89 tests) 72ms
- ✓ tests/domain/timer/PomodoroStateMachine.test.ts (60 tests) 76ms
- ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 68ms
- ✓ tests/application/settings/AppSettingsService.test.ts (34 tests) 52ms
- ✓ tests/application/gallery/GalleryCoordinator.test.ts (17 tests) 75ms
- ✓ tests/desktop/main/license.test.ts (21 tests) 25ms
- ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 25ms
- ✓ tests/domain/character/EmotionTrendData.test.ts (7 tests) 33ms
- ✓ tests/domain/character/EmotionState.test.ts (18 tests) 26ms
- ✓ tests/application/statistics/StatisticsService.test.ts (12 tests) 35ms
- ✓ tests/application/fureai/FureaiCoordinator.test.ts (13 tests) 48ms
- ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 49ms
+ ✓ tests/application/timer/PomodoroOrchestrator.test.ts (25 tests) 90ms
+ ✓ tests/application/timer/TimerSfxBridge.test.ts (39 tests) 96ms
+ ✓ tests/domain/character/EnrichedAnimationResolver.test.ts (83 tests) 117ms
+ ✓ tests/domain/timer/PomodoroStateMachine.test.ts (60 tests) 115ms
+ ✓ tests/domain/character/BehaviorStateMachine.test.ts (89 tests) 134ms
+ ✓ tests/application/settings/AppSettingsService.test.ts (34 tests) 73ms
+ ✓ tests/application/gallery/GalleryCoordinator.test.ts (17 tests) 48ms
+ ✓ tests/desktop/main/license.test.ts (21 tests) 30ms
+ ✓ tests/domain/character/EmotionTrendData.test.ts (7 tests) 48ms
+ ✓ tests/application/notification/NotificationBridge.test.ts (8 tests) 17ms
+ ✓ tests/domain/character/EmotionState.test.ts (18 tests) 41ms
+ ✓ tests/adapters/ui/EmotionTrendChart.test.ts (9 tests) 26ms
+ ✓ tests/domain/character/GestureRecognizer.test.ts (17 tests) 53ms
+ ✓ tests/application/fureai/FureaiCoordinator.test.ts (13 tests) 29ms
  ✓ tests/application/statistics/StatisticsBridge.test.ts (7 tests) 38ms
- ✓ tests/adapters/ui/EmotionTrendChart.test.ts (9 tests) 43ms
- ✓ tests/adapters/ui/BiorhythmChart.test.ts (12 tests) 122ms
- ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 21ms
- ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 24ms
- ✓ tests/adapters/ui/LicenseContext.test.ts (3 tests) 14ms
- ✓ tests/application/gallery/GalleryAnimationData.test.ts (15 tests) 35ms
- ✓ tests/domain/character/InteractionTracker.test.ts (12 tests) 11ms
- ✓ tests/desktop/main/window.test.ts (6 tests) 21ms
- ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 12ms
- ✓ tests/adapters/ui/reflowParagraphs.test.ts (10 tests) 10ms
- ✓ tests/application/sleep-prevention/SleepPreventionBridge.test.ts (8 tests) 14ms
- ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 16ms
- ✓ tests/domain/environment/EnvironmentTheme.test.ts (19 tests) 47ms
- ✓ tests/domain/environment/WeatherConfig.test.ts (15 tests) 14ms
- ✓ tests/domain/shared/EventBus.test.ts (4 tests) 14ms
- ✓ tests/domain/character/AnimationResolver.test.ts (13 tests) 15ms
+ ✓ tests/adapters/ui/BiorhythmChart.test.ts (12 tests) 80ms
+ ✓ tests/application/statistics/StatisticsService.test.ts (12 tests) 37ms
+ ✓ tests/application/environment/ScrollUseCase.test.ts (11 tests) 37ms
+ ✓ tests/domain/timer/CyclePlan.test.ts (7 tests) 26ms
+ ✓ tests/adapters/ui/LicenseContext.test.ts (3 tests) 17ms
+ ✓ tests/domain/character/InteractionTracker.test.ts (12 tests) 15ms
+ ✓ tests/desktop/main/window.test.ts (6 tests) 31ms
+ ✓ tests/application/gallery/GalleryAnimationData.test.ts (15 tests) 37ms
+ ✓ tests/domain/timer/TimerConfig.test.ts (10 tests) 20ms
+ ✓ tests/application/sleep-prevention/SleepPreventionBridge.test.ts (8 tests) 45ms
+ ✓ tests/adapters/ui/reflowParagraphs.test.ts (10 tests) 11ms
+ ✓ tests/application/character/InterpretPrompt.test.ts (17 tests) 18ms
+ ✓ tests/domain/environment/EnvironmentTheme.test.ts (19 tests) 44ms
+ ✓ tests/domain/environment/WeatherConfig.test.ts (15 tests) 36ms
+ ✓ tests/domain/character/AnimationResolver.test.ts (13 tests) 33ms
+ ✓ tests/domain/shared/EventBus.test.ts (4 tests) 16ms
  ✓ tests/domain/statistics/StatisticsTypes.test.ts (6 tests) 9ms
- ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 14ms
+ ✓ tests/domain/environment/SceneConfig.test.ts (11 tests) 16ms
  ✓ tests/adapters/ui/EmotionIndicator.test.ts (5 tests) 7ms
- ✓ tests/setup.test.ts (1 test) 5ms
+ ✓ tests/setup.test.ts (1 test) 9ms
 
  Test Files  40 passed (40)
       Tests  817 passed (817)
-   Start at  12:54:43
-   Duration  3.85s (transform 3.24s, setup 0ms, collect 6.40s, tests 1.36s, environment 27ms, prepare 9.21s)
+   Start at  20:08:55
+   Duration  5.26s (transform 4.65s, setup 0ms, collect 9.50s, tests 1.69s, environment 31ms, prepare 11.37s)
 
  % Coverage report from v8
 -------------------|---------|----------|---------|---------|-------------------

@@ -14,20 +14,18 @@ function toOpacity(value: number): number {
   return 0.15 + value * 0.85
 }
 
-export function EmotionIndicator({ bus }: EmotionIndicatorProps): JSX.Element | null {
+export function EmotionIndicator({ bus }: EmotionIndicatorProps): JSX.Element {
   const [emotion, setEmotion] = useState<EmotionState | null>(null)
 
   useEventBusCallback<EmotionStateUpdatedEvent>(bus, 'EmotionStateUpdated', (event) => {
     setEmotion(event.state)
   })
 
-  if (!emotion) return null
-
   return (
     <span className={styles.container} data-testid="emotion-indicator">
-      <span className={styles.icon} style={{ opacity: toOpacity(emotion.satisfaction) }} data-testid="emotion-satisfaction">♥</span>
-      <span className={styles.icon} style={{ opacity: toOpacity(emotion.fatigue) }} data-testid="emotion-fatigue">⚡</span>
-      <span className={styles.icon} style={{ opacity: toOpacity(emotion.affinity) }} data-testid="emotion-affinity">★</span>
+      <span className={styles.icon} style={{ opacity: toOpacity(emotion?.satisfaction ?? 0) }} data-testid="emotion-satisfaction">♥</span>
+      <span className={styles.icon} style={{ opacity: toOpacity(emotion?.fatigue ?? 0) }} data-testid="emotion-fatigue">⚡</span>
+      <span className={styles.icon} style={{ opacity: toOpacity(emotion?.affinity ?? 0) }} data-testid="emotion-affinity">★</span>
     </span>
   )
 }

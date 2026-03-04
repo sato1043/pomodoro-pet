@@ -7,18 +7,15 @@ vi.mock('../../../src/adapters/ui/styles/biorhythm-chart.css', () => ({}))
 import type { DailyTrendEntry } from '../../../src/domain/character/value-objects/EmotionHistory'
 import type { EmotionHistoryData } from '../../../src/domain/character/value-objects/EmotionHistory'
 import { createDefaultEmotionHistoryData } from '../../../src/domain/character/value-objects/EmotionHistory'
-import { buildEmotionTrendData, computeDateRange } from '../../../src/adapters/ui/EmotionTrendChart'
+import { buildEmotionTrendData, computeDateRange, fillDailyGaps } from '../../../src/adapters/ui/EmotionTrendChart'
 
 function makeEntry(
   date: string,
   satisfaction = 0.5,
   fatigue = 0.3,
   affinity = 0.2,
-  pomodoroCompleted = 0,
-  fed = 0,
-  petted = 0,
 ): DailyTrendEntry {
-  return { date, satisfaction, fatigue, affinity, pomodoroCompleted, fed, petted }
+  return { date, satisfaction, fatigue, affinity, pomodoroCompleted: 0, fed: 0, petted: 0 }
 }
 
 describe('buildEmotionTrendData', () => {
@@ -32,8 +29,6 @@ describe('buildEmotionTrendData', () => {
     expect(result.satisfaction).toEqual([])
     expect(result.fatigue).toEqual([])
     expect(result.affinity).toEqual([])
-    expect(result.dateLabels).toEqual([])
-    expect(result.eventBars).toEqual([])
   })
 
   it('全座標がチャート領域内に収まる', () => {
@@ -67,6 +62,12 @@ describe('buildEmotionTrendData', () => {
     expect(xs[2]).toBeCloseTo(padLeft + chartW, 1)
   })
 
+  it('n===1のとき右端(padLeft+chartW)にプロットされる', () => {
+    const entries = [makeEntry('2026-03-01')]
+    const result = buildEmotionTrendData(entries, chartW, chartH, padLeft, padTop)
+    expect(result.satisfaction[0].x).toBeCloseTo(padLeft + chartW, 1)
+  })
+
   it('y=1.0→上端(padTop)、y=0.0→下端(padTop+chartH)にマッピング', () => {
     const entries = [
       makeEntry('2026-03-01', 1.0, 0.0, 0.5),
@@ -80,31 +81,51 @@ describe('buildEmotionTrendData', () => {
     expect(result.affinity[0].y).toBeCloseTo(padTop + chartH / 2, 1)
   })
 
-  it('dateLabelsが生成される', () => {
-    const entries = [
-      makeEntry('2026-03-01'),
-      makeEntry('2026-03-02'),
-      makeEntry('2026-03-03'),
-    ]
-    const result = buildEmotionTrendData(entries, chartW, chartH, padLeft, padTop)
-    expect(result.dateLabels.length).toBeGreaterThan(0)
-    expect(result.dateLabels[0].label).toBe('3/1')
+})
+
+describe('fillDailyGaps', () => {
+  it('startDate〜endDateの全日付を埋める', () => {
+    const entries = [makeEntry('2026-03-01', 0.5, 0.3, 0.2)]
+    const result = fillDailyGaps(entries, '2026-03-01', '2026-03-03')
+    expect(result).toHaveLength(3)
+    expect(result.map(e => e.date)).toEqual(['2026-03-01', '2026-03-02', '2026-03-03'])
   })
 
-  it('eventBarsの高さがpomodoroCompleted最大値に対する比例', () => {
+  it('データがない日は直前の感情値を引き継ぐ', () => {
+    const entries = [makeEntry('2026-03-01', 0.8, 0.4, 0.6)]
+    const result = fillDailyGaps(entries, '2026-03-01', '2026-03-03')
+    expect(result[1].satisfaction).toBe(0.8)
+    expect(result[1].fatigue).toBe(0.4)
+    expect(result[1].affinity).toBe(0.6)
+  })
+
+  it('先頭ギャップは最初のデータ値で埋める', () => {
+    const entries = [makeEntry('2026-03-03', 0.7, 0.2, 0.5)]
+    const result = fillDailyGaps(entries, '2026-03-01', '2026-03-03')
+    expect(result[0].satisfaction).toBe(0.7)
+    expect(result[1].satisfaction).toBe(0.7)
+    expect(result[2].satisfaction).toBe(0.7)
+  })
+
+  it('中間ギャップは直前のデータ値で埋める', () => {
     const entries = [
-      makeEntry('2026-03-01', 0.5, 0.5, 0.5, 2),
-      makeEntry('2026-03-02', 0.5, 0.5, 0.5, 4),
-      makeEntry('2026-03-03', 0.5, 0.5, 0.5, 0),
+      makeEntry('2026-03-01', 0.3, 0.1, 0.2),
+      makeEntry('2026-03-05', 0.8, 0.5, 0.7),
     ]
-    const result = buildEmotionTrendData(entries, chartW, chartH, padLeft, padTop)
-    // pomodoroCompleted=0のエントリはeventBarsに含まれない
-    expect(result.eventBars).toHaveLength(2)
-    // 最大(4)のバーが最も高い
-    const maxBar = result.eventBars.find(b => b.count === 4)!
-    const halfBar = result.eventBars.find(b => b.count === 2)!
-    expect(maxBar.height).toBeGreaterThan(halfBar.height)
-    expect(halfBar.height).toBeCloseTo(maxBar.height / 2, 1)
+    const result = fillDailyGaps(entries, '2026-03-01', '2026-03-05')
+    expect(result).toHaveLength(5)
+    // 3/2〜3/4は3/1の値を引き継ぐ
+    expect(result[1].satisfaction).toBe(0.3)
+    expect(result[2].satisfaction).toBe(0.3)
+    expect(result[3].satisfaction).toBe(0.3)
+    // 3/5は実データ
+    expect(result[4].satisfaction).toBe(0.8)
+  })
+
+  it('空のentries→全日付が初期値0で埋まる', () => {
+    const result = fillDailyGaps([], '2026-03-01', '2026-03-03')
+    expect(result).toHaveLength(3)
+    expect(result[0].satisfaction).toBe(0)
   })
 })
 
