@@ -78,6 +78,7 @@ EventBus（UI/インフラ通知）:
 - `SceneObject` — シーンオブジェクト型定義
 - `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
 - `EnvironmentThemeParams` — 描画パラメータ（空色・霧・ライト・地面色・露出）。`resolveEnvironmentTheme(weather, timeOfDay)`で20パターンルックアップ
+- `ThemeLerp` — テーマ遷移の純粋関数群。`lerpFloat`/`lerpHexColor`（RGB分解）/`lerpVec3`/`smoothstep`（3t²-2t³）/`lerpThemeParams`（全14フィールド一括補間）/`themeParamsEqual`（不要補間スキップ用）/`startThemeTransition`/`tickThemeTransition`。`ThemeTransitionState`/`ThemeTransitionResult`型。定数: `THEME_TRANSITION_DURATION_AUTO_MS`(5000)/`THEME_TRANSITION_DURATION_MANUAL_MS`(1500)
 
 ### 4. 統計
 - `StatisticsTypes` — DailyStats型（日次集計）、emptyDailyStats()、todayKey()、formatDateKey()ヘルパー。StatisticsData型（Record<'YYYY-MM-DD', DailyStats>）
@@ -118,6 +119,7 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
 - `environment/value-objects/WeatherConfig.ts` — WeatherConfig, WeatherType, TimeOfDay, CloudDensityLevel, resolveTimeOfDay(), cloudPresetLevel()
 - `environment/value-objects/EnvironmentTheme.ts` — EnvironmentThemeParams, resolveEnvironmentTheme()（20パターンルックアップ）
+- `environment/value-objects/ThemeLerp.ts` — テーマ遷移の純粋関数群（lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/startThemeTransition/tickThemeTransition）+ ThemeTransitionState/ThemeTransitionResult型 + 遷移時間定数
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
@@ -145,6 +147,7 @@ EventBus（UI/インフラ通知）:
 - `sleep-prevention/SleepPreventionBridge.ts` — AppSceneChanged購読でポモドーロ中のOSスリープを抑制。scene='pomodoro' && preventSleep有効時にport.start()、scene変更時にport.stop()。`SleepPreventionPort`インターフェースでElectron powerSaveBlocker APIを抽象化
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
 - `statistics/StatisticsBridge.ts` — EventBus購読→StatisticsService更新。PhaseCompleted(work/break/long-break)→addWorkPhase/addBreakPhase、PomodoroCompleted→addCompletedCycle、PomodoroAborted→addAbortedCycle。NotificationBridgeと同パターン
+- `environment/ThemeTransitionService.ts` — テーマ遷移サービス。`transitionTo(target, durationMs)`で補間開始、`applyImmediate(target)`で即座適用、`tick(deltaMs)`で補間更新（変化時のみパラメータ返却）。currentParams=null時のtransitionToは即座適用にフォールバック。補間中の新transitionToは現在の中間値をfromとして再補間
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
@@ -218,7 +221,7 @@ EventBus（UI/インフラ通知）:
 **ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）
 - `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
@@ -240,11 +243,13 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
 - `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
 - `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
+- `domain/environment/ThemeLerp.test.ts` — lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/tickThemeTransition（24テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
 - `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
 - `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
+- `application/environment/ThemeTransitionService.test.ts` — transitionTo/applyImmediate/tick/補間中割り込み/同一テーマスキップ（9テスト）
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・電源設定（powerConfig）・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行

@@ -277,11 +277,30 @@
 - `SleepPreventionBridge`（アプリケーション層）がAppSceneChanged購読→powerSaveBlocker制御
 - `SleepPreventionPort`でElectron powerSaveBlocker APIを抽象化
 
-### 環境シーンのバリエーション（残課題）
-- シーンプリセット追加: 海辺、都市の公園、宇宙、部屋の中、等
-- `EnvironmentChunk` のオブジェクト生成ロジックをプリセットごとに分離
-- 天気「Auto」ボタン: 天気API連携で自動天気切替（現在は非活性）
-- 時間帯遷移のlerp補間（現在はinstant切替）
+### 環境シーンのバリエーション — Phase 1: EnvironmentChunkのプリセット化基盤
+- `ChunkSpec`を拡張し、オブジェクト種別（何を生成するか）を定義可能にする
+- `EnvironmentChunk`のオブジェクト生成ロジックをStrategy/Factory化
+- 既存の草原シーンを最初のプリセット`meadow`として再定義
+- 目的: 後続Phaseでプリセットを追加するための土台
+
+### 環境シーンのバリエーション — Phase 2: シーンプリセット追加（Phase 1完了後）
+- 海辺（seaside）、都市の公園（park）等のプリセット実装
+- プリセットごとに固有のオブジェクト（貝殻、波、ベンチ等）を生成
+- WeatherPanelまたは新UIからプリセット選択
+- 環境音とプリセットの連動（海辺→波音等）
+- 設定永続化
+
+### ~~環境シーンのバリエーション — Phase 3: 時間帯遷移のlerp補間（独立）~~ — 完了
+- EnvironmentThemeParamsの全パラメータ（色7個・float5個・vec3 1個）をsmoothstep補間
+- autoTimeOfDay時5秒、手動切替時1.5秒で滑らかに遷移
+- 補間中の割り込みは中間値から新目標へシームレスに再補間
+- ThemeLerp純粋関数群（ドメイン層）+ ThemeTransitionService（アプリケーション層）で構成
+
+### 環境シーンのバリエーション — Phase 4: 天気API連携 autoWeather（独立）
+- 外部天気API（OpenWeatherMap等）からリアルタイム天気取得
+- autoWeatherボタン有効化
+- ElectronメインプロセスでのAPI呼び出し+IPC
+- APIキー管理・オフラインフォールバック
 
 ### 環境映像（背景動画）
 - 要件定義でnice-to-haveとされた機能

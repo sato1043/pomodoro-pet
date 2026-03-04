@@ -45,11 +45,14 @@ import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
 import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConfig'
 import { resolveEnvironmentTheme } from './domain/environment/value-objects/EnvironmentTheme'
+import type { EnvironmentThemeParams } from './domain/environment/value-objects/EnvironmentTheme'
 import { isFeatureEnabled } from './application/license/LicenseState'
 import type { LicenseMode } from './application/license/LicenseState'
 import { createRainEffect } from './infrastructure/three/RainEffect'
 import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
+import { createThemeTransitionService } from './application/environment/ThemeTransitionService'
+import { THEME_TRANSITION_DURATION_AUTO_MS, THEME_TRANSITION_DURATION_MANUAL_MS } from './domain/environment/value-objects/ThemeLerp'
 
 const BREAK_BGM_TRIGGERS: PhaseTriggerMap = {
   break: [{ id: 'break-getset', timing: { type: 'remaining', beforeEndMs: 30000 } }],
@@ -144,14 +147,8 @@ async function main(): Promise<void> {
   const snowEffect = createSnowEffect(scene)
   const cloudEffect = createCloudEffect(scene)
 
-  // 天気適用関数
-  function applyWeather(config: WeatherConfig): void {
-    const weather = config.weather
-    const timeOfDay = config.autoTimeOfDay
-      ? resolveTimeOfDay(new Date().getHours())
-      : config.timeOfDay
-    const params = resolveEnvironmentTheme(weather, timeOfDay)
-
+  // テーマパラメータをシーンに反映する関数
+  function applyThemeToScene(params: EnvironmentThemeParams): void {
     lights.ambient.color.setHex(params.ambientColor)
     lights.ambient.intensity = params.ambientIntensity
     lights.hemisphere.color.setHex(params.hemiSkyColor)
@@ -160,9 +157,32 @@ async function main(): Promise<void> {
     lights.sun.color.setHex(params.sunColor)
     lights.sun.intensity = params.sunIntensity
     lights.sun.position.set(params.sunPosition.x, params.sunPosition.y, params.sunPosition.z)
-
     renderer.toneMappingExposure = params.exposure
     scrollRenderer.applyTheme(params)
+  }
+
+  // テーマ遷移サービス
+  const themeTransition = createThemeTransitionService()
+
+  // 天気適用関数
+  function applyWeather(config: WeatherConfig, immediate = false): void {
+    const weather = config.weather
+    const timeOfDay = config.autoTimeOfDay
+      ? resolveTimeOfDay(new Date().getHours())
+      : config.timeOfDay
+    const params = resolveEnvironmentTheme(weather, timeOfDay)
+
+    if (immediate) {
+      themeTransition.applyImmediate(params)
+      applyThemeToScene(params)
+    } else {
+      const duration = config.autoTimeOfDay
+        ? THEME_TRANSITION_DURATION_AUTO_MS
+        : THEME_TRANSITION_DURATION_MANUAL_MS
+      themeTransition.transitionTo(params, duration)
+    }
+
+    // エフェクトは即座切替（lerp対象外）
     rainEffect.setVisible(weather === 'rainy')
     snowEffect.setVisible(weather === 'snowy')
 
@@ -458,7 +478,7 @@ async function main(): Promise<void> {
   await statisticsService.loadFromStorage()
 
   // 初期天気適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
-  applyWeather(settingsService.weatherConfig)
+  applyWeather(settingsService.weatherConfig, true)
 
   // 初回React UIレンダリング
   renderReactUI()
@@ -644,6 +664,12 @@ async function main(): Promise<void> {
         behaviorOptions
       )
     }
+    // テーマ遷移の補間更新
+    const interpolatedParams = themeTransition.tick(deltaMs)
+    if (interpolatedParams) {
+      applyThemeToScene(interpolatedParams)
+    }
+
     rainEffect.update(deltaMs)
     snowEffect.update(deltaMs)
     cloudEffect.update(deltaMs)

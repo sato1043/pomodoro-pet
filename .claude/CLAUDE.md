@@ -92,7 +92,10 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 - ドメイン層は純粋関数/オブジェクトで構成。Three.js やDOM への依存を持たない
 - `electron/` ディレクトリ名は使用禁止（`electron` npmパッケージ名と衝突する）。代わりに `desktop/` を使用
 - rendererの root は `src/`（`electron.vite.config.ts` の `renderer.root: 'src'`）
+- 実装完了時にドキュメントを更新したかを確認する
+- 実装完了時にテストコードとE2Eテストを更新したかを確認する
 - **バージョン管理と変更記録**: すべての変更で[CHANGELOG.md](../CHANGELOG.md)への追記を義務付ける
+  - 通常のドキュメント更新ではバージョン番号を更新しない。バージョン番号の更新はリリース時に行う。
   - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新 + README.md冒頭バージョン更新
   - **バグ修正時**: package.json patch bump + feature-license-map.md冒頭バージョン更新+変更履歴1行追加 + CHANGELOG.md追記 + README.md冒頭バージョン更新
   - feature-license-map.mdのバージョン = package.jsonのバージョン（常に同期）

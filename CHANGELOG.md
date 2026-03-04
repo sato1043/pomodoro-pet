@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- 時間帯遷移のlerp補間 — EnvironmentThemeParamsの全パラメータ（色7個・float5個・vec3 1個）をsmoothstep補間で滑らかに遷移。autoTimeOfDay時5秒、手動切替時1.5秒。補間中の割り込みは中間値から新目標へシームレスに再補間。ThemeLerp純粋関数群（ドメイン層）+ ThemeTransitionService（アプリケーション層）で構成
+
 ## [0.5.1] - 2026-03-04
 
 ### Changed
