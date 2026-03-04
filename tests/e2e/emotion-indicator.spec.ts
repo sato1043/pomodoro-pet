@@ -55,6 +55,12 @@ test('opacityがデバッグ感情データと整合する', async () => {
   const { page } = app
 
   // 前テストでふれあいモードに入ったまま
+  // EmotionStateUpdatedイベント受信を待つ（プレースホルダーからの更新完了まで）
+  await expect(async () => {
+    const e = await getDebugEmotion(page)
+    expect(e.satisfaction + e.fatigue + e.affinity).toBeGreaterThan(0)
+  }).toPass({ timeout: 3_000 })
+
   const emotion = await getDebugEmotion(page)
 
   // toOpacity(value) = 0.15 + value * 0.85

@@ -145,15 +145,16 @@ const CURVES = [
 export default function EmotionTrendChart(): JSX.Element {
   const { emotionHistoryService } = useAppDeps()
 
-  const curves = useMemo(() => {
+  const { curves, hasData } = useMemo(() => {
     const data = emotionHistoryService.getHistory()
     const { startDate, endDate } = computeDateRange('all', data)
     const sparse = extractDailyTrendEntries(data, startDate, endDate)
+    if (sparse.length === 0) {
+      return { curves: { satisfaction: [], fatigue: [], affinity: [] }, hasData: false }
+    }
     const entries = fillDailyGaps(sparse, startDate, endDate)
-    return buildEmotionTrendData(entries, CHART_W, CHART_H, PAD_LEFT, PAD_TOP)
+    return { curves: buildEmotionTrendData(entries, CHART_W, CHART_H, PAD_LEFT, PAD_TOP), hasData: true }
   }, [emotionHistoryService])
-
-  const hasData = curves.satisfaction.length > 0
 
   return (
     <div className={styles.section} data-testid="emotion-trend">
