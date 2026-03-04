@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.5.0] - 2026-03-04
+
+### Added
+- 感情推移グラフUI — StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフを追加。期間切替（7d/30d/All）、ポモドーロ完了数イベントバー、ダーク/ライトテーマ対応。extractDailyTrendEntries/buildEmotionTrendData/computeDateRange純粋関数で構成。pointsToPathをBiorhythmChartから再利用。canUse('emotionAccumulation')でライセンス制御
+- 感情パラメータ全永続化 — satisfaction/fatigue/affinityを`{userData}/emotion-history.json`に保存し起動間で復元。日次スナップショット・イベントカウント（pomodoroCompleted/pomodoroAborted/fed/petted）・連続利用日数（streakDays）を記録。EmotionHistoryService/EmotionHistoryBridge/EmotionHistory純粋関数で構成
+- クロスセッション時間経過変化 — 起動時に放置時間に応じた感情変化を適用。satisfaction減衰（-0.02/時、上限-0.30）、fatigue回復（-0.05/時）、affinity減衰（-0.03/日、猶予4h、上限-0.15）。連続利用3日以上でaffinityボーナス（+0.01/日、上限+0.10）
+- 感情パラメータ永続化のE2Eテスト（3テスト）— emotionHistory IPC API存在確認・emotion-history.jsonファイル生成検証（lastSession/daily/streakDays構造）・アプリ再起動後の感情パラメータ復元（two-launchパターン）
+
+### Fixed
+- E2Eテスト: emotion-history.spec.tsの感情変化テストをBREAK待ちから全サイクル完走待ちに修正（PomodoroCompletedは全サイクル完走時のみ発火するため）
+- E2Eテスト: emotion-history.jsonの残存データによる感情初期値の汚染を防ぐcleanEmotionHistoryヘルパーを追加（animation-state.spec.ts・emotion-history.spec.ts）
+
 ## [0.4.0] - 2026-03-03
 
 ### Added

@@ -126,6 +126,11 @@ globalStyle(`.${darkThemeClass}`, {
     '--bio-focus': '#76ff03',
     '--bio-grid': 'rgba(255, 255, 255, 0.12)',
     '--bio-today': 'rgba(255, 255, 255, 0.5)',
+    // 感情推移グラフ用カラー
+    '--emo-satisfaction': '#ff5252',
+    '--emo-fatigue': '#448aff',
+    '--emo-affinity': '#69f0ae',
+    '--emo-event-bar': 'rgba(76,175,80,0.15)',
   },
 })
 
@@ -141,5 +146,10 @@ globalStyle(`.${lightThemeClass}`, {
     '--bio-focus': '#558b2f',
     '--bio-grid': 'rgba(0, 0, 0, 0.1)',
     '--bio-today': 'rgba(0, 0, 0, 0.35)',
+    // 感情推移グラフ用カラー
+    '--emo-satisfaction': '#d32f2f',
+    '--emo-fatigue': '#1565c0',
+    '--emo-affinity': '#2e7d32',
+    '--emo-event-bar': 'rgba(56,152,60,0.12)',
   },
 })

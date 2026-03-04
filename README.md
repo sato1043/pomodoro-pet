@@ -1,4 +1,4 @@
-pomodoro-pet v0.4.0
+pomodoro-pet v0.5.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -33,7 +33,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **Weather Settings** — Choose weather type (sunny / cloudy / rainy / snowy), cloud density (6 levels), and time of day (morning / day / evening / night / auto). Live preview with dynamic lighting and effects
 - **Sound** — Procedural ambient sounds (forest / rain / wind), timer SFX, break BGM with crossfade, volume and mute controls
 - **Background Notifications** — System toast notifications for phase completion and cycle completion when the app is in the background
-- **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. Affinity persists across sessions. Visual indicators (♥ ⚡ ★) in the Statistics panel show current emotion state via opacity
+- **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. All parameters persist across sessions with daily snapshots, event history tracking, and cross-session time-based changes (boredom decay, rest recovery, streak bonuses). Visual indicators (♥ ⚡ ★) in the fureai panel show current emotion state via opacity. Emotion trend chart in the Statistics panel displays 3-line graphs (satisfaction/fatigue/affinity) with period switching (7d/30d/All) and pomodoro completion event bars
 - **Biorhythm** — Daily periodic state variation (activity 5-day / sociability 7-day / focus 11-day sine wave cycles) that affects character behavior duration, idle animations, and march speed. Feeding and petting provide temporary boosts. Neon-colored sine curve graph with animated dots in the Statistics panel (registered license only)
 - **Sleep Prevention** — Prevents OS sleep/suspend during pomodoro sessions using Electron's powerSaveBlocker API. Configurable ON/OFF toggle (default ON)
 - **Auto Update** — Check, download, and install updates via electron-updater with in-app notification banner

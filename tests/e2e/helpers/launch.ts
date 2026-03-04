@@ -1,6 +1,7 @@
 import { _electron as electron } from '@playwright/test'
 import type { ElectronApplication, Page } from '@playwright/test'
-import { resolve } from 'path'
+import { resolve, join } from 'path'
+import { existsSync, unlinkSync } from 'fs'
 
 const PROJECT_ROOT = resolve(__dirname, '../../..')
 
@@ -45,4 +46,16 @@ export async function setLicenseMode(ctx: AppContext, mode: string): Promise<voi
     await ctx.page.waitForSelector('[data-testid="trial-badge"]', { state: 'hidden', timeout: 5_000 }).catch(() => {})
   }
   await ctx.page.waitForTimeout(300)
+}
+
+/**
+ * E2Eテスト前にemotion-history.jsonを削除して感情初期値をデフォルトにリセットする。
+ * 一時的にアプリを起動してuserDataパスを取得し、ファイル削除後に閉じる。
+ */
+export async function cleanEmotionHistory(): Promise<void> {
+  const ctx = await launchApp()
+  const userDataPath = await ctx.electronApp.evaluate(({ app }) => app.getPath('userData'))
+  await closeApp(ctx)
+  const historyPath = join(userDataPath, 'emotion-history.json')
+  if (existsSync(historyPath)) unlinkSync(historyPath)
 }

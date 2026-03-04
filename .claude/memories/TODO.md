@@ -241,17 +241,32 @@
 - ネオンカラー（シアン/マゼンタ/ライム）+グローエフェクト、カーブ上を移動するドットアニメーション
 - `canUse('biorhythm')`でregistered限定表示
 
-### キャラクターの感情統計・永続トラッキング
-- 感情パラメータ（satisfaction/fatigue/affinity）の履歴を永続化し、起動間を跨いで連続性を持たせる
-- 現在のEmotionState（satisfaction/fatigue/affinity）はセッション中の一時的な値（affinityのみ永続化）
-- satisfaction/fatigueも含めた全感情パラメータの履歴を永続化
-- 日次・時間帯ごとの変動を記録（最終ポモドーロ完了時刻、最終餌やり時刻、連続利用日数）
-- 長時間放置で機嫌が下がる、毎日使うと親密度が上がる等の時間経過に基づく感情変化
-- `{userData}/emotion-history.json`等でファイルベース永続化
-- 日次・週次・月次の感情推移グラフ（折れ線/エリアチャート）
-- affinity成長曲線、satisfaction/fatigueの変動パターン
-- ポモドーロ完了数や餌やり回数との相関表示
-- 感情インジケーターUIと連携して可視化
+### ~~キャラクターの感情統計・永続トラッキング~~ — Phase 1-3完了
+
+**~~Phase 1（完了）: 感情パラメータの全永続化+日次スナップショット記録~~**
+- ~~全感情パラメータ（satisfaction/fatigue/affinity）を`{userData}/emotion-history.json`に永続化~~
+- ~~起動時に前回セッションの全パラメータを復元（lastSessionから）~~
+- ~~日次スナップショット+イベントカウント（pomodoroCompleted/pomodoroAborted/fed/petted）を記録~~
+- ~~連続利用日数（streakDays）を追跡~~
+- ~~EmotionHistoryService/EmotionHistoryBridge/EmotionHistory純粋関数で構成~~
+
+**~~Phase 2（完了）: クロスセッション時間経過変化~~**
+- ~~起動時にlastSession.timestampからの経過時間で感情変化を適用~~
+- ~~satisfaction減衰（-0.02/時）、fatigue回復（-0.05/時）、affinity減衰（-0.03/日、猶予4h）~~
+- ~~streakDays 3日以上でaffinityボーナス（+0.01/日）~~
+
+**~~E2Eテスト（完了）: 感情パラメータ永続化~~**
+- ~~ユニットテスト: EmotionHistory.test.ts（35テスト）、EmotionHistoryService.test.ts（16テスト）~~
+- ~~E2Eテスト: emotion-history.spec.ts（5テスト）— IPC API存在確認・全サイクル完走後satisfaction増加・emotion-history.jsonファイル生成検証・アプリ再起動後復元（two-launch）~~
+- ~~cleanEmotionHistoryヘルパーで前回テスト実行の永続化データをリセット~~
+
+**~~Phase 3（完了）: 感情推移グラフUI~~**
+- ~~StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフを追加~~
+- ~~期間切替（7d/30d/All）でグラフ表示範囲を変更~~
+- ~~ポモドーロ完了数をイベントバーとして表示~~
+- ~~ダーク/ライトテーマ対応（--emo-satisfaction/fatigue/affinity CSS変数）~~
+- ~~canUse('emotionAccumulation')でライセンス制御~~
+- ~~extractDailyTrendEntries/buildEmotionTrendData/computeDateRange純粋関数で構成~~
 
 ### ~~OSスリープ抑制設定~~ — 完了
 - ポモドーロ実行中にOSがスリープ/サスペンドしないようにする機能

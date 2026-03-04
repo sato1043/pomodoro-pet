@@ -12,6 +12,7 @@ import type { ThreeCharacterHandle } from '../three/ThreeCharacterAdapter'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
 import type { FureaiCoordinator } from '../../application/fureai/FureaiCoordinator'
 import type { GalleryCoordinator } from '../../application/gallery/GalleryCoordinator'
+import type { EmotionHistoryService } from '../../application/character/EmotionHistoryService'
 
 export interface AppDeps {
   readonly bus: EventBus
@@ -28,6 +29,7 @@ export interface AppDeps {
   readonly statisticsService: StatisticsService
   readonly fureaiCoordinator: FureaiCoordinator
   readonly galleryCoordinator: GalleryCoordinator
+  readonly emotionHistoryService: EmotionHistoryService
 }
 
 const AppContext = createContext<AppDeps | null>(null)

@@ -15,6 +15,8 @@ import { createBehaviorStateMachine } from './domain/character/services/Behavior
 import { updateBehavior, type UpdateBehaviorOptions } from './application/character/UpdateBehaviorUseCase'
 import { createEnrichedAnimationResolver } from './domain/character/services/EnrichedAnimationResolver'
 import { createEmotionService, type EmotionService } from './application/character/EmotionService'
+import { createEmotionHistoryService } from './application/character/EmotionHistoryService'
+import { bridgeEmotionHistory } from './application/character/EmotionHistoryBridge'
 import { createBiorhythmService } from './application/character/BiorhythmService'
 import { NEUTRAL_BIORHYTHM } from './domain/character/value-objects/BiorhythmState'
 import { createInteractionTracker, type InteractionTracker } from './domain/character/services/InteractionTracker'
@@ -274,6 +276,9 @@ async function main(): Promise<void> {
     renderer, camera, cabbageHandles, charHandle, character, behaviorSM, bus
   )
 
+  // EmotionHistoryService（感情履歴の永続化）
+  const emotionHistoryService = createEmotionHistoryService()
+
   // EmotionService（感情パラメータ管理）
   const emotionService: EmotionService = createEmotionService(settingsService.emotionConfig.affinity)
 
@@ -303,12 +308,14 @@ async function main(): Promise<void> {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_completed' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+    emotionHistoryService.saveCurrentState(emotionService.state)
     emitEmotionState(true)
   })
   bus.subscribe<PomodoroEvent>('PomodoroAborted', () => {
     if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
     emotionService.applyEvent({ type: 'pomodoro_aborted' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+    emotionHistoryService.saveCurrentState(emotionService.state)
     emitEmotionState(true)
   })
   bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
@@ -318,6 +325,7 @@ async function main(): Promise<void> {
       emotionService.applyEvent({ type: 'fed' })
       interactionTracker.recordFeeding()
       settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+      emotionHistoryService.saveCurrentState(emotionService.state)
       emitEmotionState(true)
     }
     if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
@@ -364,7 +372,7 @@ async function main(): Promise<void> {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
       character, behaviorSM, charHandle, statisticsService, fureaiCoordinator,
-      galleryCoordinator
+      galleryCoordinator, emotionHistoryService
     }
     appRoot.render(createElement(App, { deps }))
   }
@@ -426,11 +434,22 @@ async function main(): Promise<void> {
   // 統計ブリッジ（EventBus購読→統計記録）
   bridgeTimerToStatistics(bus, statisticsService, () => settingsService.currentConfig)
 
+  // 感情履歴ブリッジ（EventBus購読→履歴記録）
+  bridgeEmotionHistory(bus, emotionHistoryService)
+
   // 保存済み設定の復元（購読登録後に実行）
   await settingsService.loadFromStorage()
 
-  // EmotionServiceのaffinity復元（loadFromStorage後に実行）
-  emotionService.loadAffinity(settingsService.emotionConfig.affinity)
+  // EmotionHistoryServiceの復元（loadFromStorage後に実行）
+  await emotionHistoryService.loadFromStorage()
+
+  // EmotionServiceの全感情パラメータ復元（クロスセッション効果適用込み）
+  const startupResult = emotionHistoryService.calculateStartupEffect()
+  if (startupResult) {
+    emotionService.loadFullState(startupResult.state)
+  } else {
+    emotionService.loadAffinity(settingsService.emotionConfig.affinity)
+  }
 
   // BiorhythmServiceのoriginDay復元（loadFromStorage後に実行）
   biorhythmService.setOriginDay(settingsService.biorhythmConfig.originDay)
@@ -457,6 +476,8 @@ async function main(): Promise<void> {
       if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
         emotionService.applyEvent({ type: 'petted' })
         settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
+        emotionHistoryService.recordEvent('petted')
+        emotionHistoryService.saveCurrentState(emotionService.state)
         emitEmotionState(true)
       }
       if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {

@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.4.0**（= package.json）
+**バージョン: 0.5.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -111,6 +111,8 @@
 | 38 | 好感度 | EmotionState.ts, EmotionService.ts | 永続化 | emotionAccumulation | 餌やり/撫で/完了で上昇、永続化 |
 | 39 | 感情イベント反応 | EmotionState.ts | 自動 | emotionAccumulation | 4イベントの数値変化テーブル |
 | 90 | 感情インジケーターUI | EmotionIndicator.tsx, StatsDrawer.tsx | 自動 | emotionAccumulation | ♥⚡★アイコンのopacity表示（統計パネル内） |
+| 96 | 感情履歴永続化 | EmotionHistoryService.ts, EmotionHistoryBridge.ts | 永続化 | emotionAccumulation | 全感情パラメータの起動間復元+日次スナップショット+イベントカウント+クロスセッション時間経過変化 |
+| 98 | 感情推移グラフ | EmotionTrendChart.tsx, StatsDrawer.tsx | 統計パネル | emotionAccumulation | satisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロ完了数イベントバー（期間切替7d/30d/All） |
 
 ### G. 統計と記録
 
@@ -248,6 +250,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.5.0 | 機能追加 | 感情推移グラフUI追加（#98）。StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロイベントバー。期間切替（7d/30d/All）、ダーク/ライト対応 |
 | 0.4.0 | 機能追加 | OSスリープ抑制機能追加（#97）。ポモドーロ中のpowerSaveBlocker制御、設定UIトグル、settings.json永続化 |
 | 0.3.2 | UI改善 | ウィンドウボタンのホバー時のみアイコン表示、Galleryモード上部マージン縮小 |
 | 0.3.1 | リファクタ | バイオリズムグラフ・EmotionIndicator・CharacterNameEditorをCompactHeader内に統合、BiorhythmChart独立コンポーネント化、E2Eテスト追従修正 |

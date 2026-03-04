@@ -42,6 +42,7 @@ EventBus（UI/インフラ通知）:
   PhaseCompleted(work/break)/PomodoroCompleted → NotificationBridge（バックグラウンド通知）
   AppSceneChanged → SleepPreventionBridge（ポモドーロ中のOSスリープ抑制）
   PhaseCompleted(work/break/long-break)/PomodoroCompleted/PomodoroAborted → StatisticsBridge（統計記録）
+  PomodoroCompleted/PomodoroAborted/FeedingSuccess → EmotionHistoryBridge（感情履歴記録）
   FeedingSuccess → SceneFureai（ハートエフェクト発火）、main.ts（EmotionService fed + InteractionTracker recordFeeding）
   PomodoroCompleted/PomodoroAborted → main.ts（EmotionService pomodoro_completed/pomodoro_aborted）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
@@ -110,6 +111,7 @@ EventBus（UI/インフラ通知）:
 - `character/value-objects/BehaviorPreset.ts` — 6種のプリセット定義（autonomous/march-cycle/rest-cycle/joyful-rest/celebrate/fureai-idle）
 - `character/value-objects/CharacterState.ts` — 11状態定義+設定（feeding追加）
 - `character/value-objects/EmotionState.ts` — EmotionState値オブジェクト（satisfaction/fatigue/affinity）。applyEmotionEvent()、tickEmotion()純粋関数
+- `character/value-objects/EmotionHistory.ts` — EmotionHistoryData/DailyEmotionRecord/CrossSessionEffect型定義 + recordEmotionEvent/updateLastSession/updateDailySnapshot/updateStreak/calculateCrossSessionEffect/applyCrossSessionChanges純粋関数
 - `character/value-objects/BiorhythmState.ts` — BiorhythmState値オブジェクト（activity/sociability/focus）。calculateBaseBiorhythm()、applyBoost()、tickBoost()等の純粋関数
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
@@ -133,7 +135,9 @@ EventBus（UI/インフラ通知）:
 - `timer/PomodoroEvents.ts` — ポモドーロライフサイクルイベント型（PomodoroAborted/PomodoroCompleted判別共用体）
 - `character/InterpretPromptUseCase.ts` — キーワードマッチング（英語/日本語→行動）
 - `character/UpdateBehaviorUseCase.ts` — 毎フレームtick。StateMachine遷移 + AnimationResolver経由のアニメーション選択 + ScrollManager経由で背景スクロール制御。`UpdateBehaviorOptions`でリゾルバ・phaseProgress・emotion・interaction・timeOfDay・todayCompletedCyclesを注入
-- `character/EmotionService.ts` — 感情パラメータ管理サービス。tick(deltaMs, isWorking)で自然変化、applyEvent()でイベント適用、loadAffinity()で永続化値復元
+- `character/EmotionService.ts` — 感情パラメータ管理サービス。tick(deltaMs, isWorking)で自然変化、applyEvent()でイベント適用、loadAffinity()/loadFullState()で永続化値復元
+- `character/EmotionHistoryService.ts` — 感情履歴の永続化サービス。emotion-history.jsonへの読み書き、日次スナップショット・イベントカウント・streak管理、起動時クロスセッション効果計算
+- `character/EmotionHistoryBridge.ts` — EventBus購読→EmotionHistoryServiceへの感情イベント記録ブリッジ
 - `character/EmotionEvents.ts` — 感情UI通知イベント型。`EmotionStateUpdatedEvent`（type + state: EmotionState）。main.tsのrAFループから1秒間隔スロットリングで発行、感情イベント時は即時発行
 - `character/BiorhythmService.ts` — バイオリズム管理サービス。tick(deltaMs)でブースト減衰+再計算、applyFeedingBoost()/applyPettingBoost()でケアブースト、setOriginDay()でoriginDay設定
 - `timer/TimerSfxBridge.ts` — タイマーSFX一元管理。PhaseStarted(work)でwork開始音、PhaseStarted(congrats)でファンファーレ、PhaseStarted(break)でwork完了音（long-break前はスキップする遅延判定）。break/long-break中は`break-chill.mp3`ループ再生、残り30秒で`break-getset.mp3`にクロスフェード切替。`PomodoroAborted`で`pomodoro-exit.mp3`を再生。`AudioControl`で環境音の停止/復帰を制御（EventBus経由）。`shouldPlayAudio`コールバックでバックグラウンド時のオーディオ抑制に対応
@@ -179,7 +183,8 @@ EventBus（UI/インフラ通知）:
 - `ui/StatsButton.tsx` — 統計パネル表示ボタン。チャートSVGアイコン（`bottom: 168`）
 - `ui/OverlayPomodoro.tsx` — pomodoroモードオーバーレイ。createPortalでdocument.bodyに描画。`PhaseStarted`購読でwork/break/congrats切替。DisplayTransitionStateでイントラ・ポモドーロ遷移エフェクト解決。背景ティント計算。PomodoroTimerPanel/CongratsPanel描画
 - `ui/SceneTransition.tsx` — 暗転レンダリング。全画面暗転オーバーレイ（z-index: 10000）。`playBlackout(cb)`: opacity 0→1 (350ms) → cb() → opacity 1→0 (350ms)。forwardRef+useImperativeHandleで親からの呼び出しに対応。SceneRouter（シーン間）とOverlayPomodoro（イントラ・ポモドーロ）がそれぞれインスタンスを所有
-- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）
+- `ui/StatsDrawer.tsx` — 統計ドロワーパネル。サマリー3カード（Today/7Days/30Days: work完了数+累計時間）、13週カレンダーヒートマップ（SVG、work完了数5段階）、累計(work+break)時間の折れ線グラフ（SVG、最終点に放射状グラデーション脈動アニメーション付き）、感情推移グラフ（canUse('emotionAccumulation')で条件付き描画）
+- `ui/EmotionTrendChart.tsx` — 感情推移折れ線グラフ。satisfaction/fatigue/affinityの3曲線+ポモドーロ完了数イベントバー。期間切替（7d/30d/All）。buildEmotionTrendData/computeDateRange純粋関数をexport。pointsToPathをBiorhythmChartから再利用
 - `ui/PomodoroTimerPanel.tsx` — pomodoroモード。SVG円形プログレスリング（200px, r=90, stroke-width=12）でタイマー進捗をアナログ表現。リング内にフェーズラベル＋フェーズカラー数字（work=緑、break=青、long-break=紫）を配置。背景にフェーズカラーの下→上グラデーションティント（時間経過でalpha 0.04→0.24に濃化）。左肩にサイクル進捗ドット、右肩にpause/stopのSVGアイコンボタン。`phaseColor`/`overlayTintBg`純粋関数をexport
 - `ui/CongratsPanel.tsx` — congratsモード。祝福メッセージ＋CSS紙吹雪エフェクト
 - `ui/VolumeControl.tsx` — サウンドプリセット選択・ボリュームインジケーター・ミュートの共通コンポーネント。ボリューム変更/ミュート解除時にSfxPlayerでテストサウンドを再生。ミュート/ボリューム操作時にAudioAdapter（環境音）とSfxPlayer（SFX）の両方を同期
@@ -214,7 +219,7 @@ EventBus（UI/インフラ通知）:
 
 ### src/ — エントリ
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish
-- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
+- `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
 ### tests/
@@ -230,6 +235,7 @@ EventBus（UI/インフラ通知）:
 - `domain/character/AnimationResolver.test.ts` — デフォルトリゾルバが全11状態でSTATE_CONFIGS準拠を検証
 - `domain/character/EnrichedAnimationResolver.test.ts` — 全16ルールの個別テスト+統合テスト（優先順位・感情ルール・リアクションルール）
 - `domain/character/EmotionState.test.ts` — createDefaultEmotionState・applyEmotionEvent全4イベント・tickEmotion自然変化・クランプ
+- `domain/character/EmotionHistory.test.ts` — createDefaultEmotionHistoryData・recordEmotionEvent全4イベント・updateLastSession・updateDailySnapshot・updateStreak連続/途切れ・イミュータブル性
 - `domain/character/InteractionTracker.test.ts` — クリック記録・3秒ウィンドウ除去・餌やり記録・resetDaily
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
 - `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
@@ -248,8 +254,12 @@ EventBus（UI/インフラ通知）:
 - `domain/statistics/StatisticsTypes.test.ts` — emptyDailyStats・todayKey・formatDateKey
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
+- `application/character/EmotionHistoryService.test.ts` — loadFromStorage・getLastSession・recordEvent・saveCurrentState・バリデーション
 - `application/license/LicenseState.test.ts` — ライセンス判定ロジック（62テスト）
 - `adapters/ui/BiorhythmChart.test.ts` — buildBiorhythmCurves純粋関数テスト（座標範囲・サンプル数・周期検証）+pointsToPathテスト（SVGパス生成）
+- `adapters/ui/EmotionTrendChart.test.ts` — buildEmotionTrendData純粋関数テスト（座標範囲・均等配置・Y軸マッピング・日付ラベル・イベントバー）+computeDateRangeテスト（7d/30d/all期間計算）
+- `domain/character/EmotionTrendData.test.ts` — extractDailyTrendEntries純粋関数テスト（空配列・範囲抽出・ソート・マッピング・イミュータブル）
+- `e2e/emotion-trend.spec.ts` — 感情推移グラフE2E（Emotion Trends表示・期間ボタン3種・データなしメッセージ・ポモドーロ完走後SVG描画・期間切替動作）
 - `adapters/ui/LicenseContext.test.ts` — LicenseContext nullハンドリング（null→trial全機能有効、expired制限、restricted制限）
 - `desktop/main/license.test.ts` — メインプロセスライセンスモジュール（decodeJwtPayload正常/異常、verifyJwt署名拒否、getLicenseState/setLicenseState状態管理）
 - `desktop/main/window.test.ts` — ウィンドウ操作IPCハンドラ（window:minimize/window:close登録・BrowserWindow.minimize()/close()呼び出し・fromWebContents null安全性）
@@ -285,6 +295,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
 - `e2e/emotion-indicator.spec.ts` — 感情インジケーター表示/非表示・3アイコン存在・opacity整合性・ライセンス制限（6テスト）
+- `e2e/emotion-history.spec.ts` — 感情パラメータ永続化（初期状態範囲確認・全サイクル完走後satisfaction増加・emotionHistory IPC API存在・emotion-history.jsonファイル生成検証・アプリ再起動後復元）。cleanEmotionHistoryで前回テスト実行の永続化データをリセット
 - `e2e/fureai-mode.spec.ts` — ふれあいモード遷移・ボタン表示制御・freeモード復帰（setLicenseModeでregistered切替）
 - `e2e/gallery-mode.spec.ts` — ギャラリーモード遷移・ボタン表示制御・States/Rulesモード切替・アニメーション情報表示・freeモード復帰（setLicenseModeでregistered切替）
 - `e2e/theme.spec.ts` — テーマ切替のcolorScheme即時反映・スナップショット復元

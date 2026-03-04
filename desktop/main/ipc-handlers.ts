@@ -2,7 +2,7 @@ import { app, BrowserWindow, ipcMain, Notification, powerSaveBlocker, shell } fr
 import { join } from 'path'
 import { readFile } from 'fs/promises'
 import { autoUpdater } from 'electron-updater'
-import { loadSettings, saveSettings, loadStatistics, saveStatistics, getOrCreateDeviceId } from './settings'
+import { loadSettings, saveSettings, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, getOrCreateDeviceId } from './settings'
 import { getLicenseState, setLicenseState, resolveLicense } from './license'
 
 declare const __HEARTBEAT_URL__: string
@@ -41,6 +41,14 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('statistics:save', (_event, data: Record<string, unknown>) => {
     saveStatistics(data)
+  })
+
+  ipcMain.handle('emotionHistory:load', () => {
+    return loadEmotionHistory()
+  })
+
+  ipcMain.handle('emotionHistory:save', (_event, data: Record<string, unknown>) => {
+    saveEmotionHistory(data)
   })
 
   // --- 通知 ---

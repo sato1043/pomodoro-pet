@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test'
-import { launchApp, closeApp, type AppContext } from './helpers/launch'
+import { launchApp, closeApp, cleanEmotionHistory, type AppContext } from './helpers/launch'
 
 // VITE_DEBUG_TIMER=3/2/3/2 でビルド済み前提
 // work=3秒, break=2秒, long-break=3秒, sets=2
@@ -7,6 +7,7 @@ import { launchApp, closeApp, type AppContext } from './helpers/launch'
 let app: AppContext
 
 test.beforeAll(async () => {
+  await cleanEmotionHistory()
   app = await launchApp()
 })
 

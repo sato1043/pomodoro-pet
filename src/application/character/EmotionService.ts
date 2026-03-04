@@ -6,6 +6,7 @@ export interface EmotionService {
   tick(deltaMs: number, isWorking: boolean): void
   applyEvent(event: EmotionEvent): void
   loadAffinity(affinity: number): void
+  loadFullState(state: { satisfaction: number; fatigue: number; affinity: number }): void
 }
 
 export function createEmotionService(initialAffinity: number = 0): EmotionService {
@@ -24,6 +25,14 @@ export function createEmotionService(initialAffinity: number = 0): EmotionServic
 
     loadAffinity(affinity: number): void {
       state = createDefaultEmotionState(affinity)
+    },
+
+    loadFullState(fullState: { satisfaction: number; fatigue: number; affinity: number }): void {
+      state = {
+        satisfaction: Math.max(0, Math.min(1, fullState.satisfaction)),
+        fatigue: Math.max(0, Math.min(1, fullState.fatigue)),
+        affinity: Math.max(0, Math.min(1, fullState.affinity)),
+      }
     },
   }
 }

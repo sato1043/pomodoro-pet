@@ -16,6 +16,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('statistics:load'),
   saveStatistics: (data: Record<string, unknown>): Promise<void> =>
     ipcRenderer.invoke('statistics:save', data),
+  loadEmotionHistory: (): Promise<Record<string, unknown> | null> =>
+    ipcRenderer.invoke('emotionHistory:load'),
+  saveEmotionHistory: (data: Record<string, unknown>): Promise<void> =>
+    ipcRenderer.invoke('emotionHistory:save', data),
   loadAbout: (): Promise<{ version: string; licensesText: string }> =>
     ipcRenderer.invoke('about:load'),
   loadRegistrationGuide: (): Promise<string> =>

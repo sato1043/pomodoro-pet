@@ -31,6 +31,8 @@ interface ElectronAPI {
   stopSleepBlocker(): Promise<void>
   loadStatistics(): Promise<Record<string, unknown> | null>
   saveStatistics(data: Record<string, unknown>): Promise<void>
+  loadEmotionHistory(): Promise<Record<string, unknown> | null>
+  saveEmotionHistory(data: Record<string, unknown>): Promise<void>
   loadAbout(): Promise<{ version: string; licensesText: string; eulaText: string; privacyPolicyText: string; licenseText: string }>
   loadRegistrationGuide(): Promise<string>
 
