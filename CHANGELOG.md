@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 - 時間帯遷移のlerp補間 — EnvironmentThemeParamsの全パラメータ（色7個・float5個・vec3 1個）をsmoothstep補間で滑らかに遷移。autoTimeOfDay時5秒、手動切替時1.5秒。補間中の割り込みは中間値から新目標へシームレスに再補間。ThemeLerp純粋関数群（ドメイン層）+ ThemeTransitionService（アプリケーション層）で構成
+- 天気エフェクトのopacityフェード — 雨/雪/雲エフェクトの切替をsetVisible即座切替からfadeIn/fadeOutによる滑らかなopacity遷移に変更。テーマ遷移と同期したdurationで動作。フェード中の方向反転は現在のopacityから継続。雲の密度変更時は古い雲を退場バッチに移してフェードアウト（2000ms）しながら新しい雲をフェードイン。初回起動時はsetVisibleで即座表示を維持
 
 ## [0.5.1] - 2026-03-04
 

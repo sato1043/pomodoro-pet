@@ -175,20 +175,29 @@ async function main(): Promise<void> {
     if (immediate) {
       themeTransition.applyImmediate(params)
       applyThemeToScene(params)
+
+      // 即座切替（初回起動）
+      rainEffect.setVisible(weather === 'rainy')
+      snowEffect.setVisible(weather === 'snowy')
+      cloudEffect.setDensity(config.cloudDensityLevel)
+      cloudEffect.setVisible(config.cloudDensityLevel > 0)
     } else {
       const duration = config.autoTimeOfDay
         ? THEME_TRANSITION_DURATION_AUTO_MS
         : THEME_TRANSITION_DURATION_MANUAL_MS
       themeTransition.transitionTo(params, duration)
+
+      // エフェクトのopacityフェード
+      if (weather === 'rainy') rainEffect.fadeIn(duration)
+      else rainEffect.fadeOut(duration)
+
+      if (weather === 'snowy') snowEffect.fadeIn(duration)
+      else snowEffect.fadeOut(duration)
+
+      cloudEffect.setDensity(config.cloudDensityLevel)
+      if (config.cloudDensityLevel > 0) cloudEffect.fadeIn(duration)
+      else cloudEffect.fadeOut(duration)
     }
-
-    // エフェクトは即座切替（lerp対象外）
-    rainEffect.setVisible(weather === 'rainy')
-    snowEffect.setVisible(weather === 'snowy')
-
-    // 雲の密度をconfigのcloudDensityLevelから決定
-    cloudEffect.setDensity(config.cloudDensityLevel)
-    cloudEffect.setVisible(config.cloudDensityLevel > 0)
   }
 
   // ポモドーロタイマー初期化

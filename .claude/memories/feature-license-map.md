@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.5.1**（= package.json）
+**バージョン: 0.6.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -164,7 +164,7 @@
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
 | 65 | 背景スクロール | ScrollUseCase.ts, InfiniteScrollRenderer.ts | 自動 | character | march/wander時のチャンクスクロール |
-| 66 | 天気エフェクト描画 | RainEffect.ts, SnowEffect.ts, CloudEffect.ts | 自動 | （制限不要） | 選択された天気の描画（設定UIを制限すれば十分） |
+| 66 | 天気エフェクト描画 | RainEffect.ts, SnowEffect.ts, CloudEffect.ts | 自動 | （制限不要） | 選択された天気の描画（設定UIを制限すれば十分）。opacityフェード（fadeIn/fadeOut）でテーマ遷移と同期。雲は密度変更時に退場バッチクロスフェード |
 | 67 | ライティング | main.ts, EnvironmentTheme.ts | 自動 | （制限不要） | 時間帯×天気のルックアップテーブル適用 |
 | 68 | オートタイムオブデイ | main.ts | 自動 | （制限不要） | 1分間隔の時間帯更新 |
 | 69 | 天気プレビューカメラ | main.ts | 自動 | weatherSettings | パネル表示中のカメラ後退 |
@@ -250,6 +250,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
 | 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |
 | 0.5.0 | 機能追加 | 感情推移グラフUI追加（#98）。StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロイベントバー。期間切替（7d/30d/All）、ダーク/ライト対応 |
 | 0.4.0 | 機能追加 | OSスリープ抑制機能追加（#97）。ポモドーロ中のpowerSaveBlocker制御、設定UIトグル、settings.json永続化 |

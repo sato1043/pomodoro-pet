@@ -11,6 +11,8 @@ const SWAY_AMPLITUDE = 0.8 // 揺れ幅（m）
 const SWAY_FREQ_MIN = 0.5 // 揺れ周波数の下限（Hz）
 const SWAY_FREQ_MAX = 1.5 // 揺れ周波数の上限（Hz）
 
+const BASE_OPACITY = 0.7
+
 function randomZ(): number {
   return Z_MIN + Math.random() * (Z_MAX - Z_MIN)
 }
@@ -50,9 +52,36 @@ export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
 
   let visible = false
   let elapsed = 0
+  let fadeState: 'none' | 'in' | 'out' = 'none'
+  let fadeElapsed = 0
+  let fadeDuration = 0
+
+  function currentFadeRatio(): number {
+    if (fadeState === 'none') return visible ? 1 : 0
+    const t = Math.min(fadeElapsed / fadeDuration, 1)
+    return fadeState === 'in' ? t : 1 - t
+  }
 
   return {
     update(deltaMs: number): void {
+      // フェード処理
+      if (fadeState !== 'none') {
+        fadeElapsed += deltaMs
+        const t = Math.min(fadeElapsed / fadeDuration, 1)
+        if (fadeState === 'in') {
+          material.opacity = BASE_OPACITY * t
+        } else {
+          material.opacity = BASE_OPACITY * (1 - t)
+        }
+        if (t >= 1) {
+          if (fadeState === 'out') {
+            visible = false
+            points.visible = false
+          }
+          fadeState = 'none'
+        }
+      }
+
       if (!visible) return
       const deltaSec = deltaMs / 1000
       elapsed += deltaSec
@@ -79,6 +108,26 @@ export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
     setVisible(v: boolean): void {
       visible = v
       points.visible = v
+      fadeState = 'none'
+      material.opacity = v ? BASE_OPACITY : 0
+    },
+
+    fadeIn(durationMs: number): void {
+      if (visible && fadeState === 'none') return
+      const ratio = currentFadeRatio()
+      visible = true
+      points.visible = true
+      fadeDuration = durationMs
+      fadeElapsed = ratio * durationMs
+      fadeState = 'in'
+    },
+
+    fadeOut(durationMs: number): void {
+      if (!visible && fadeState === 'none') return
+      const ratio = currentFadeRatio()
+      fadeDuration = durationMs
+      fadeElapsed = (1 - ratio) * durationMs
+      fadeState = 'out'
     },
 
     dispose(): void {

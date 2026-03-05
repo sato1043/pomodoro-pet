@@ -3,6 +3,8 @@ import * as THREE from 'three'
 export interface WeatherEffect {
   update(deltaMs: number): void
   setVisible(visible: boolean): void
+  fadeIn(durationMs: number): void
+  fadeOut(durationMs: number): void
   dispose(): void
 }
 
@@ -21,6 +23,9 @@ const SPLASH_SPEED = 1.5
 const SPLASH_UP_SPEED = 1.0
 const SPLASH_GRAVITY = 4.0
 const SPLASH_LIFETIME = 0.3
+
+const BASE_RAIN_OPACITY = 0.4
+const BASE_SPLASH_OPACITY = 0.5
 
 function randomZ(): number {
   return Z_MIN + Math.random() * (Z_MAX - Z_MIN)
@@ -100,9 +105,39 @@ export function createRainEffect(scene: THREE.Scene): WeatherEffect {
   }
 
   let visible = false
+  let fadeState: 'none' | 'in' | 'out' = 'none'
+  let fadeElapsed = 0
+  let fadeDuration = 0
+
+  function currentFadeRatio(): number {
+    if (fadeState === 'none') return visible ? 1 : 0
+    const t = Math.min(fadeElapsed / fadeDuration, 1)
+    return fadeState === 'in' ? t : 1 - t
+  }
 
   return {
     update(deltaMs: number): void {
+      // フェード処理
+      if (fadeState !== 'none') {
+        fadeElapsed += deltaMs
+        const t = Math.min(fadeElapsed / fadeDuration, 1)
+        if (fadeState === 'in') {
+          rainMat.opacity = BASE_RAIN_OPACITY * t
+          splashMat.opacity = BASE_SPLASH_OPACITY * t
+        } else {
+          rainMat.opacity = BASE_RAIN_OPACITY * (1 - t)
+          splashMat.opacity = BASE_SPLASH_OPACITY * (1 - t)
+        }
+        if (t >= 1) {
+          if (fadeState === 'out') {
+            visible = false
+            lines.visible = false
+            splashPoints.visible = false
+          }
+          fadeState = 'none'
+        }
+      }
+
       if (!visible) return
       const deltaSec = deltaMs / 1000
       const fall = FALL_SPEED * deltaSec
@@ -160,6 +195,28 @@ export function createRainEffect(scene: THREE.Scene): WeatherEffect {
       visible = v
       lines.visible = v
       splashPoints.visible = v
+      fadeState = 'none'
+      rainMat.opacity = v ? BASE_RAIN_OPACITY : 0
+      splashMat.opacity = v ? BASE_SPLASH_OPACITY : 0
+    },
+
+    fadeIn(durationMs: number): void {
+      if (visible && fadeState === 'none') return
+      const ratio = currentFadeRatio()
+      visible = true
+      lines.visible = true
+      splashPoints.visible = true
+      fadeDuration = durationMs
+      fadeElapsed = ratio * durationMs
+      fadeState = 'in'
+    },
+
+    fadeOut(durationMs: number): void {
+      if (!visible && fadeState === 'none') return
+      const ratio = currentFadeRatio()
+      fadeDuration = durationMs
+      fadeElapsed = (1 - ratio) * durationMs
+      fadeState = 'out'
     },
 
     dispose(): void {
