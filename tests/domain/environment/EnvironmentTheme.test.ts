@@ -73,12 +73,26 @@ describe('EnvironmentTheme', () => {
       }
     })
 
-    it('meadow/parkプリセットではgroundColorがオーバーライドされない', () => {
+    it('seasideプリセットの全16パターンでskyColorが基準より明るい', () => {
+      for (const weather of WEATHER_TYPES) {
+        for (const timeOfDay of TIME_OF_DAYS) {
+          const base = resolveEnvironmentTheme(weather, timeOfDay)
+          const seaside = resolveEnvironmentTheme(weather, timeOfDay, 'seaside')
+          expect(seaside.skyColor).toBeGreaterThanOrEqual(base.skyColor)
+          expect(seaside.fogColor).toBeGreaterThanOrEqual(base.fogColor)
+          expect(seaside.hemiSkyColor).toBeGreaterThanOrEqual(base.hemiSkyColor)
+        }
+      }
+    })
+
+    it('meadow/parkプリセットではskyColor/groundColorがオーバーライドされない', () => {
       const base = resolveEnvironmentTheme('sunny', 'day')
       const meadow = resolveEnvironmentTheme('sunny', 'day', 'meadow')
       const park = resolveEnvironmentTheme('sunny', 'day', 'park')
       expect(meadow.groundColor).toBe(base.groundColor)
       expect(park.groundColor).toBe(base.groundColor)
+      expect(meadow.skyColor).toBe(base.skyColor)
+      expect(park.skyColor).toBe(base.skyColor)
     })
   })
 })

@@ -103,10 +103,10 @@ GPUで描画される視覚エフェクト。DOMに表れない。
 |---|------|------|
 | 6 | 雨エフェクト | LineSegments（650本）+スプラッシュパーティクル+opacityフェード（fadeIn/fadeOut） |
 | 7 | 雪エフェクト | Points（750個）+sin/cosゆらぎ落下+opacityフェード（fadeIn/fadeOut） |
-| 8 | 雲エフェクト | SphereGeometry群の6段階密度+ドリフト+opacityフェード（fadeIn/fadeOut）+密度変更時の退場バッチクロスフェード |
+| 8 | 雲エフェクト | SphereGeometry群の6段階密度+ドリフト+opacityフェード（fadeIn/fadeOut）+密度変更時の退場バッチクロスフェード+天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色） |
 | 9 | 背景スクロール | 3チャンクリサイクル |
-| 10 | シーンプリセット3Dオブジェクト | meadow（木・草・岩・花）/seaside（貝殻・流木・泡・岩）/park（ベンチ・街灯・低木・花壇・樹木・草）の描画結果 |
-| 11 | 動的ライティング | 4天気×4時間帯の20パターン（ambient/hemisphere/sun） |
+| 10 | シーンプリセット3Dオブジェクト | meadow（木・草・岩・花）/seaside（ヤシの木・波打ち際・泡・貝殻）/park（歩道・街灯・植え込み・花壇・ベンチ・広葉樹）の描画結果 |
+| 11 | 動的ライティング | 4天気×4時間帯の20パターン（ambient/hemisphere/sun）+seasideプリセットの空色明化・輝度ブースト |
 | 12 | キャラクターアニメーション描画 | AnimationMixer+crossFadeToによるメッシュ変形 |
 
 #### B-3. OS依存
@@ -317,7 +317,7 @@ Rain（ブラウンノイズ+LP）、Forest（ホワイトノイズ+BP+LFO）、
 |------|------|
 | 雨 | LineSegments 650本 + スプラッシュ（リングバッファ最大200個）+ opacityフェード（rainMat: 0→0.4、splashMat: 0→0.5） |
 | 雪 | Points 750個 + sin/cosゆらぎ落下 + opacityフェード（0→0.7） |
-| 雲 | SphereGeometry群、6段階密度（0=none〜5=overcast最大100個）+ opacityフェード + 密度変更時の退場バッチクロスフェード（2000ms） |
+| 雲 | SphereGeometry群、6段階密度（0=none〜5=overcast最大100個）+ opacityフェード + 密度変更時の退場バッチクロスフェード（2000ms）+ 天気別色（sunny=白emissive、それ以外=灰色） |
 | 背景スクロール | 3チャンクリサイクル（視界外でregenerate()） |
 
 **天気エフェクトopacityフェード — 手動テスト手順**:

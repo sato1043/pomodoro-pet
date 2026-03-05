@@ -43,7 +43,7 @@ export function createParkPreset(): ScenePreset {
     chunkSpec: {
       width: 20,
       depth: 10,
-      treeCount: 1,
+      treeCount: 5,
       grassCount: 30,
       rockCount: 0,
       flowerCount: 5,

@@ -4,9 +4,7 @@ import type { ChunkDecorator } from '../ChunkDecorator'
 
 const CENTER_EXCLUSION = 3
 const BENCH_COUNT = 1
-const LAMP_COUNT = 1
-const BUSH_COUNT = 4
-const FLOWER_BED_COUNT = 2
+const LAMP_INTERVAL = 4
 
 function randomX(width: number): number {
   const halfW = width / 2
@@ -63,8 +61,11 @@ export function createParkDecorator(): ChunkDecorator {
         bench.add(leg)
       }
 
-      bench.position.set(randomX(spec.width), 0, randomZ(spec.depth))
-      bench.rotation.y = Math.random() * Math.PI * 2
+      // 歩道脇に配置（±1.5〜±2.5）、歩道に向けて回転
+      const side = i % 2 === 0 ? -1 : 1
+      const bx = side * (1.5 + Math.random() * 1.0)
+      bench.position.set(bx, 0, randomZ(spec.depth))
+      bench.rotation.y = side > 0 ? Math.PI : 0
       group.add(bench)
     }
   }
@@ -79,95 +80,102 @@ export function createParkDecorator(): ChunkDecorator {
     })
     materials.push(poleMat, lightMat)
 
-    for (let i = 0; i < LAMP_COUNT; i++) {
+    const poleH = 2.4
+    const poleGeo = new THREE.CylinderGeometry(0.02, 0.03, poleH, 6)
+    const headGeo = new THREE.SphereGeometry(0.08, 8, 6)
+    disposables.push(poleGeo, headGeo)
+
+    // 歩道脇に等間隔配置（左右交互）
+    const walkwayEdge = 1.1
+    const lampCount = Math.floor(spec.depth / LAMP_INTERVAL)
+    for (let i = 0; i < lampCount; i++) {
       const lamp = new THREE.Group()
 
-      // ポール
-      const poleGeo = new THREE.CylinderGeometry(0.02, 0.03, 1.2, 6)
-      disposables.push(poleGeo)
       const pole = new THREE.Mesh(poleGeo, poleMat)
-      pole.position.y = 0.6
+      pole.position.y = poleH / 2
       pole.castShadow = true
       lamp.add(pole)
 
-      // ランプヘッド
-      const headGeo = new THREE.SphereGeometry(0.08, 8, 6)
-      disposables.push(headGeo)
       const head = new THREE.Mesh(headGeo, lightMat)
-      head.position.y = 1.25
+      head.position.y = poleH + 0.05
       lamp.add(head)
 
-      lamp.position.set(randomX(spec.width), 0, randomZ(spec.depth))
+      const side = i % 2 === 0 ? -1 : 1
+      const z = -spec.depth / 2 + LAMP_INTERVAL * (i + 0.5)
+      lamp.position.set(side * walkwayEdge, 0, z)
       group.add(lamp)
     }
   }
 
-  function placeBushes(group: THREE.Group, spec: ChunkSpec): void {
+  function placeBordersAlongWalkway(group: THREE.Group, spec: ChunkSpec): void {
     const bushMat = new THREE.MeshStandardMaterial({ color: 0x3a7d28, roughness: 0.85 })
-    materials.push(bushMat)
-
-    for (let i = 0; i < BUSH_COUNT; i++) {
-      const bush = new THREE.Group()
-      const clusterCount = 2 + Math.floor(Math.random() * 3)
-
-      for (let j = 0; j < clusterCount; j++) {
-        const r = 0.12 + Math.random() * 0.1
-        const bushGeo = new THREE.SphereGeometry(r, 7, 6)
-        disposables.push(bushGeo)
-        const sphere = new THREE.Mesh(bushGeo, bushMat)
-        sphere.position.set(
-          (Math.random() - 0.5) * 0.2,
-          r * 0.8,
-          (Math.random() - 0.5) * 0.2,
-        )
-        sphere.castShadow = true
-        bush.add(sphere)
-      }
-
-      bush.position.set(randomX(spec.width), 0, randomZ(spec.depth))
-      group.add(bush)
-    }
-  }
-
-  function placeFlowerBeds(group: THREE.Group, spec: ChunkSpec): void {
-    const colors = [0xff4081, 0xffeb3b, 0xba68c8, 0xff7043, 0x42a5f5]
     const stemMat = new THREE.MeshStandardMaterial({ color: 0x388e3c })
-    materials.push(stemMat)
+    const flowerColors = [0xff4081, 0xffeb3b, 0xba68c8, 0xff7043, 0x42a5f5]
+    materials.push(bushMat, stemMat)
 
-    for (let i = 0; i < FLOWER_BED_COUNT; i++) {
-      const bed = new THREE.Group()
-      const flowerCount = 6 + Math.floor(Math.random() * 5)
+    const walkwayHalf = 0.75
+    const borderOffset = walkwayHalf + 0.4
+    const interval = 2.0
+    const slotCount = Math.floor(spec.depth / interval)
 
-      for (let j = 0; j < flowerCount; j++) {
-        const flower = new THREE.Group()
+    for (let i = 0; i < slotCount; i++) {
+      const z = -spec.depth / 2 + interval * (i + 0.5) + (Math.random() - 0.5) * 0.3
+      const side = i % 2 === 0 ? -1 : 1
+      const x = side * borderOffset + (Math.random() - 0.5) * 0.2
 
-        const stemGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 4)
-        disposables.push(stemGeo)
-        const stem = new THREE.Mesh(stemGeo, stemMat)
-        stem.position.y = 0.075
-        flower.add(stem)
+      if (i % 3 === 0) {
+        // 花壇
+        const bed = new THREE.Group()
+        const flowerCount = 4 + Math.floor(Math.random() * 4)
+        for (let j = 0; j < flowerCount; j++) {
+          const flower = new THREE.Group()
 
-        const petalGeo = new THREE.SphereGeometry(0.04, 6, 6)
-        const petalMat = new THREE.MeshStandardMaterial({
-          color: colors[j % colors.length],
-        })
-        disposables.push(petalGeo)
-        materials.push(petalMat)
-        const petal = new THREE.Mesh(petalGeo, petalMat)
-        petal.position.y = 0.17
-        flower.add(petal)
+          const stemGeo = new THREE.CylinderGeometry(0.01, 0.01, 0.15, 4)
+          disposables.push(stemGeo)
+          const stem = new THREE.Mesh(stemGeo, stemMat)
+          stem.position.y = 0.075
+          flower.add(stem)
 
-        flower.position.set(
-          (Math.random() - 0.5) * 0.8,
-          0,
-          (Math.random() - 0.5) * 0.5,
-        )
-        flower.scale.setScalar(0.6 + Math.random() * 0.6)
-        bed.add(flower)
+          const petalGeo = new THREE.SphereGeometry(0.04, 6, 6)
+          const petalMat = new THREE.MeshStandardMaterial({
+            color: flowerColors[j % flowerColors.length],
+          })
+          disposables.push(petalGeo)
+          materials.push(petalMat)
+          const petal = new THREE.Mesh(petalGeo, petalMat)
+          petal.position.y = 0.17
+          flower.add(petal)
+
+          flower.position.set(
+            (Math.random() - 0.5) * 0.6,
+            0,
+            (Math.random() - 0.5) * 0.4,
+          )
+          flower.scale.setScalar(0.6 + Math.random() * 0.6)
+          bed.add(flower)
+        }
+        bed.position.set(x, 0, z)
+        group.add(bed)
+      } else {
+        // 植え込み
+        const bush = new THREE.Group()
+        const clusterCount = 2 + Math.floor(Math.random() * 2)
+        for (let j = 0; j < clusterCount; j++) {
+          const r = 0.1 + Math.random() * 0.08
+          const bushGeo = new THREE.SphereGeometry(r, 7, 6)
+          disposables.push(bushGeo)
+          const sphere = new THREE.Mesh(bushGeo, bushMat)
+          sphere.position.set(
+            (Math.random() - 0.5) * 0.15,
+            r * 0.8,
+            (Math.random() - 0.5) * 0.15,
+          )
+          sphere.castShadow = true
+          bush.add(sphere)
+        }
+        bush.position.set(x, 0, z)
+        group.add(bush)
       }
-
-      bed.position.set(randomX(spec.width), 0, randomZ(spec.depth))
-      group.add(bed)
     }
   }
 
@@ -196,46 +204,30 @@ export function createParkDecorator(): ChunkDecorator {
 
       const scale = 0.8 + Math.random() * 0.5
       tree.scale.setScalar(scale)
-      tree.position.set(randomX(spec.width), 0, randomZ(spec.depth))
+      // 歩道脇に配置（±1.5〜±3.0）
+      const side = i % 2 === 0 ? -1 : 1
+      const x = side * (1.5 + Math.random() * 1.5)
+      tree.position.set(x, 0, randomZ(spec.depth))
       tree.rotation.y = Math.random() * Math.PI * 2
       group.add(tree)
     }
   }
 
-  function placeGrass(group: THREE.Group, spec: ChunkSpec): void {
-    if (spec.grassCount <= 0) return
-
-    const grassGeo = new THREE.ConeGeometry(0.03, 0.12, 4)
-    const grassMat = new THREE.MeshStandardMaterial({
-      color: 0x66bb6a,
-      roughness: 0.9,
+  function placeWalkway(group: THREE.Group, spec: ChunkSpec): void {
+    const walkwayWidth = 1.5
+    const walkwayGeo = new THREE.PlaneGeometry(walkwayWidth, spec.depth)
+    const walkwayMat = new THREE.MeshStandardMaterial({
+      color: 0xbbaa99,
+      roughness: 0.85,
     })
-    disposables.push(grassGeo)
-    materials.push(grassMat)
+    disposables.push(walkwayGeo)
+    materials.push(walkwayMat)
 
-    const mesh = new THREE.InstancedMesh(grassGeo, grassMat, spec.grassCount)
-    const matrix = new THREE.Matrix4()
-    const position = new THREE.Vector3()
-    const rotation = new THREE.Euler()
-    const scaleVec = new THREE.Vector3()
-    const quaternion = new THREE.Quaternion()
-
-    for (let i = 0; i < spec.grassCount; i++) {
-      position.set(
-        (Math.random() - 0.5) * spec.width,
-        0.06,
-        randomZ(spec.depth),
-      )
-      rotation.set(0, Math.random() * Math.PI * 2, (Math.random() - 0.5) * 0.2)
-      quaternion.setFromEuler(rotation)
-      const s = 0.4 + Math.random() * 0.8
-      scaleVec.set(s, s, s)
-      matrix.compose(position, quaternion, scaleVec)
-      mesh.setMatrixAt(i, matrix)
-    }
-
-    mesh.instanceMatrix.needsUpdate = true
-    group.add(mesh)
+    const walkway = new THREE.Mesh(walkwayGeo, walkwayMat)
+    walkway.rotation.x = -Math.PI / 2
+    walkway.position.set(0, 0.01, 0)
+    walkway.receiveShadow = true
+    group.add(walkway)
   }
 
   return {
@@ -245,10 +237,9 @@ export function createParkDecorator(): ChunkDecorator {
         if (child === ground) continue
         group.remove(child)
       }
+      placeWalkway(group, spec)
       placeTrees(group, spec)
-      placeGrass(group, spec)
-      placeBushes(group, spec)
-      placeFlowerBeds(group, spec)
+      placeBordersAlongWalkway(group, spec)
       placeBenches(group, spec)
       placeLamps(group, spec)
     },

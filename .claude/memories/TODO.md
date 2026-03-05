@@ -288,7 +288,7 @@
 ### ~~環境シーンのバリエーション — Phase 2: シーンプリセット追加~~ — 完了
 - meadow（草原）/seaside（海辺）/park（公園）の3プリセット実装
 - seaside: 貝殻・流木・波打ち際泡・海岸岩
-- park: ベンチ・街灯・低木・花壇・広葉樹・草
+- park: 歩道・街灯（歩道脇等間隔）・植え込み・花壇（歩道脇沿い）・ベンチ・広葉樹
 - WeatherPanelにScene選択行追加（3つのSVGアイコンボタン）
 - 環境音とプリセットの連動（meadow→forest, seaside→wind, park→forest）
 - settings.jsonのweather.scenePresetに永続化（後方互換: 未設定時はmeadowにフォールバック）
@@ -304,6 +304,12 @@
 - autoWeatherボタン有効化
 - ElectronメインプロセスでのAPI呼び出し+IPC
 - APIキー管理・オフラインフォールバック
+
+### 環境シーンのバリエーション — Phase 5: 時間帯に応じた影の向き
+- sunPositionの方向に合わせてDirectionalLightの影を連動させる
+- morning: 東（右）から低い角度、day: 真上付近、evening: 西（左）から低い角度、night: 月光（現行の固定位置）
+- テーマ遷移（lerp補間）と同期して影の方向も滑らかに変化
+- キャラクターやオブジェクトの影が時間帯に応じて自然に伸縮・回転する
 
 ### 環境映像（背景動画）
 - 要件定義でnice-to-haveとされた機能

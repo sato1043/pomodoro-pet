@@ -8,13 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- 環境シーンプリセットシステム — EnvironmentChunkのオブジェクト生成をStrategy/Factory化（ChunkDecorator）。meadow（草原）/seaside（海辺）/park（公園）の3プリセット。各プリセットに固有の3Dオブジェクト（seaside: 貝殻・流木・波打ち際泡・海岸岩、park: ベンチ・街灯・低木・花壇・広葉樹）。WeatherPanelにScene選択行追加。プリセット別環境音連動（meadow→forest, seaside→wind, park→forest）。settings.jsonのweather.scenePresetに永続化。ScenePreset値オブジェクト（ドメイン層）で型安全にプリセット定義
+- 環境シーンプリセットシステム — EnvironmentChunkのオブジェクト生成をStrategy/Factory化（ChunkDecorator）。meadow（草原）/seaside（海辺）/park（公園）の3プリセット。各プリセットに固有の3Dオブジェクト（seaside: 貝殻・流木・波打ち際泡・海岸岩、park: 歩道・街灯・植え込み・花壇・ベンチ・広葉樹）。WeatherPanelにScene選択行追加。プリセット別環境音連動（meadow→forest, seaside→wind, park→forest）。settings.jsonのweather.scenePresetに永続化。ScenePreset値オブジェクト（ドメイン層）で型安全にプリセット定義
 - seasideプリセットの砂浜地面色 — seaside選択時にgroundColorとhemiGroundColorを砂色にオーバーライド。天気×時間帯の全16パターンで明度を維持した砂色を定義。snowy時は雪をかぶった砂浜色。テーマ遷移（lerp）によるプリセット切替時の滑らかな色変化に対応
 - 時間帯遷移のlerp補間 — EnvironmentThemeParamsの全パラメータ（色7個・float5個・vec3 1個）をsmoothstep補間で滑らかに遷移。autoTimeOfDay時5秒、手動切替時1.5秒。補間中の割り込みは中間値から新目標へシームレスに再補間。ThemeLerp純粋関数群（ドメイン層）+ ThemeTransitionService（アプリケーション層）で構成
 - 天気エフェクトのopacityフェード — 雨/雪/雲エフェクトの切替をsetVisible即座切替からfadeIn/fadeOutによる滑らかなopacity遷移に変更。テーマ遷移と同期したdurationで動作。フェード中の方向反転は現在のopacityから継続。雲の密度変更時は古い雲を退場バッチに移してフェードアウト（2000ms）しながら新しい雲をフェードイン。初回起動時はsetVisibleで即座表示を維持
 - seasideプリセットの夏演出強化 — 空色・霧色・半球光をlightenColorで白方向25%明るく補正。exposure×1.25・sunIntensity×1.2・ambientIntensity×1.15の輝度ブースト
 - 天気別雲色 — sunny時は白雲（emissive自発光で真っ白）、cloudy/rainy/snowy時は灰色雲に変更。CloudEffectにsetWeatherColor API追加
 - seasideヤシの木 — 放物線カーブの幹（7セグメント）、4〜5枚の羽状複葉フロンド（中心線+葉片15対）、波打ち際・泡・貝殻の3Dオブジェクト配置
+- parkプリセット改善 — 中央歩道（石畳色PlaneGeometry）追加。街灯を歩道脇に4m間隔・左右交互の等間隔配置に変更（高さ2.4倍）。植え込み・花壇を歩道脇沿い2m間隔配置に変更。街路樹・ベンチを歩道近傍に配置。草を削除
 
 ### Changed
 - WeatherPanelのSetボタンを廃止 — 天気・時間帯・雲量・シーンプリセットの変更が選択時に即座に設定に反映・永続化されるように変更。スナップショット復元（キャンセル）機能を削除

@@ -214,7 +214,7 @@ EventBus（UI/インフラ通知）:
 - `three/ChunkDecorator.ts` — ChunkDecoratorインターフェース（populate/dispose）+ createChunkDecorator()ファクトリ。ScenePresetNameに応じたデコレータを生成
 - `three/decorators/MeadowDecorator.ts` — 草原プリセットのデコレータ。木（ConeGeometry）、草（InstancedMesh）、岩（DodecahedronGeometry）、花
 - `three/decorators/SeasideDecorator.ts` — 海辺プリセットのデコレータ。ヤシの木（放物線幹7セグメント+羽状複葉4-5フロンド）、波打ち際（水面PlaneGeometry+泡）、貝殻8個。mergeGeometriesでdraw call削減（幹・葉片・泡を各1 Meshに統合）
-- `three/decorators/ParkDecorator.ts` — 公園プリセットのデコレータ。ベンチ（Box構成）、街灯（Cylinder+emissive Sphere）、低木（Sphereクラスター）、花壇、広葉樹、草（InstancedMesh）
+- `three/decorators/ParkDecorator.ts` — 公園プリセットのデコレータ。歩道（中央PlaneGeometry）、街灯（歩道脇等間隔・左右交互配置）、植え込み・花壇（歩道脇沿い配置）、ベンチ（歩道脇配置）、広葉樹（歩道近傍）
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkDecorator委譲方式、地面メッシュ所有、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新。`rebuildChunks(spec, decorator)`でランタイムプリセット切替
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。WeatherEffectインターフェース定義

@@ -56,13 +56,14 @@ describe('ScenePreset', () => {
       expect(preset.chunkSpec.depth).toBe(10)
     })
 
-    it('木がある', () => {
-      expect(preset.chunkSpec.treeCount).toBeGreaterThan(0)
+    it('街路樹が5本ある', () => {
+      expect(preset.chunkSpec.treeCount).toBe(5)
     })
 
     it('花がある', () => {
       expect(preset.chunkSpec.flowerCount).toBeGreaterThan(0)
     })
+
   })
 
   describe('resolvePreset', () => {
