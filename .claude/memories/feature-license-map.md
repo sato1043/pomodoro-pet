@@ -251,7 +251,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
-| 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行、環境音連動、settings.json永続化 |
+| 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行（即座反映・Setボタン廃止）、環境音連動、settings.json永続化。seaside演出強化（ヤシの木・波打ち際・砂浜地面色・空色明化・輝度ブースト・mergeGeometries描画最適化）。天気別雲色（sunny=白emissive/それ以外=灰色） |
 | 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
 | 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |
 | 0.5.0 | 機能追加 | 感情推移グラフUI追加（#98）。StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロイベントバー。期間切替（7d/30d/All）、ダーク/ライト対応 |

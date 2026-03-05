@@ -213,13 +213,13 @@ EventBus（UI/インフラ通知）:
 - `three/EnvironmentBuilder.ts` — 旧・単一シーン環境生成（InfiniteScrollRendererに置換済み）
 - `three/ChunkDecorator.ts` — ChunkDecoratorインターフェース（populate/dispose）+ createChunkDecorator()ファクトリ。ScenePresetNameに応じたデコレータを生成
 - `three/decorators/MeadowDecorator.ts` — 草原プリセットのデコレータ。木（ConeGeometry）、草（InstancedMesh）、岩（DodecahedronGeometry）、花
-- `three/decorators/SeasideDecorator.ts` — 海辺プリセットのデコレータ。貝殻（扁平SphereGeometry）、流木（CylinderGeometry）、泡クラスター（透明白SphereGroup）、海岸岩
+- `three/decorators/SeasideDecorator.ts` — 海辺プリセットのデコレータ。ヤシの木（放物線幹7セグメント+羽状複葉4-5フロンド）、波打ち際（水面PlaneGeometry+泡）、貝殻8個。mergeGeometriesでdraw call削減（幹・葉片・泡を各1 Meshに統合）
 - `three/decorators/ParkDecorator.ts` — 公園プリセットのデコレータ。ベンチ（Box構成）、街灯（Cylinder+emissive Sphere）、低木（Sphereクラスター）、花壇、広葉樹、草（InstancedMesh）
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkDecorator委譲方式、地面メッシュ所有、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新。`rebuildChunks(spec, decorator)`でランタイムプリセット切替
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。WeatherEffectインターフェース定義
 - `three/SnowEffect.ts` — 雪エフェクト。Points（750個）sin/cosゆらゆら揺れ
-- `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト
+- `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
 - `audio/AudioAdapter.ts` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止）。ミュート時は`AudioContext.suspend()`でシステムリソース（PulseAudioストリーム等）を解放し、解除時に`resume()`で復帰する。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートとの共存: `updateSuspendState()`で`isMuted || backgroundMuted`を統合判定）
 - `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+クロスフェードタイマー解除+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応
