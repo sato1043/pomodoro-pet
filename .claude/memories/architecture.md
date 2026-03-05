@@ -73,10 +73,11 @@ EventBus（UI/インフラ通知）:
 
 ### 3. 環境
 - `SceneConfig` — 進行方向、スクロール速度、状態別スクロール有無
-- `ChunkSpec` — チャンク寸法（幅・奥行き）とオブジェクト配置数（木・草・岩・花）
+- `ScenePreset` — ScenePresetName型（'meadow'|'seaside'|'park'）、ChunkSpec（チャンク寸法+オブジェクト配置数）、resolvePreset()でプリセット名からChunkSpec解決
+- `ChunkSpec` — チャンク寸法（幅・奥行き）とオブジェクト配置数（木・草・岩・花）。ScenePreset.tsで定義
 - `shouldScroll()` — 現在の状態でスクロールすべきか判定する純粋関数
 - `SceneObject` — シーンオブジェクト型定義
-- `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
+- `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay, scenePreset）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
 - `EnvironmentThemeParams` — 描画パラメータ（空色・霧・ライト・地面色・露出）。`resolveEnvironmentTheme(weather, timeOfDay)`で20パターンルックアップ
 - `ThemeLerp` — テーマ遷移の純粋関数群。`lerpFloat`/`lerpHexColor`（RGB分解）/`lerpVec3`/`smoothstep`（3t²-2t³）/`lerpThemeParams`（全14フィールド一括補間）/`themeParamsEqual`（不要補間スキップ用）/`startThemeTransition`/`tickThemeTransition`。`ThemeTransitionState`/`ThemeTransitionResult`型。定数: `THEME_TRANSITION_DURATION_AUTO_MS`(5000)/`THEME_TRANSITION_DURATION_MANUAL_MS`(1500)
 
@@ -117,7 +118,8 @@ EventBus（UI/インフラ通知）:
 - `character/value-objects/Position3D.ts` — 3D位置
 - `environment/value-objects/SceneConfig.ts` — SceneConfig, ChunkSpec, shouldScroll()
 - `environment/value-objects/SceneObject.ts` — シーンオブジェクト型
-- `environment/value-objects/WeatherConfig.ts` — WeatherConfig, WeatherType, TimeOfDay, CloudDensityLevel, resolveTimeOfDay(), cloudPresetLevel()
+- `environment/value-objects/ScenePreset.ts` — ScenePresetName型（'meadow'|'seaside'|'park'）、ScenePreset/ChunkSpecインターフェース、createMeadowPreset/createSeasidePreset/createParkPreset、resolvePreset()、ALL_SCENE_PRESETS
+- `environment/value-objects/WeatherConfig.ts` — WeatherConfig（scenePreset含む）, WeatherType, TimeOfDay, CloudDensityLevel, resolveTimeOfDay(), cloudPresetLevel(). ScenePresetNameをre-export
 - `environment/value-objects/EnvironmentTheme.ts` — EnvironmentThemeParams, resolveEnvironmentTheme()（20パターンルックアップ）
 - `environment/value-objects/ThemeLerp.ts` — テーマ遷移の純粋関数群（lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/startThemeTransition/tickThemeTransition）+ ThemeTransitionState/ThemeTransitionResult型 + 遷移時間定数
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
@@ -209,8 +211,12 @@ EventBus（UI/インフラ通知）:
 - `three/CabbageObject.ts` — プリミティブSphereGeometryキャベツ3Dオブジェクト。CabbageHandleインターフェースでposition/visible/reset操作
 - `three/AppleObject.ts` — プリミティブ形状リンゴ3Dオブジェクト。CabbageHandleインターフェースを共用。スケール0.15
 - `three/EnvironmentBuilder.ts` — 旧・単一シーン環境生成（InfiniteScrollRendererに置換済み）
-- `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkSpecベース、中央帯回避配置、regenerate対応）
-- `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新
+- `three/ChunkDecorator.ts` — ChunkDecoratorインターフェース（populate/dispose）+ createChunkDecorator()ファクトリ。ScenePresetNameに応じたデコレータを生成
+- `three/decorators/MeadowDecorator.ts` — 草原プリセットのデコレータ。木（ConeGeometry）、草（InstancedMesh）、岩（DodecahedronGeometry）、花
+- `three/decorators/SeasideDecorator.ts` — 海辺プリセットのデコレータ。貝殻（扁平SphereGeometry）、流木（CylinderGeometry）、泡クラスター（透明白SphereGroup）、海岸岩
+- `three/decorators/ParkDecorator.ts` — 公園プリセットのデコレータ。ベンチ（Box構成）、街灯（Cylinder+emissive Sphere）、低木（Sphereクラスター）、花壇、広葉樹、草（InstancedMesh）
+- `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkDecorator委譲方式、地面メッシュ所有、regenerate対応）
+- `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新。`rebuildChunks(spec, decorator)`でランタイムプリセット切替
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。WeatherEffectインターフェース定義
 - `three/SnowEffect.ts` — 雪エフェクト。Points（750個）sin/cosゆらゆら揺れ
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト
@@ -241,7 +247,8 @@ EventBus（UI/インフラ通知）:
 - `domain/character/EmotionHistory.test.ts` — createDefaultEmotionHistoryData・recordEmotionEvent全4イベント・updateLastSession・updateDailySnapshot・updateStreak連続/途切れ・イミュータブル性
 - `domain/character/InteractionTracker.test.ts` — クリック記録・3秒ウィンドウ除去・餌やり記録・resetDaily
 - `domain/environment/SceneConfig.test.ts` — shouldScroll・状態別スクロール判定・デフォルト設定
-- `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
+- `domain/environment/ScenePreset.test.ts` — 3プリセットのファクトリ関数・ChunkSpec値・resolvePreset・ALL_SCENE_PRESETS（13テスト）
+- `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig（scenePreset含む）・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
 - `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
 - `domain/environment/ThemeLerp.test.ts` — lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/tickThemeTransition（24テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作

@@ -55,32 +55,32 @@ test('opacityがデバッグ感情データと整合する', async () => {
   const { page } = app
 
   // 前テストでふれあいモードに入ったまま
-  // EmotionStateUpdatedイベント受信を待つ（プレースホルダーからの更新完了まで）
+  // EmotionStateUpdatedイベントは1秒スロットリングのため、
+  // デバッグデータ（rAFで常時更新）とReactコンポーネントのopacityに
+  // タイミング差が生じうる。toPassでリトライして収束を待つ
   await expect(async () => {
-    const e = await getDebugEmotion(page)
-    expect(e.satisfaction + e.fatigue + e.affinity).toBeGreaterThan(0)
-  }).toPass({ timeout: 3_000 })
+    const emotion = await getDebugEmotion(page)
+    expect(emotion.satisfaction + emotion.fatigue + emotion.affinity).toBeGreaterThan(0)
 
-  const emotion = await getDebugEmotion(page)
+    // toOpacity(value) = 0.15 + value * 0.85
+    const expectedSatOpacity = 0.15 + emotion.satisfaction * 0.85
+    const expectedFatOpacity = 0.15 + emotion.fatigue * 0.85
+    const expectedAffOpacity = 0.15 + emotion.affinity * 0.85
 
-  // toOpacity(value) = 0.15 + value * 0.85
-  const expectedSatOpacity = 0.15 + emotion.satisfaction * 0.85
-  const expectedFatOpacity = 0.15 + emotion.fatigue * 0.85
-  const expectedAffOpacity = 0.15 + emotion.affinity * 0.85
+    const satOpacity = await page.locator('[data-testid="emotion-satisfaction"]').evaluate(
+      el => parseFloat(getComputedStyle(el).opacity)
+    )
+    const fatOpacity = await page.locator('[data-testid="emotion-fatigue"]').evaluate(
+      el => parseFloat(getComputedStyle(el).opacity)
+    )
+    const affOpacity = await page.locator('[data-testid="emotion-affinity"]').evaluate(
+      el => parseFloat(getComputedStyle(el).opacity)
+    )
 
-  const satOpacity = await page.locator('[data-testid="emotion-satisfaction"]').evaluate(
-    el => parseFloat(getComputedStyle(el).opacity)
-  )
-  const fatOpacity = await page.locator('[data-testid="emotion-fatigue"]').evaluate(
-    el => parseFloat(getComputedStyle(el).opacity)
-  )
-  const affOpacity = await page.locator('[data-testid="emotion-affinity"]').evaluate(
-    el => parseFloat(getComputedStyle(el).opacity)
-  )
-
-  expect(satOpacity).toBeCloseTo(expectedSatOpacity, 1)
-  expect(fatOpacity).toBeCloseTo(expectedFatOpacity, 1)
-  expect(affOpacity).toBeCloseTo(expectedAffOpacity, 1)
+    expect(satOpacity).toBeCloseTo(expectedSatOpacity, 1)
+    expect(fatOpacity).toBeCloseTo(expectedFatOpacity, 1)
+    expect(affOpacity).toBeCloseTo(expectedAffOpacity, 1)
+  }).toPass({ timeout: 5_000 })
 })
 
 test('ふれあいモードを抜けるとインジケーターが消える', async () => {

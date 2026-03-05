@@ -23,7 +23,10 @@ import { createInteractionTracker, type InteractionTracker } from './domain/char
 import type { PomodoroEvent } from './application/timer/PomodoroEvents'
 import type { EmotionStateUpdatedEvent } from './application/character/EmotionEvents'
 import { createInteractionAdapter } from './adapters/three/ThreeInteractionAdapter'
-import { createDefaultSceneConfig, createDefaultChunkSpec } from './domain/environment/value-objects/SceneConfig'
+import { createDefaultSceneConfig } from './domain/environment/value-objects/SceneConfig'
+import { resolvePreset } from './domain/environment/value-objects/ScenePreset'
+import type { ScenePresetName } from './domain/environment/value-objects/ScenePreset'
+import { createChunkDecorator } from './infrastructure/three/ChunkDecorator'
 import { createScrollManager } from './application/environment/ScrollUseCase'
 import { createInfiniteScrollRenderer } from './infrastructure/three/InfiniteScrollRenderer'
 import { createAudioAdapter } from './infrastructure/audio/AudioAdapter'
@@ -53,6 +56,13 @@ import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
 import { createThemeTransitionService } from './application/environment/ThemeTransitionService'
 import { THEME_TRANSITION_DURATION_AUTO_MS, THEME_TRANSITION_DURATION_MANUAL_MS } from './domain/environment/value-objects/ThemeLerp'
+
+// シーンプリセットに連動するデフォルト環境音
+const SCENE_SOUND_MAP: Record<ScenePresetName, SoundPreset> = {
+  meadow: 'forest',
+  seaside: 'wind',
+  park: 'forest',
+}
 
 const BREAK_BGM_TRIGGERS: PhaseTriggerMap = {
   break: [{ id: 'break-getset', timing: { type: 'remaining', beforeEndMs: 30000 } }],
@@ -137,10 +147,26 @@ async function main(): Promise<void> {
 
   // シーン設定と無限スクロール
   const sceneConfig = createDefaultSceneConfig()
-  const chunkSpec = createDefaultChunkSpec()
+  const initialPreset = resolvePreset('meadow')
   const chunkCount = 6
-  const scrollManager = createScrollManager(sceneConfig, chunkSpec, chunkCount)
-  const scrollRenderer = createInfiniteScrollRenderer(scene, sceneConfig, chunkSpec, chunkCount)
+  let currentPresetName: ScenePresetName = initialPreset.name
+  const scrollManager = createScrollManager(sceneConfig, initialPreset.chunkSpec, chunkCount)
+  const scrollRenderer = createInfiniteScrollRenderer(
+    scene, sceneConfig, initialPreset.chunkSpec, chunkCount, createChunkDecorator(initialPreset.name),
+  )
+
+  // シーンプリセット切替
+  function switchScenePreset(name: ScenePresetName): void {
+    if (name === currentPresetName) return
+    currentPresetName = name
+    const preset = resolvePreset(name)
+    const decorator = createChunkDecorator(name)
+    scrollRenderer.rebuildChunks(preset.chunkSpec, decorator)
+
+    // 環境音をプリセットに連動
+    const soundPreset = SCENE_SOUND_MAP[name]
+    audio.switchPreset(soundPreset)
+  }
 
   // 雨エフェクト
   const rainEffect = createRainEffect(scene)
@@ -170,7 +196,7 @@ async function main(): Promise<void> {
     const timeOfDay = config.autoTimeOfDay
       ? resolveTimeOfDay(new Date().getHours())
       : config.timeOfDay
-    const params = resolveEnvironmentTheme(weather, timeOfDay)
+    const params = resolveEnvironmentTheme(weather, timeOfDay, config.scenePreset)
 
     if (immediate) {
       themeTransition.applyImmediate(params)
@@ -179,6 +205,7 @@ async function main(): Promise<void> {
       // 即座切替（初回起動）
       rainEffect.setVisible(weather === 'rainy')
       snowEffect.setVisible(weather === 'snowy')
+      cloudEffect.setWeatherColor(weather)
       cloudEffect.setDensity(config.cloudDensityLevel)
       cloudEffect.setVisible(config.cloudDensityLevel > 0)
     } else {
@@ -194,6 +221,7 @@ async function main(): Promise<void> {
       if (weather === 'snowy') snowEffect.fadeIn(duration)
       else snowEffect.fadeOut(duration)
 
+      cloudEffect.setWeatherColor(weather)
       cloudEffect.setDensity(config.cloudDensityLevel)
       if (config.cloudDensityLevel > 0) cloudEffect.fadeIn(duration)
       else cloudEffect.fadeOut(duration)
@@ -422,10 +450,11 @@ async function main(): Promise<void> {
     renderReactUI()
   })
 
-  // WeatherConfigChanged → 天気適用
+  // WeatherConfigChanged → 天気適用 + プリセット切替
   bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
     if (event.type !== 'WeatherConfigChanged') return
     applyWeather(event.weather)
+    switchScenePreset(event.weather.scenePreset)
   })
 
   // WeatherPreviewOpen → カメラ位置切替 + キャラクター歩行
@@ -486,8 +515,9 @@ async function main(): Promise<void> {
   // 保存済み統計データの復元
   await statisticsService.loadFromStorage()
 
-  // 初期天気適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
+  // 初期天気・プリセット適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
   applyWeather(settingsService.weatherConfig, true)
+  switchScenePreset(settingsService.weatherConfig.scenePreset)
 
   // 初回React UIレンダリング
   renderReactUI()

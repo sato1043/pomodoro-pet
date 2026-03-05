@@ -252,13 +252,12 @@ test('天気設定がsettings.jsonに永続化される', async () => {
   await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
 
-  // rainy + nightに変更
+  // rainy + nightに変更（即時永続化）
   await page.locator('[data-testid="weather-rainy"]').click()
   await page.locator('[data-testid="time-night"]').click()
 
-  // Setで確定
-  await page.locator('[data-testid="set-button"]').click()
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 閉じる
+  await page.locator('[data-testid="weather-close"]').click()
   await page.waitForTimeout(500)
 
   // settings.jsonを確認
@@ -280,8 +279,8 @@ test('アプリ再起動後に天気設定が復元される', async () => {
   await page1.locator('[data-testid="weather-cloudy"]').click()
   await page1.locator('[data-testid="time-evening"]').click()
 
-  await page1.locator('[data-testid="set-button"]').click()
-  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 閉じる（即時永続化済み）
+  await page1.locator('[data-testid="weather-close"]').click()
   await page1.waitForTimeout(500)
 
   await app1.close()
@@ -310,12 +309,11 @@ test('cloudDensityLevel設定がsettings.jsonに永続化される', async () =>
   await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
 
-  // cloudDensityLevelを4に設定
+  // cloudDensityLevelを4に設定（即時永続化）
   await page.locator('[data-testid="cloud-level-4"]').click()
 
-  // Setで確定
-  await page.locator('[data-testid="set-button"]').click()
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 閉じる
+  await page.locator('[data-testid="weather-close"]').click()
   await page.waitForTimeout(500)
 
   // settings.jsonを確認
@@ -335,8 +333,8 @@ test('アプリ再起動後にcloudDensityLevel設定が復元される', async 
 
   await page1.locator('[data-testid="cloud-level-3"]').click()
 
-  await page1.locator('[data-testid="set-button"]').click()
-  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 閉じる（即時永続化済み）
+  await page1.locator('[data-testid="weather-close"]').click()
   await page1.waitForTimeout(500)
 
   await app1.close()
@@ -356,6 +354,62 @@ test('アプリ再起動後にcloudDensityLevel設定が復元される', async 
   }
 
   await page2.locator('[data-testid="weather-close"]').click()
+
+  await app2.close()
+})
+
+test('scenePreset設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // Weatherパネルを開く
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // seasideに変更（即時永続化）
+  await page.locator('[data-testid="scene-seaside"]').click()
+
+  // 閉じる
+  await page.locator('[data-testid="weather-close"]').click()
+  await page.waitForTimeout(500)
+
+  // settings.jsonを確認
+  const settingsPath = join(userDataPath, 'settings.json')
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.weather?.scenePreset).toBe('seaside')
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にscenePreset設定が復元される', async () => {
+  // 1回目: parkに変更して保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  await page1.locator('[data-testid="weather-toggle"]').click()
+  await expect(page1.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  await page1.locator('[data-testid="scene-park"]').click()
+
+  // 閉じる（即時永続化済み）
+  await page1.locator('[data-testid="weather-close"]').click()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動して復元を確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  await page2.locator('[data-testid="weather-toggle"]').click()
+  await page2.waitForTimeout(500)
+
+  await expect(page2.locator('[data-testid="scene-park"]')).toHaveClass(/active/)
+  await expect(page2.locator('[data-testid="scene-meadow"]')).not.toHaveClass(/active/)
+
+  // meadowに戻す（他テストへの影響を防ぐ）
+  await page2.locator('[data-testid="scene-meadow"]').click()
+  await page2.locator('[data-testid="weather-close"]').click()
+  await page2.waitForTimeout(500)
 
   await app2.close()
 })

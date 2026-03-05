@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import type { WeatherEffect } from './RainEffect'
+import type { WeatherType } from '../../domain/environment/value-objects/WeatherConfig'
 
 /** 雲の密度設定。インデックスがCloudDensityLevel(0〜5)に対応 */
 const CLOUD_CONFIGS: Array<{ count: number; opacity: number }> = [
@@ -37,12 +38,13 @@ interface RetiringBatch {
   duration: number
 }
 
-function createCloudGroup(opacity: number): { group: THREE.Group; material: THREE.MeshStandardMaterial } {
+function createCloudGroup(opacity: number, color: THREE.Color, emissive: THREE.Color): { group: THREE.Group; material: THREE.MeshStandardMaterial } {
   const group = new THREE.Group()
   const puffCount = PUFFS_PER_CLOUD_MIN + Math.floor(Math.random() * (PUFFS_PER_CLOUD_MAX - PUFFS_PER_CLOUD_MIN + 1))
 
   const material = new THREE.MeshStandardMaterial({
-    color: 0xffffff,
+    color,
+    emissive,
     transparent: true,
     opacity,
     depthWrite: false,
@@ -70,6 +72,7 @@ function createCloudGroup(opacity: number): { group: THREE.Group; material: THRE
 
 export interface CloudEffect extends WeatherEffect {
   setDensity(level: number): void
+  setWeatherColor(weather: WeatherType): void
   fadeIn(durationMs: number): void
   fadeOut(durationMs: number): void
 }
@@ -78,6 +81,8 @@ export function createCloudEffect(scene: THREE.Scene): CloudEffect {
   const clouds: CloudInstance[] = []
   const materials: THREE.MeshStandardMaterial[] = []
   const geometry = new THREE.SphereGeometry(1, 8, 6)
+  let currentCloudColor = new THREE.Color(0xffffff)
+  let currentCloudEmissive = new THREE.Color(0xcccccc)
   let currentLevel = -1
   let visible = false
   let fadeState: 'none' | 'in' | 'out' = 'none'
@@ -139,7 +144,7 @@ export function createCloudEffect(scene: THREE.Scene): CloudEffect {
     if (config.count === 0) return
 
     for (let i = 0; i < config.count; i++) {
-      const { group, material } = createCloudGroup(initialOpacity)
+      const { group, material } = createCloudGroup(initialOpacity, currentCloudColor, currentCloudEmissive)
       materials.push(material)
 
       group.position.set(
@@ -257,6 +262,24 @@ export function createCloudEffect(scene: THREE.Scene): CloudEffect {
       // 新しい雲を生成（フェード中なら進行度に合わせたopacityで開始）
       const initialOpacity = fadeState !== 'none' ? targetOpacity * ratio : targetOpacity
       spawnClouds(level, initialOpacity)
+    },
+
+    setWeatherColor(weather: WeatherType): void {
+      const isSunny = weather === 'sunny'
+      const hex = isSunny ? 0xffffff : 0xaaaaaa
+      const emissiveHex = isSunny ? 0xcccccc : 0x000000
+      currentCloudColor.set(hex)
+      currentCloudEmissive.set(emissiveHex)
+      for (const mat of materials) {
+        mat.color.set(hex)
+        mat.emissive.set(emissiveHex)
+      }
+      for (const batch of retiringBatches) {
+        for (const mat of batch.materials) {
+          mat.color.set(hex)
+          mat.emissive.set(emissiveHex)
+        }
+      }
     },
 
     fadeIn(durationMs: number): void {

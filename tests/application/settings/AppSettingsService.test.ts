@@ -202,6 +202,7 @@ describe('AppSettingsService', () => {
         autoWeather: false,
         autoTimeOfDay: false,
         cloudDensityLevel: 1,
+        scenePreset: 'meadow',
       })
     })
 
@@ -267,6 +268,7 @@ describe('AppSettingsService', () => {
         autoWeather: false,
         autoTimeOfDay: false,
         cloudDensityLevel: 1,
+        scenePreset: 'meadow',
       })
     })
   })

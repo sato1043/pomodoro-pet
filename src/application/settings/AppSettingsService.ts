@@ -240,12 +240,16 @@ export function createAppSettingsService(
       if (data.weather) {
         const w = data.weather as Record<string, unknown>
         if (typeof w.weather === 'string' && typeof w.timeOfDay === 'string') {
+          const validPresets = ['meadow', 'seaside', 'park']
           currentWeather = {
             weather: w.weather as WeatherConfig['weather'],
             timeOfDay: w.timeOfDay as WeatherConfig['timeOfDay'],
             autoWeather: typeof w.autoWeather === 'boolean' ? w.autoWeather : false,
             autoTimeOfDay: typeof w.autoTimeOfDay === 'boolean' ? w.autoTimeOfDay : true,
             cloudDensityLevel: typeof w.cloudDensityLevel === 'number' ? w.cloudDensityLevel as WeatherConfig['cloudDensityLevel'] : DEFAULT_WEATHER.cloudDensityLevel,
+            scenePreset: typeof w.scenePreset === 'string' && validPresets.includes(w.scenePreset)
+              ? w.scenePreset as WeatherConfig['scenePreset']
+              : 'meadow',
           }
           publishWeatherChanged(currentWeather)
         }

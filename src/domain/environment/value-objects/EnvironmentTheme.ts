@@ -1,4 +1,5 @@
 import type { WeatherType, TimeOfDay } from './WeatherConfig'
+import type { ScenePresetName } from './ScenePreset'
 
 export interface EnvironmentThemeParams {
   readonly skyColor: number
@@ -285,15 +286,61 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
   },
 }
 
+// --- シーンプリセット別 地面色オーバーライド ---
+
+const SEASIDE_GROUND: Record<string, number> = {
+  'sunny-morning':  0xd4b878,
+  'sunny-day':      0xd4b878,
+  'sunny-evening':  0xc0a870,
+  'sunny-night':    0x5c5038,
+  'cloudy-morning': 0xccb078,
+  'cloudy-day':     0xc8ac70,
+  'cloudy-evening': 0xa89460,
+  'cloudy-night':   0x5c5038,
+  'rainy-morning':  0xc0a870,
+  'rainy-day':      0xc4a870,
+  'rainy-evening':  0xa89460,
+  'rainy-night':    0x584c30,
+  'snowy-morning':  0xd0c8b8,
+  'snowy-day':      0xc8c0b0,
+  'snowy-evening':  0xa89880,
+  'snowy-night':    0x686050,
+}
+
+/** 色を白方向にlerp（明度を上げる） */
+function lightenColor(hex: number, factor: number): number {
+  const r = (hex >> 16) & 0xff
+  const g = (hex >> 8) & 0xff
+  const b = hex & 0xff
+  const lr = Math.min(255, Math.round(r + (255 - r) * factor))
+  const lg = Math.min(255, Math.round(g + (255 - g) * factor))
+  const lb = Math.min(255, Math.round(b + (255 - b) * factor))
+  return (lr << 16) | (lg << 8) | lb
+}
+
 export function resolveEnvironmentTheme(
   weather: WeatherType,
-  timeOfDay: TimeOfDay
+  timeOfDay: TimeOfDay,
+  presetName?: ScenePresetName
 ): EnvironmentThemeParams {
   const key: ThemeKey = `${weather}-${timeOfDay}`
   const params = THEME_TABLE[key]
   if (!params) {
-    // 未知の天気タイプは sunny-day にフォールバック
     return THEME_TABLE['sunny-day']
+  }
+  if (presetName === 'seaside') {
+    const sandColor = SEASIDE_GROUND[key] ?? params.groundColor
+    return {
+      ...params,
+      skyColor: lightenColor(params.skyColor, 0.25),
+      fogColor: lightenColor(params.fogColor, 0.25),
+      hemiSkyColor: lightenColor(params.hemiSkyColor, 0.25),
+      groundColor: sandColor,
+      hemiGroundColor: sandColor,
+      exposure: params.exposure * 1.25,
+      sunIntensity: params.sunIntensity * 1.2,
+      ambientIntensity: params.ambientIntensity * 1.15,
+    }
   }
   return params
 }

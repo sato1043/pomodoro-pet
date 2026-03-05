@@ -1,4 +1,4 @@
-pomodoro-pet v0.6.0
+pomodoro-pet v0.7.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -30,7 +30,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **3D Character** — Autonomous behavior (idle, wander, sit, sleep), march during work, celebration on completion. Click, pet, and drag interactions
 - **Statistics** — 13-week heatmap, daily / 7-day / monthly summaries of completed cycles and work time
 - **Fureai Mode** — Feed the character by dragging apples and cabbages. Prompt input for behavior commands (English / Japanese keywords)
-- **Weather Settings** — Choose weather type (sunny / cloudy / rainy / snowy), cloud density (6 levels), and time of day (morning / day / evening / night / auto). Live preview with dynamic lighting and effects
+- **Weather Settings** — Choose scene preset (meadow / seaside / park), weather type (sunny / cloudy / rainy / snowy), cloud density (6 levels), and time of day (morning / day / evening / night / auto). Live preview with dynamic lighting and effects. Scene-linked ambient sounds (meadow→forest, seaside→wind, park→forest)
 - **Sound** — Procedural ambient sounds (forest / rain / wind), timer SFX, break BGM with crossfade, volume and mute controls
 - **Background Notifications** — System toast notifications for phase completion and cycle completion when the app is in the background
 - **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. All parameters persist across sessions with daily snapshots, event history tracking, and cross-session time-based changes (boredom decay, rest recovery, streak bonuses). Visual indicators (♥ ⚡ ★) in the fureai panel show current emotion state via opacity. Emotion trend chart in the Statistics panel displays 3-line graphs (satisfaction/fatigue/affinity) with period switching (7d/30d/All) and pomodoro completion event bars

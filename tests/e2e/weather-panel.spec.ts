@@ -26,6 +26,67 @@ test('WeatherButtonが表示されクリックでパネルが開く', async () =
   await page.locator('[data-testid="weather-close"]').click()
 })
 
+test('Scene行の3プリセットボタンが表示される', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // Scene行の3ボタンが存在する
+  await expect(page.locator('[data-testid="scene-meadow"]')).toBeVisible()
+  await expect(page.locator('[data-testid="scene-seaside"]')).toBeVisible()
+  await expect(page.locator('[data-testid="scene-park"]')).toBeVisible()
+
+  // デフォルトはmeadowがactive
+  await expect(page.locator('[data-testid="scene-meadow"]')).toHaveClass(/active/)
+
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('Sceneプリセット切替でactive状態が変化する', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // seasideをクリック
+  await page.locator('[data-testid="scene-seaside"]').click()
+  await expect(page.locator('[data-testid="scene-seaside"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="scene-meadow"]')).not.toHaveClass(/active/)
+
+  // parkをクリック
+  await page.locator('[data-testid="scene-park"]').click()
+  await expect(page.locator('[data-testid="scene-park"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="scene-seaside"]')).not.toHaveClass(/active/)
+
+  // meadowに戻す
+  await page.locator('[data-testid="scene-meadow"]').click()
+  await expect(page.locator('[data-testid="scene-meadow"]')).toHaveClass(/active/)
+
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('Sceneプリセット変更が閉じても保持される', async () => {
+  const { page } = app
+
+  // パネルを開いてseasideに変更
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await page.locator('[data-testid="scene-seaside"]').click()
+  await expect(page.locator('[data-testid="scene-seaside"]')).toHaveClass(/active/)
+
+  // 閉じる
+  await page.locator('[data-testid="weather-close"]').click()
+
+  // 再度開いてseasideが保持されていることを確認
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="scene-seaside"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="scene-meadow"]')).not.toHaveClass(/active/)
+
+  // meadowに戻す
+  await page.locator('[data-testid="scene-meadow"]').click()
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
 test('WeatherPanel表示時に他ボタンが非表示になる', async () => {
   const { page } = app
 
@@ -96,7 +157,6 @@ test('天気タイプの切替でactive状態が変化する', async () => {
   await page.locator('[data-testid="weather-sunny"]').click()
   await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
 
-  // 閉じる（Setを押さずに閉じる=復元）
   await page.locator('[data-testid="weather-close"]').click()
 })
 
@@ -137,35 +197,29 @@ test('時間帯切替でactive状態が変化する', async () => {
   await page.locator('[data-testid="weather-close"]').click()
 })
 
-test('Setを押さずに閉じるとスナップショットから復元される', async () => {
+test('天気・時間帯の変更が閉じても保持される', async () => {
   const { page } = app
 
-  // まずsunny+dayをSetで確定して既知の状態にする
+  // sunny+dayに設定
   await page.locator('[data-testid="weather-toggle"]').click()
   await page.locator('[data-testid="weather-sunny"]').click()
   await page.locator('[data-testid="time-day"]').click()
-  await page.locator('[data-testid="set-button"]').click()
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page.locator('[data-testid="weather-close"]').click()
 
-  // パネルを開く
+  // パネルを開いて rainy + night に変更
   await page.locator('[data-testid="weather-toggle"]').click()
-  await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
-  await expect(page.locator('[data-testid="time-day"]')).toHaveClass(/active/)
-
-  // rainy + nightに変更
   await page.locator('[data-testid="weather-rainy"]').click()
   await page.locator('[data-testid="time-night"]').click()
+  await page.locator('[data-testid="weather-close"]').click()
+
+  // 再度開いてrainy+nightが保持されていることを確認
+  await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-rainy"]')).toHaveClass(/active/)
   await expect(page.locator('[data-testid="time-night"]')).toHaveClass(/active/)
 
-  // Setを押さずに閉じる
-  await page.locator('[data-testid="weather-close"]').click()
-
-  // 再度開いて値が復元されていることを確認
-  await page.locator('[data-testid="weather-toggle"]').click()
-  await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
-  await expect(page.locator('[data-testid="time-day"]')).toHaveClass(/active/)
-
+  // sunnyに戻す
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await page.locator('[data-testid="time-day"]').click()
   await page.locator('[data-testid="weather-close"]').click()
 })
 

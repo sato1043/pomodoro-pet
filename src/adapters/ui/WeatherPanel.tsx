@@ -1,10 +1,9 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppDeps } from './AppContext'
-import { SetButton } from './SetButton'
 import { resolveTimeOfDay, cloudPresetLevel } from '../../domain/environment/value-objects/WeatherConfig'
-import type { WeatherType, TimeOfDay, WeatherConfig, CloudDensityLevel } from '../../domain/environment/value-objects/WeatherConfig'
-import type { SettingsEvent } from '../../application/settings/SettingsEvents'
+import type { WeatherType, TimeOfDay, WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
+import type { ScenePresetName } from '../../domain/environment/value-objects/ScenePreset'
 import * as styles from './styles/weather-panel.css'
 
 // --- SVG アイコン (18x18) ---
@@ -121,6 +120,43 @@ function ResetIcon(): JSX.Element {
   )
 }
 
+// --- Scene プリセットアイコン ---
+
+function MeadowIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 20 L12 4 L21 20 Z" />
+      <line x1="3" y1="20" x2="21" y2="20" />
+    </svg>
+  )
+}
+
+function SeasideIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M2 16c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+      <path d="M2 20c2-2 4-2 6 0s4 2 6 0 4-2 6 0" />
+      <circle cx="17" cy="7" r="4" />
+    </svg>
+  )
+}
+
+function ParkIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="22" x2="12" y2="12" />
+      <circle cx="12" cy="8" r="5" />
+      <line x1="3" y1="22" x2="21" y2="22" />
+    </svg>
+  )
+}
+
+const SCENE_OPTIONS: Array<{ value: ScenePresetName; icon: () => JSX.Element; title: string }> = [
+  { value: 'meadow', icon: MeadowIcon, title: 'Meadow' },
+  { value: 'seaside', icon: SeasideIcon, title: 'Seaside' },
+  { value: 'park', icon: ParkIcon, title: 'Park' },
+]
+
 // --- 定義 ---
 
 const WEATHER_OPTIONS: Array<{ value: WeatherType; icon: () => JSX.Element; enabled: boolean; title: string }> = [
@@ -139,53 +175,32 @@ const TIME_OPTIONS: Array<{ value: TimeOfDay; icon: () => JSX.Element; title: st
 
 // --- コンポーネント ---
 
-interface WeatherPanelProps {
-  readonly onClose: () => void
-}
-
-export function WeatherPanel({ onClose }: WeatherPanelProps): JSX.Element {
+export function WeatherPanel(): JSX.Element {
   const { settingsService, bus } = useAppDeps()
 
-  const snapshotRef = useRef<WeatherConfig>(settingsService.weatherConfig)
   const [draft, setDraft] = useState<WeatherConfig>(() => settingsService.weatherConfig)
-  const confirmedRef = useRef(false)
 
-  function publishPreview(next: WeatherConfig): void {
-    const event: SettingsEvent = {
+  function applyConfig(next: WeatherConfig): void {
+    bus.publish('WeatherConfigChanged', {
       type: 'WeatherConfigChanged',
       weather: next,
       timestamp: Date.now(),
-    }
-    bus.publish(event.type, event)
+    })
+    settingsService.updateWeatherConfig(next)
   }
 
   function updateDraft(partial: Partial<WeatherConfig>): void {
     setDraft(prev => {
       const next = { ...prev, ...partial }
-      publishPreview(next)
+      applyConfig(next)
       return next
     })
   }
 
-  function handleConfirm(): void {
-    settingsService.updateWeatherConfig(draft)
-    confirmedRef.current = true
-    onClose()
-  }
-
-  // マウント時: カメラ後退、アンマウント時: スナップショット復元 + カメラ復帰
+  // マウント時: カメラ後退、アンマウント時: カメラ復帰
   useEffect(() => {
     bus.publish('WeatherPreviewOpen', { open: true })
     return () => {
-      if (!confirmedRef.current) {
-        const snap = snapshotRef.current
-        const event: SettingsEvent = {
-          type: 'WeatherConfigChanged',
-          weather: snap,
-          timestamp: Date.now(),
-        }
-        bus.publish(event.type, event)
-      }
       bus.publish('WeatherPreviewOpen', { open: false })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -200,6 +215,24 @@ export function WeatherPanel({ onClose }: WeatherPanelProps): JSX.Element {
 
   return createPortal(
     <div className={styles.panel}>
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Scene</span>
+        {SCENE_OPTIONS.map(opt => {
+          const Icon = opt.icon
+          return (
+            <button
+              key={opt.value}
+              className={btnClass(draft.scenePreset === opt.value)}
+              onClick={() => updateDraft({ scenePreset: opt.value })}
+              title={opt.title}
+              data-testid={`scene-${opt.value}`}
+            >
+              <Icon />
+            </button>
+          )
+        })}
+      </div>
+
       <div className={styles.row}>
         <span className={styles.rowLabel}>Weather</span>
         {WEATHER_OPTIONS.map(opt => {
@@ -273,7 +306,6 @@ export function WeatherPanel({ onClose }: WeatherPanelProps): JSX.Element {
         </button>
       </div>
 
-      <SetButton onClick={handleConfirm} />
     </div>,
     document.body
   )

@@ -279,18 +279,19 @@
 - `SleepPreventionBridge`（アプリケーション層）がAppSceneChanged購読→powerSaveBlocker制御
 - `SleepPreventionPort`でElectron powerSaveBlocker APIを抽象化
 
-### 環境シーンのバリエーション — Phase 1: EnvironmentChunkのプリセット化基盤
+### ~~環境シーンのバリエーション — Phase 1: EnvironmentChunkのプリセット化基盤~~ — 完了
 - `ChunkSpec`を拡張し、オブジェクト種別（何を生成するか）を定義可能にする
-- `EnvironmentChunk`のオブジェクト生成ロジックをStrategy/Factory化
+- `EnvironmentChunk`のオブジェクト生成ロジックをStrategy/Factory化（ChunkDecorator）
 - 既存の草原シーンを最初のプリセット`meadow`として再定義
-- 目的: 後続Phaseでプリセットを追加するための土台
+- ScenePreset値オブジェクト（ドメイン層）で型安全にプリセット定義
 
-### 環境シーンのバリエーション — Phase 2: シーンプリセット追加（Phase 1完了後）
-- 海辺（seaside）、都市の公園（park）等のプリセット実装
-- プリセットごとに固有のオブジェクト（貝殻、波、ベンチ等）を生成
-- WeatherPanelまたは新UIからプリセット選択
-- 環境音とプリセットの連動（海辺→波音等）
-- 設定永続化
+### ~~環境シーンのバリエーション — Phase 2: シーンプリセット追加~~ — 完了
+- meadow（草原）/seaside（海辺）/park（公園）の3プリセット実装
+- seaside: 貝殻・流木・波打ち際泡・海岸岩
+- park: ベンチ・街灯・低木・花壇・広葉樹・草
+- WeatherPanelにScene選択行追加（3つのSVGアイコンボタン）
+- 環境音とプリセットの連動（meadow→forest, seaside→wind, park→forest）
+- settings.jsonのweather.scenePresetに永続化（後方互換: 未設定時はmeadowにフォールバック）
 
 ### ~~環境シーンのバリエーション — Phase 3: 時間帯遷移のlerp補間（独立）~~ — 完了
 - EnvironmentThemeParamsの全パラメータ（色7個・float5個・vec3 1個）をsmoothstep補間

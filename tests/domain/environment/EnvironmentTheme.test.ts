@@ -45,5 +45,40 @@ describe('EnvironmentTheme', () => {
       const params = resolveEnvironmentTheme('snowy', 'day')
       expect(params.groundColor).toBe(0xc0c0c8)
     })
+
+    it('seasideプリセットでgroundColorが砂色にオーバーライドされる', () => {
+      const meadow = resolveEnvironmentTheme('sunny', 'day')
+      const seaside = resolveEnvironmentTheme('sunny', 'day', 'seaside')
+      expect(seaside.groundColor).toBe(0xd4b878)
+      expect(seaside.hemiGroundColor).toBe(0xd4b878)
+      // 砂色は緑色と異なる
+      expect(seaside.groundColor).not.toBe(meadow.groundColor)
+      // skyColorは明るくなる
+      expect(seaside.skyColor).not.toBe(meadow.skyColor)
+      expect(seaside.skyColor).toBeGreaterThan(meadow.skyColor)
+      // seasideは輝度ブーストがかかる
+      expect(seaside.sunIntensity).toBeCloseTo(meadow.sunIntensity * 1.2)
+      expect(seaside.exposure).toBeCloseTo(meadow.exposure * 1.25)
+      expect(seaside.ambientIntensity).toBeCloseTo(meadow.ambientIntensity * 1.15)
+    })
+
+    it('seasideプリセットの全16パターンでgroundColorが有効値', () => {
+      for (const weather of WEATHER_TYPES) {
+        for (const timeOfDay of TIME_OF_DAYS) {
+          const params = resolveEnvironmentTheme(weather, timeOfDay, 'seaside')
+          expect(params.groundColor).toBeTypeOf('number')
+          expect(params.groundColor).toBeGreaterThan(0)
+          expect(params.hemiGroundColor).toBe(params.groundColor)
+        }
+      }
+    })
+
+    it('meadow/parkプリセットではgroundColorがオーバーライドされない', () => {
+      const base = resolveEnvironmentTheme('sunny', 'day')
+      const meadow = resolveEnvironmentTheme('sunny', 'day', 'meadow')
+      const park = resolveEnvironmentTheme('sunny', 'day', 'park')
+      expect(meadow.groundColor).toBe(base.groundColor)
+      expect(park.groundColor).toBe(base.groundColor)
+    })
   })
 })

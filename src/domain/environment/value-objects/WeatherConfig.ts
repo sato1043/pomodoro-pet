@@ -1,3 +1,6 @@
+import type { ScenePresetName } from './ScenePreset'
+export type { ScenePresetName }
+
 export type WeatherType = 'sunny' | 'cloudy' | 'rainy' | 'snowy'
 
 export type TimeOfDay = 'morning' | 'day' | 'evening' | 'night'
@@ -11,6 +14,7 @@ export interface WeatherConfig {
   readonly autoWeather: boolean
   readonly autoTimeOfDay: boolean
   readonly cloudDensityLevel: CloudDensityLevel
+  readonly scenePreset: ScenePresetName
 }
 
 const CLOUD_PRESET: Record<WeatherType, CloudDensityLevel> = {
@@ -31,6 +35,7 @@ export function createDefaultWeatherConfig(): WeatherConfig {
     autoWeather: false,
     autoTimeOfDay: false,
     cloudDensityLevel: CLOUD_PRESET['sunny'],
+    scenePreset: 'meadow',
   }
 }
 

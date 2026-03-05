@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.6.0**（= package.json）
+**バージョン: 0.7.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -32,7 +32,7 @@
 | 1 | Start Pomodoroボタン | StartPomodoroButton.tsx | 操作 | pomodoroTimer | ポモドーロサイクル開始 |
 | 2 | 設定パネル展開 | SettingsButton.tsx | 操作 | （制限不要） | タイマー設定・サウンド設定・テーマ等を展開 |
 | 3 | 統計パネル表示 | StatsButton.tsx, StatsDrawer.tsx | 操作 | stats | 13週間ヒートマップ・日別集計を表示 |
-| 4 | 天気設定パネル | WeatherButton.tsx, WeatherPanel.tsx | 操作 | weatherSettings | 天気タイプ・雲量・時間帯を選択・プレビュー |
+| 4 | 天気設定パネル | WeatherButton.tsx, WeatherPanel.tsx | 操作 | weatherSettings | シーンプリセット・天気タイプ・雲量・時間帯を選択・プレビュー |
 | 5 | タイマー設定エディタ | OverlayFree.tsx | 操作 | timerSettings | Work/Break/Long Break/Sets入力 |
 | 6 | サウンドプリセット選択 | VolumeControl.tsx | 操作 | soundSettings | silence/forest/rain/windプリセット切替 |
 | 7 | テーマ切替 | OverlayFree.tsx | 操作 | （制限不要） | System/Light/Dark選択 |
@@ -164,6 +164,7 @@
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
 | 65 | 背景スクロール | ScrollUseCase.ts, InfiniteScrollRenderer.ts | 自動 | character | march/wander時のチャンクスクロール |
+| 99 | シーンプリセット選択 | ScenePreset.ts, ChunkDecorator.ts, decorators/*.ts | 操作 | weatherSettings | meadow/seaside/parkの3プリセット切替+環境音連動 |
 | 66 | 天気エフェクト描画 | RainEffect.ts, SnowEffect.ts, CloudEffect.ts | 自動 | （制限不要） | 選択された天気の描画（設定UIを制限すれば十分）。opacityフェード（fadeIn/fadeOut）でテーマ遷移と同期。雲は密度変更時に退場バッチクロスフェード |
 | 67 | ライティング | main.ts, EnvironmentTheme.ts | 自動 | （制限不要） | 時間帯×天気のルックアップテーブル適用 |
 | 68 | オートタイムオブデイ | main.ts | 自動 | （制限不要） | 1分間隔の時間帯更新 |
@@ -250,6 +251,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行、環境音連動、settings.json永続化 |
 | 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
 | 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |
 | 0.5.0 | 機能追加 | 感情推移グラフUI追加（#98）。StatsDrawer内にsatisfaction/fatigue/affinityの3曲線折れ線グラフ+ポモドーロイベントバー。期間切替（7d/30d/All）、ダーク/ライト対応 |

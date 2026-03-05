@@ -3,7 +3,7 @@ import { vars } from './theme.css'
 
 export const panel = style({
   position: 'fixed',
-  bottom: 110,
+  bottom: 10,
   left: 66,
   borderRadius: 12,
   background: vars.color.overlayBg,

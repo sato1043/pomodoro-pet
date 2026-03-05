@@ -56,7 +56,7 @@ export function SceneFree(): JSX.Element {
       )}
       {showStats && <StatsDrawer onClose={() => setShowStats(false)} />}
       {showStats && <StatsCloseButton onClick={() => setShowStats(false)} />}
-      {showWeather && <WeatherPanel onClose={() => setShowWeather(false)} />}
+      {showWeather && <WeatherPanel />}
       {showWeather && <WeatherCloseButton onClick={() => setShowWeather(false)} />}
       {!hideButtons && <StartPomodoroButton />}
       {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
