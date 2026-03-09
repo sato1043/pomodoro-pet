@@ -43,7 +43,7 @@ export function KouDisplay({ kou, visible }: KouDisplayProps): JSX.Element | nul
   if (!visible || !displayKou) return null
 
   return createPortal(
-    <div className={styles.container} style={{ opacity }}>
+    <div className={styles.container} style={{ opacity }} data-testid="kou-display">
       <div className={styles.solarTerm}>
         {displayKou.solarTermName} {PHASE_LABELS[displayKou.phase]}
       </div>

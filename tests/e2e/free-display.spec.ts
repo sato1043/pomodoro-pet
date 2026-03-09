@@ -41,6 +41,17 @@ test('タイムライン設定サマリーが表示される', async () => {
   await expect(overlay.getByText(/Sets\s*=/)).toBeVisible()
 })
 
+test('タイムゾーン略称が時計に表示される', async () => {
+  const { page } = app
+
+  const overlay = page.locator('[data-testid="overlay-free"]')
+
+  // TZ略称（2〜5文字の大文字アルファベットまたはGMT±N形式）が表示される
+  // デフォルト地域はTokyoなのでJSTが期待される
+  const tzLabel = overlay.getByText(/^[A-Z]{2,5}$|^GMT[+-]\d{1,2}$|^ART$/)
+  await expect(tzLabel.first()).toBeVisible()
+})
+
 test('タイムラインに終了時刻が表示される', async () => {
   const { page } = app
 

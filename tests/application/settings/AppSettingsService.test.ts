@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createAppSettingsService, type AppSettingsService } from '../../../src/application/settings/AppSettingsService'
 import { createEventBus } from '../../../src/domain/shared/EventBus'
 import { createConfig, createDefaultConfig } from '../../../src/domain/timer/value-objects/TimerConfig'
@@ -392,6 +392,104 @@ describe('AppSettingsService', () => {
       service.updatePowerConfig({ preventSleep: false })
       service.resetToDefault()
       expect(service.powerConfig).toEqual({ preventSleep: true })
+    })
+  })
+
+  describe('loadFromStorage — theme復元', () => {
+    beforeEach(() => {
+      // window.electronAPI.loadSettingsをモック
+      (globalThis as any).window = {
+        electronAPI: {
+          loadSettings: vi.fn(),
+          saveSettings: vi.fn(),
+        },
+      }
+    })
+
+    afterEach(() => {
+      delete (globalThis as any).window
+    })
+
+    it.each(['system', 'light', 'dark', 'auto'] as const)(
+      'loadFromStorageで%sテーマを復元する',
+      async (theme) => {
+        ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue({ theme })
+        // loadFromStorageはwindow.electronAPI.loadSettingsの結果からテーマを復元する
+        // 新しいserviceを作成（beforeEachのwindowモック後に）
+        const svc = createAppSettingsService(bus)
+        await svc.loadFromStorage()
+        expect(svc.themePreference).toBe(theme)
+      }
+    )
+
+    it('loadFromStorageでThemeLoadedイベントを発行する', async () => {
+      ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue({ theme: 'auto' })
+      const received: SettingsEvent[] = []
+      bus.subscribe<SettingsEvent>('ThemeLoaded', (event) => received.push(event))
+
+      const svc = createAppSettingsService(bus)
+      await svc.loadFromStorage()
+
+      expect(received).toHaveLength(1)
+      expect(received[0].type).toBe('ThemeLoaded')
+      if (received[0].type === 'ThemeLoaded') {
+        expect(received[0].theme).toBe('auto')
+      }
+    })
+
+    it('loadFromStorageで無効なtheme値はデフォルトを保持する', async () => {
+      ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue({ theme: 'invalid' })
+      const svc = createAppSettingsService(bus)
+      await svc.loadFromStorage()
+      expect(svc.themePreference).toBe('system')
+    })
+
+    it('loadFromStorageでtheme未設定時はデフォルトを保持する', async () => {
+      ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue({})
+      const svc = createAppSettingsService(bus)
+      await svc.loadFromStorage()
+      expect(svc.themePreference).toBe('system')
+    })
+
+    it('loadFromStorageでthemeが文字列以外の場合はデフォルトを保持する', async () => {
+      ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue({ theme: 123 })
+      const svc = createAppSettingsService(bus)
+      await svc.loadFromStorage()
+      expect(svc.themePreference).toBe('system')
+    })
+
+    it('loadFromStorageでdata=null時は何もしない', async () => {
+      ;(globalThis as any).window.electronAPI.loadSettings.mockResolvedValue(null)
+      const svc = createAppSettingsService(bus)
+      await svc.loadFromStorage()
+      expect(svc.themePreference).toBe('system')
+    })
+  })
+
+  describe('themePreference', () => {
+    it('初期状態で system を保持する', () => {
+      expect(service.themePreference).toBe('system')
+    })
+
+    it('updateThemeConfig で light に変更できる', () => {
+      service.updateThemeConfig('light')
+      expect(service.themePreference).toBe('light')
+    })
+
+    it('updateThemeConfig で dark に変更できる', () => {
+      service.updateThemeConfig('dark')
+      expect(service.themePreference).toBe('dark')
+    })
+
+    it('updateThemeConfig で auto に変更できる', () => {
+      service.updateThemeConfig('auto')
+      expect(service.themePreference).toBe('auto')
+    })
+
+    it('resetToDefault で system に戻す', () => {
+      service.updateThemeConfig('auto')
+      service.resetToDefault()
+      expect(service.themePreference).toBe('system')
     })
   })
 

@@ -2,7 +2,7 @@ import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { SoundConfigInput, BackgroundConfigInput } from './AppSettingsService'
 import type { WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
 
-export type ThemePreference = 'system' | 'light' | 'dark'
+export type ThemePreference = 'system' | 'light' | 'dark' | 'auto'
 
 export type SettingsEvent =
   | { type: 'SettingsChanged'; config: TimerConfig; timestamp: number }

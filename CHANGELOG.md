@@ -8,6 +8,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- EnvironmentContext — 環境パラメータ（climate/currentKou/solarAltitude/isDaytime/timezone）をReact Contextで一元管理。EventBus購読→React状態変換のアダプター。updateClimate操作で永続化+イベント発行を内包
+- テーマ自動切替（auto） — ThemePreferenceに4番目の選択肢'auto'を追加。太陽高度角ベース（市民薄明-6°閾値）でlight/darkを自動切替。useResolvedThemeにisDayTimeパラメータ追加。OverlayFreeのテーマ選択UIにSunriseIconアイコン追加。AppSettingsServiceのthemeバリデーションにauto対応
 - 気候グリッドデータ生成スクリプト (`scripts/generate-climate-grid.ts`) — NASA POWER API (1991-2020 climatology) から5度格子の月別気候データを取得し `assets/data/climate-grid.json` に出力。中間キャッシュによる中断・再開対応。`npm run generate:climate` で実行
 - 海岸線SVGパス生成スクリプト (`scripts/generate-coastline-path.ts`) — Natural Earth 110m GeoJSONから世界地図用SVGパスを生成し `assets/data/coastline-path.json` に出力。`npm run generate:coastline` で実行
 - NASA POWERデータ帰属表示 — `licenses/ASSET_CREDITS.txt` にNASA POWER CERES/MERRA-2 Climatologyのクレジットを追加
@@ -25,6 +27,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - タイムゾーン表示 — tz-lookupで緯度経度→IANAタイムゾーン自動解決。事前生成済み略称マッピング（386エントリ、103 DST対応）で正確な略称表示（JST/EST/AEDT等）。フリーモードの時計・タイムラインを選択地域の現地時刻で表示。`scripts/generate-timezone-abbr.ts`で生成
 
 ### Changed
+- autoWeatherとロケーション設定を分離 — 地点選択がautoWeather=trueを強制しなくなった。envSimServiceはautoWeather状態に関わらず常に稼働し天文計算ベースのテーマ生成を継続。autoWeatherはenvSimService内部の天気自動決定（decideWeather）の有効/無効のみを制御。LocationButton・KouDisplayはautoWeather非依存で常に表示。WeatherPanelのAutoボタンを天気アイコンと排他選択に変更（Autoクリック→auto有効、天気アイコンクリック→auto解除）。WeatherPanel内のLocationボタン（GlobeIcon）を削除（フリーモードのLocationButtonに一本化）
 - ClimateGridAdapter APIをデータ注入方式に変更 — `createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルされたJSONデータを直接受け取る。`load(url)` / `fetch` / `isLoaded=false` フォールバックを廃止。`ClimateGridJson` 型をexport
 - 陸地データをne_110m_coastline（LineString）からne_110m_land（Polygon）に変更 — 閉じたポリゴンでSVG fillが正しく機能し、180°境界でのアーティファクトを解消
 - 日付変更線をNatural Earth ne_110m_geographic_linesの正確なデータに変更（手動14点概略→2047座標）
@@ -32,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - Terminator昼夜境界の反転バグ修正 — `Math.atan2`を`Math.atan`に変更。負の赤緯（9月〜3月）でatan2が2/3象限の値を返しclampで誤った緯度になる問題を解消
+- Ushuaiaタイムゾーン表示を`-03`から`ART`に修正 — tz-lookupがUshuaia座標をAmerica/Punta_Arenas（チリ）に誤マッピングする境界精度問題を`TZ_BOUNDARY_OVERRIDES`テーブルで補正。generate-timezone-abbrにArgentina`-03`→`ART`ポストプロセス追加
+- 手動timeOfDay選択がシーンに反映されないバグ修正 — `EnvironmentSimulationService.setManualTimeOfDay()`を追加。autoWeather=false かつ autoTimeOfDay=false 時に擬似太陽/月位置でテーマを生成（morning=高度10°、day=50°、evening=5°、night=-20°）。候計算は実太陽位置を維持
+- 手動天気/時間帯切替時のテーマ遷移が30秒かかるバグ修正 — 手動操作（setManualTimeOfDay/setManualWeather/setAutoWeather/onClimateChanged/onScenePresetChanged）時の遷移時間を1.5秒に短縮。通常の30秒間隔天体更新時のみ30秒遷移を維持
+- 起動時に永続化された時間帯設定がシーンに反映されないバグ修正 — WeatherConfigChangedハンドラでオーバーライド設定をstart()より前に移動。applyImmediate()が内部状態のみ更新しtick()がnullを返す問題に対し、start()直後にapplyThemeToScene()を明示的に呼び出し
 
 ## [0.7.0] - 2026-03-05
 

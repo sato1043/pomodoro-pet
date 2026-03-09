@@ -4,10 +4,6 @@ import { useAppDeps } from './AppContext'
 import { resolveTimeOfDay, cloudPresetLevel } from '../../domain/environment/value-objects/WeatherConfig'
 import type { WeatherType, TimeOfDay, WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
 import type { ScenePresetName } from '../../domain/environment/value-objects/ScenePreset'
-import { DEFAULT_CLIMATE } from '../../domain/environment/value-objects/ClimateData'
-import type { ClimateConfig } from '../../domain/environment/value-objects/ClimateData'
-import { WorldMapModal } from './WorldMapModal'
-import coastlineData from '../../../assets/data/coastline-path.json'
 import * as styles from './styles/weather-panel.css'
 
 // --- SVG アイコン (18x18) ---
@@ -115,16 +111,6 @@ function AutoIcon(): JSX.Element {
   )
 }
 
-function GlobeIcon(): JSX.Element {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z" />
-    </svg>
-  )
-}
-
 function ResetIcon(): JSX.Element {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -193,7 +179,6 @@ export function WeatherPanel(): JSX.Element {
   const { settingsService, bus } = useAppDeps()
 
   const [draft, setDraft] = useState<WeatherConfig>(() => settingsService.weatherConfig)
-  const [showWorldMap, setShowWorldMap] = useState(false)
 
   function applyConfig(next: WeatherConfig): void {
     bus.publish('WeatherConfigChanged', {
@@ -253,13 +238,13 @@ export function WeatherPanel(): JSX.Element {
         <span className={styles.rowLabel}>Weather</span>
         {WEATHER_OPTIONS.map(opt => {
           const Icon = opt.icon
-          const manualDisabled = !opt.enabled || draft.autoWeather
+          const isDisabled = !opt.enabled
           return (
             <button
               key={opt.value}
-              className={btnClass(!draft.autoWeather && draft.weather === opt.value && opt.enabled, manualDisabled)}
-              onClick={() => { if (!manualDisabled) { updateDraft({ weather: opt.value, autoWeather: false, cloudDensityLevel: cloudPresetLevel(opt.value) }) } }}
-              disabled={manualDisabled}
+              className={btnClass(!draft.autoWeather && draft.weather === opt.value && opt.enabled, isDisabled)}
+              onClick={() => { if (!isDisabled) { updateDraft({ weather: opt.value, autoWeather: false, cloudDensityLevel: cloudPresetLevel(opt.value) }) } }}
+              disabled={isDisabled}
               title={opt.title}
               data-testid={`weather-${opt.value}`}
             >
@@ -275,16 +260,6 @@ export function WeatherPanel(): JSX.Element {
         >
           A
         </button>
-        {draft.autoWeather && (
-          <button
-            className={styles.iconBtn}
-            onClick={() => setShowWorldMap(true)}
-            title={`Location: ${draft.climate?.label ?? DEFAULT_CLIMATE.label}`}
-            data-testid="weather-location"
-          >
-            <GlobeIcon />
-          </button>
-        )}
       </div>
 
       <div className={styles.row}>
@@ -312,13 +287,11 @@ export function WeatherPanel(): JSX.Element {
         <span className={styles.rowLabel}>Time</span>
         {TIME_OPTIONS.map(opt => {
           const Icon = opt.icon
-          const timeDisabled = draft.autoWeather
           return (
             <button
               key={opt.value}
-              className={btnClass(!draft.autoWeather && !draft.autoTimeOfDay && draft.timeOfDay === opt.value, timeDisabled)}
-              onClick={() => { if (!timeDisabled) updateDraft({ timeOfDay: opt.value, autoTimeOfDay: false, autoWeather: false }) }}
-              disabled={timeDisabled}
+              className={btnClass(!draft.autoWeather && !draft.autoTimeOfDay && draft.timeOfDay === opt.value)}
+              onClick={() => updateDraft({ timeOfDay: opt.value, autoTimeOfDay: false, autoWeather: false })}
               title={opt.title}
               data-testid={`time-${opt.value}`}
             >
@@ -327,9 +300,8 @@ export function WeatherPanel(): JSX.Element {
           )
         })}
         <button
-          className={btnClass(!draft.autoWeather && draft.autoTimeOfDay, draft.autoWeather)}
-          onClick={() => { if (!draft.autoWeather) updateDraft({ autoTimeOfDay: true }) }}
-          disabled={draft.autoWeather}
+          className={btnClass(!draft.autoWeather && draft.autoTimeOfDay)}
+          onClick={() => updateDraft({ autoTimeOfDay: true, autoWeather: false })}
           title={`Auto (${resolveTimeOfDay(new Date().getHours())})`}
           data-testid="time-auto"
         >
@@ -339,16 +311,6 @@ export function WeatherPanel(): JSX.Element {
 
     </div>,
     document.body
-  )}
-  {showWorldMap && (
-    <WorldMapModal
-      isOpen={showWorldMap}
-      currentClimate={draft.climate ?? DEFAULT_CLIMATE}
-      coastlinePath={(coastlineData as { path: string; idlPath: string }).path}
-      idlPath={(coastlineData as { path: string; idlPath: string }).idlPath}
-      onClose={() => setShowWorldMap(false)}
-      onApply={(climate: ClimateConfig) => updateDraft({ climate })}
-    />
   )}
   </>)
 }

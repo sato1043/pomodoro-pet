@@ -1,6 +1,7 @@
-import { useState, useRef, useCallback, useEffect } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useLicenseMode } from './LicenseContext'
 import { useAppDeps } from './AppContext'
+import { useEnvironment } from './EnvironmentContext'
 import { OverlayFree } from './OverlayFree'
 import { FureaiEntryButton } from './FureaiEntryButton'
 import { StartPomodoroButton } from './StartPomodoroButton'
@@ -17,35 +18,18 @@ import { FeatureLockedOverlay } from './FeatureLockedOverlay'
 import { LocationButton } from './LocationButton'
 import { WorldMapModal } from './WorldMapModal'
 import { KouDisplay } from './KouDisplay'
-import { DEFAULT_CLIMATE } from '../../domain/environment/value-objects/ClimateData'
-import type { ClimateConfig } from '../../domain/environment/value-objects/ClimateData'
-import { resolveTimezone } from '../../domain/environment/value-objects/Timezone'
-import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
-import type { KouChangedEvent } from '../../application/environment/EnvironmentSimulationService'
 import coastlineData from '../../../assets/data/coastline-path.json'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
-  const { fureaiCoordinator, galleryCoordinator, settingsService, bus, envSimService } = useAppDeps()
+  const { fureaiCoordinator, galleryCoordinator } = useAppDeps()
+  const { climate, currentKou, timezone, updateClimate } = useEnvironment()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [showWeather, setShowWeather] = useState(false)
   const [showLocked, setShowLocked] = useState(false)
   const [showWorldMap, setShowWorldMap] = useState(false)
-  const [timezone, setTimezone] = useState(() => {
-    const c = settingsService.weatherConfig.climate
-    return resolveTimezone(c?.latitude ?? DEFAULT_CLIMATE.latitude, c?.longitude ?? DEFAULT_CLIMATE.longitude)
-  })
-  const [currentKou, setCurrentKou] = useState<KouDefinition | null>(envSimService.currentKou)
   const toggleSettingsRef = useRef<() => void>(() => {})
-
-  // KouChangedイベント購読
-  useEffect(() => {
-    const unsubscribe = bus.subscribe<KouChangedEvent>('KouChanged', (event) => {
-      setCurrentKou(event.kou)
-    })
-    return unsubscribe
-  }, [bus])
   const hideButtons = showStats || settingsExpanded || showWeather
 
   const handleToggleRef = useCallback((toggle: () => void) => {
@@ -89,30 +73,22 @@ export function SceneFree(): JSX.Element {
       {!hideButtons && <FureaiEntryButton onClick={handleFureaiClick} />}
       {!hideButtons && <LocationButton
         onClick={() => setShowWorldMap(true)}
-        label={settingsService.weatherConfig.climate?.label ?? DEFAULT_CLIMATE.label}
+        label={climate.label}
       />}
       {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
       {!hideButtons && <GalleryEntryButton onClick={handleGalleryClick} />}
       {showWorldMap && (
         <WorldMapModal
           isOpen={showWorldMap}
-          currentClimate={settingsService.weatherConfig.climate ?? DEFAULT_CLIMATE}
+          currentClimate={climate}
           coastlinePath={(coastlineData as { path: string; idlPath: string }).path}
           idlPath={(coastlineData as { path: string; idlPath: string }).idlPath}
           onClose={() => setShowWorldMap(false)}
-          onApply={(climate: ClimateConfig) => {
-            setTimezone(resolveTimezone(climate.latitude, climate.longitude))
-            settingsService.updateWeatherConfig({ climate, autoWeather: true })
-            bus.publish('WeatherConfigChanged', {
-              type: 'WeatherConfigChanged',
-              weather: { ...settingsService.weatherConfig, climate, autoWeather: true },
-              timestamp: Date.now(),
-            })
-          }}
+          onApply={updateClimate}
         />
       )}
       {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
-      <KouDisplay kou={currentKou} visible={settingsService.weatherConfig.autoWeather && !hideButtons} />
+      <KouDisplay kou={currentKou} visible={currentKou !== null && !hideButtons} />
     </>
   )
 }

@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect } from 'react'
 import type { ThemePreference } from '../../application/settings/SettingsEvents'
 import type { SettingsEvent } from '../../application/settings/SettingsEvents'
 import { useAppDeps } from './AppContext'
+import { useEnvironment } from './EnvironmentContext'
 import { useEventBusCallback } from './hooks/useEventBus'
 import { useResolvedTheme } from './hooks/useResolvedTheme'
 import { darkThemeClass, lightThemeClass } from './styles/theme.css'
@@ -15,10 +16,11 @@ const ThemeContext = createContext<ThemeContextValue | null>(null)
 
 export function ThemeProvider({ children }: { children: React.ReactNode }): JSX.Element {
   const { settingsService, bus } = useAppDeps()
+  const { isDaytime } = useEnvironment()
   const [themePreference, setThemePreference] = useState<ThemePreference>(
     () => settingsService.themePreference
   )
-  const resolvedTheme = useResolvedTheme(themePreference)
+  const resolvedTheme = useResolvedTheme(themePreference, isDaytime)
 
   useEventBusCallback<SettingsEvent>(bus, 'ThemeLoaded', (event) => {
     if (event.type === 'ThemeLoaded') {

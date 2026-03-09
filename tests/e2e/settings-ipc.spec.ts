@@ -414,6 +414,69 @@ test('アプリ再起動後にscenePreset設定が復元される', async () => 
   await app2.close()
 })
 
+test('Autoテーマ設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // 展開 → Auto選択 → Set確定
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  await page.getByRole('button', { name: 'Auto' }).click()
+  await page.locator('[data-testid="set-button"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+
+  await page.waitForTimeout(500)
+
+  // settings.json確認
+  const settingsPath = join(userDataPath, 'settings.json')
+  expect(existsSync(settingsPath)).toBe(true)
+
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.theme).toBe('auto')
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にAutoテーマ設定が復元される', async () => {
+  // 1回目: テーマをAutoに変更して保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  await page1.locator('[data-testid="settings-toggle"]').click()
+  await expect(page1.getByRole('button', { name: 'Set' })).toBeVisible()
+
+  await page1.getByRole('button', { name: 'Auto' }).click()
+  await page1.getByRole('button', { name: 'Set' }).click()
+  await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動してAutoテーマが復元されているか確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  await page2.waitForTimeout(1000) // テーマ復元の非同期処理を待つ
+
+  // autoテーマが適用されている場合、isDaytimeに応じてlight/darkのいずれか
+  const colorScheme = await page2.evaluate(() =>
+    getComputedStyle(document.documentElement).colorScheme
+  )
+  expect(['light', 'dark']).toContain(colorScheme)
+
+  // 設定パネルを開いてAutoが選択状態であることを確認
+  await page2.locator('[data-testid="settings-toggle"]').click()
+  await expect(page2.locator('[data-testid="set-button"]')).toBeVisible()
+  await page2.waitForTimeout(500)
+
+  // Autoボタンがactive状態であることを確認
+  const autoButton = page2.getByRole('button', { name: 'Auto' })
+  const classes = await autoButton.getAttribute('class')
+  expect(classes).toContain('active')
+
+  await app2.close()
+})
+
 test('アプリ再起動後にテーマ設定が復元される', async () => {
   // VITE_DEBUG_TIMER有効時はタイマー設定の復元がスキップされるため、
   // テーマ設定で永続化・復元を検証する
@@ -445,6 +508,67 @@ test('アプリ再起動後にテーマ設定が復元される', async () => {
     getComputedStyle(document.documentElement).colorScheme
   )
   expect(colorScheme).toBe('dark')
+
+  await app2.close()
+})
+
+test('autoWeather設定がsettings.jsonに永続化される', async () => {
+  const { electronApp, page } = await launchFresh()
+
+  const userDataPath = await electronApp.evaluate(({ app }) => app.getPath('userData'))
+
+  // Weatherパネルを開く
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // Autoをオン
+  await page.locator('[data-testid="weather-auto"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+
+  // 閉じる
+  await page.locator('[data-testid="weather-close"]').click()
+  await page.waitForTimeout(500)
+
+  // settings.jsonを確認
+  const settingsPath = join(userDataPath, 'settings.json')
+  const savedSettings = JSON.parse(readFileSync(settingsPath, 'utf-8'))
+  expect(savedSettings.weather?.autoWeather).toBe(true)
+
+  await electronApp.close()
+})
+
+test('アプリ再起動後にautoWeather設定が復元される', async () => {
+  // 1回目: autoWeather=trueにして保存
+  const { electronApp: app1, page: page1 } = await launchFresh()
+
+  await page1.locator('[data-testid="weather-toggle"]').click()
+  await expect(page1.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  await page1.locator('[data-testid="weather-auto"]').click()
+  await expect(page1.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+
+  await page1.locator('[data-testid="weather-close"]').click()
+  await page1.waitForTimeout(500)
+
+  await app1.close()
+
+  // 2回目: 再起動して復元を確認
+  const { electronApp: app2, page: page2 } = await launchFresh()
+
+  await page2.locator('[data-testid="weather-toggle"]').click()
+  await page2.waitForTimeout(500)
+
+  // Autoボタンがactive状態
+  await expect(page2.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+
+  // Weather/Cloud/Time行はautoWeather中も操作可能（操作するとauto解除）
+  await expect(page2.locator('[data-testid="weather-sunny"]')).not.toBeDisabled()
+  await expect(page2.locator('[data-testid="time-morning"]')).not.toBeDisabled()
+
+  // autoをオフに戻す（天気アイコンクリックで排他切替）
+  await page2.locator('[data-testid="weather-sunny"]').click()
+  await page2.locator('[data-testid="weather-close"]').click()
+  await page2.waitForTimeout(500)
 
   await app2.close()
 })

@@ -198,7 +198,7 @@ export function createAppSettingsService(
       if (!data) return
 
       // テーマ設定の復元（最初に実行。UIレンダリング前にテーマクラスを適用するため）
-      if (typeof data.theme === 'string' && ['system', 'light', 'dark'].includes(data.theme)) {
+      if (typeof data.theme === 'string' && ['system', 'light', 'dark', 'auto'].includes(data.theme)) {
         currentTheme = data.theme as ThemePreference
         publishThemeLoaded(currentTheme)
       }

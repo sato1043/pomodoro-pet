@@ -22,6 +22,20 @@ describe('resolveTimezone', () => {
     expect(resolveTimezone(25.2048, 55.2708)).toBe('Asia/Dubai')
   })
 
+  it('Ushuaia（アルゼンチン）はtz-lookup境界補正でAmerica/Argentina/Ushuaiaを返す', () => {
+    // tz-lookupはこの座標をAmerica/Punta_Arenas（チリ）と判定するが、
+    // 座標がアルゼンチン領内のためオーバーライドで補正される
+    expect(resolveTimezone(-54.8019, -68.3030)).toBe('America/Argentina/Ushuaia')
+  })
+
+  it('オーバーライド範囲外のPunta_Arenas座標は補正されない', () => {
+    // Punta Arenas市街地（チリ側 南緯-53.15°）はオーバーライド範囲（南緯-56〜-50）内だが
+    // 西経-70.9°はオーバーライドの経度範囲（-70〜-65）外
+    // tz-lookupがPunta_Arenasを返し、チリ側なので補正しない
+    const tz = resolveTimezone(-53.15, -70.92)
+    expect(tz).not.toMatch(/Argentina/)
+  })
+
   it('海上座標でもエラーにならずEtc/GMTベースを返す', () => {
     // 太平洋上（陸から遠い座標）
     const tz = resolveTimezone(0, -170)
@@ -69,6 +83,11 @@ describe('formatTimezoneLabel', () => {
   it('New York夏はEDT', () => {
     const date = new Date('2026-06-01T00:00:00Z')
     expect(formatTimezoneLabel('America/New_York', date)).toBe('EDT')
+  })
+
+  it('Ushuaia（アルゼンチン）のラベルはART', () => {
+    const date = new Date('2026-01-01T00:00:00Z')
+    expect(formatTimezoneLabel('America/Argentina/Ushuaia', date)).toBe('ART')
   })
 
   it('マッピングにないタイムゾーンはGMT+Nを返す', () => {

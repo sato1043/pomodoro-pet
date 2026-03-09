@@ -47,7 +47,8 @@ import type { CharacterBehavior } from './domain/character/value-objects/Behavio
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
 import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConfig'
-import { resolveEnvironmentTheme } from './domain/environment/value-objects/EnvironmentTheme'
+// resolveEnvironmentTheme は envSimService が天文計算ベースでテーマ生成するため不要
+// EnvironmentTheme型はapplyThemeToSceneの引数型として間接的に使用される
 import type { EnvironmentThemeParams } from './domain/environment/value-objects/EnvironmentTheme'
 import { isFeatureEnabled } from './application/license/LicenseState'
 import type { LicenseMode } from './application/license/LicenseState'
@@ -197,30 +198,22 @@ async function main(): Promise<void> {
   const themeTransition = createThemeTransitionService()
 
   // 天気適用関数
-  function applyWeather(config: WeatherConfig, immediate = false): void {
+  /**
+   * 天気エフェクト（雨/雪/雲パーティクル）の適用。
+   * テーマ（ライティング）はenvSimServiceが天文計算ベースで生成するため、ここではエフェクトのみ制御する。
+   */
+  function applyWeatherEffects(config: WeatherConfig, immediate = false): void {
     const weather = config.weather
-    const timeOfDay = config.autoTimeOfDay
-      ? resolveTimeOfDay(new Date().getHours())
-      : config.timeOfDay
-    const params = resolveEnvironmentTheme(weather, timeOfDay, config.scenePreset)
 
     if (immediate) {
-      themeTransition.applyImmediate(params)
-      applyThemeToScene(params)
-
-      // 即座切替（初回起動）
       rainEffect.setVisible(weather === 'rainy')
       snowEffect.setVisible(weather === 'snowy')
       cloudEffect.setWeatherColor(weather)
       cloudEffect.setDensity(config.cloudDensityLevel)
       cloudEffect.setVisible(config.cloudDensityLevel > 0)
     } else {
-      const duration = config.autoTimeOfDay
-        ? THEME_TRANSITION_DURATION_AUTO_MS
-        : THEME_TRANSITION_DURATION_MANUAL_MS
-      themeTransition.transitionTo(params, duration)
+      const duration = THEME_TRANSITION_DURATION_MANUAL_MS
 
-      // エフェクトのopacityフェード
       if (weather === 'rainy') rainEffect.fadeIn(duration)
       else rainEffect.fadeOut(duration)
 
@@ -468,7 +461,7 @@ async function main(): Promise<void> {
   function startAutoTimeInterval(): void {
     if (autoTimeInterval !== null) return
     autoTimeInterval = setInterval(() => {
-      applyWeather(settingsService.weatherConfig)
+      applyWeatherEffects(settingsService.weatherConfig)
     }, 60000)
   }
   function stopAutoTimeInterval(): void {
@@ -483,22 +476,38 @@ async function main(): Promise<void> {
     if (event.type !== 'WeatherConfigChanged') return
     switchScenePreset(event.weather.scenePreset)
 
+    const climate = event.weather.climate ?? DEFAULT_CLIMATE
+
+    // オーバーライド設定をstart()より前に適用（start内のrunFullComputationが正しい値を使うため）
+    envSimService.setAutoWeather(event.weather.autoWeather)
+
+    if (!event.weather.autoWeather && !event.weather.autoTimeOfDay) {
+      envSimService.setManualTimeOfDay(event.weather.timeOfDay)
+    } else {
+      envSimService.setManualTimeOfDay(null)
+    }
+
+    if (!event.weather.autoWeather) {
+      envSimService.setManualWeather({
+        weather: event.weather.weather,
+        precipIntensity: 0,
+        cloudDensity: event.weather.cloudDensityLevel / 5,
+      })
+    }
+
+    // envSimServiceは climate が設定されていれば常時起動（天文計算+テーマ生成）
+    if (!envSimService.isRunning) {
+      envSimService.start(climate, event.weather.scenePreset)
+    } else {
+      envSimService.onClimateChanged(climate)
+      envSimService.onScenePresetChanged(event.weather.scenePreset)
+    }
+
     if (event.weather.autoWeather) {
-      // autoWeather有効: envSimServiceに委譲
-      const climate = event.weather.climate ?? DEFAULT_CLIMATE
-      if (!envSimService.isRunning) {
-        envSimService.start(climate, event.weather.scenePreset)
-      } else {
-        envSimService.onClimateChanged(climate)
-        envSimService.onScenePresetChanged(event.weather.scenePreset)
-      }
       stopAutoTimeInterval()
     } else {
-      // autoWeather無効: envSimService停止、手動テーマ適用
-      if (envSimService.isRunning) {
-        envSimService.stop()
-      }
-      applyWeather(event.weather)
+      // 手動天気のエフェクト適用
+      applyWeatherEffects(event.weather)
     }
   })
 
@@ -589,11 +598,31 @@ async function main(): Promise<void> {
 
   // 初期天気・プリセット適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
   switchScenePreset(settingsService.weatherConfig.scenePreset)
-  if (settingsService.weatherConfig.autoWeather) {
-    const climate = settingsService.weatherConfig.climate ?? DEFAULT_CLIMATE
-    envSimService.start(climate, settingsService.weatherConfig.scenePreset)
-  } else {
-    applyWeather(settingsService.weatherConfig, true)
+  {
+    const wc = settingsService.weatherConfig
+    const climate = wc.climate ?? DEFAULT_CLIMATE
+    // envSimServiceは常に起動（天文計算ベースのライティング）
+    envSimService.setAutoWeather(wc.autoWeather)
+    if (!wc.autoWeather) {
+      envSimService.setManualWeather({
+        weather: wc.weather,
+        precipIntensity: 0,
+        cloudDensity: wc.cloudDensityLevel / 5,
+      })
+    }
+    // 手動timeOfDay: autoWeather=false かつ autoTimeOfDay=false の場合のみ
+    if (!wc.autoWeather && !wc.autoTimeOfDay) {
+      envSimService.setManualTimeOfDay(wc.timeOfDay)
+    }
+    envSimService.start(climate, wc.scenePreset)
+    // 起動時テーマを即座にシーンに反映（applyImmediateは内部状態のみ更新しtick()はnullを返すため）
+    if (themeTransition.currentParams) {
+      applyThemeToScene(themeTransition.currentParams)
+    }
+    if (!wc.autoWeather) {
+      // 手動天気のエフェクト適用（即座切替）
+      applyWeatherEffects(wc, true)
+    }
   }
 
   // 初回React UIレンダリング
@@ -720,7 +749,7 @@ async function main(): Promise<void> {
 
     // autoTimeOfDay有効時、バックグラウンド中の時間帯変化を反映（プレビュー中はスキップ）
     if (!weatherPreviewOpen && settingsService.weatherConfig.autoTimeOfDay) {
-      applyWeather(settingsService.weatherConfig)
+      applyWeatherEffects(settingsService.weatherConfig)
     }
   })
 

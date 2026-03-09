@@ -88,6 +88,20 @@ export function generateTimezoneAbbr(
     }
   }
 
+  // ポストプロセス: システムtzdataが名前付き略称を持たない地域の補正
+  // アルゼンチン（America/Argentina/*）: "-03" → "ART" (Argentina Time)
+  // ART はIANA公式略称ではないが、現地で広く認識されている略称
+  for (const tz of Object.keys(result)) {
+    if (tz.startsWith('America/Argentina/')) {
+      const val = result[tz]
+      if (val === '-03') {
+        result[tz] = 'ART'
+      } else if (Array.isArray(val) && val[0] === '-03') {
+        result[tz] = ['ART', val[1], val[2]]
+      }
+    }
+  }
+
   return result
 }
 

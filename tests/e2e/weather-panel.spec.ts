@@ -160,16 +160,94 @@ test('天気タイプの切替でactive状態が変化する', async () => {
   await page.locator('[data-testid="weather-close"]').click()
 })
 
-test('autoWeatherボタンが非活性（disabled）', async () => {
+test('autoWeatherは天気タイプと排他選択で動作する', async () => {
   const { page } = app
 
   await page.locator('[data-testid="weather-toggle"]').click()
   await expect(page.locator('[data-testid="weather-auto"]')).toBeVisible()
 
-  // disabled属性を確認
-  await expect(page.locator('[data-testid="weather-auto"]')).toBeDisabled()
+  // Autoボタンはdisabledでないこと
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toBeDisabled()
+
+  // 初期状態: autoWeather=false → Autoはnon-active、sunnyがactive
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+  await expect(page.locator('[data-testid="weather-sunny"]')).toHaveClass(/active/)
+
+  // Autoクリック → autoWeather=true、Autoがactive、sunnyがnon-active
+  await page.locator('[data-testid="weather-auto"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="weather-sunny"]')).not.toHaveClass(/active/)
+
+  // 天気アイコンクリック → autoWeather=false、選択した天気がactive、Autoがnon-active
+  await page.locator('[data-testid="weather-rainy"]').click()
+  await expect(page.locator('[data-testid="weather-rainy"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+
+  // sunnyに戻す
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('autoWeather有効時にWeather/Time行の操作でautoが解除され、Cloud行はdisabled', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // sunnyに明示的に設定（前テストの状態をクリア）
+  await page.locator('[data-testid="weather-sunny"]').click()
+
+  // Autoをオン
+  await page.locator('[data-testid="weather-auto"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+
+  // Weather/Time行は操作可能（disabledでない）
+  await expect(page.locator('[data-testid="weather-sunny"]')).not.toBeDisabled()
+  await expect(page.locator('[data-testid="time-morning"]')).not.toBeDisabled()
+
+  // Cloud行はdisabled（autoWeather時は雲量も自動）
+  await expect(page.locator('[data-testid="cloud-reset"]')).toBeDisabled()
+
+  // 天気アイコンクリック → autoWeather解除
+  await page.locator('[data-testid="weather-rainy"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+  await expect(page.locator('[data-testid="weather-rainy"]')).toHaveClass(/active/)
+
+  // Cloud行のdisabled解除を確認
+  await expect(page.locator('[data-testid="cloud-reset"]')).not.toBeDisabled()
+
+  // 再度Autoオン
+  await page.locator('[data-testid="weather-auto"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+
+  // Time行クリック → autoWeather解除
+  await page.locator('[data-testid="time-morning"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+  await expect(page.locator('[data-testid="time-morning"]')).toHaveClass(/active/)
+
+  // sunnyに戻す
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('WeatherPanelにLocationボタンが存在しない', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // weather-locationは削除済み
+  await expect(page.locator('[data-testid="weather-location"]')).not.toBeVisible()
 
   await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('LocationButtonがフリーモードで表示される', async () => {
+  const { page } = app
+
+  // フリーモードでLocationButtonが見える
+  await expect(page.locator('[data-testid="location-button"]')).toBeVisible()
 })
 
 test('時間帯切替でactive状態が変化する', async () => {
@@ -194,6 +272,32 @@ test('時間帯切替でactive状態が変化する', async () => {
   // Dayに戻す
   await page.locator('[data-testid="time-day"]').click()
 
+  await page.locator('[data-testid="weather-close"]').click()
+})
+
+test('Time手動選択→autoWeather有効化→再度autoWeather解除でTime選択が維持される', async () => {
+  const { page } = app
+
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // nightを選択（autoWeather=false, autoTimeOfDay=false）
+  await page.locator('[data-testid="time-night"]').click()
+  await expect(page.locator('[data-testid="time-night"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+
+  // autoWeather有効化
+  await page.locator('[data-testid="weather-auto"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).toHaveClass(/active/)
+  // Time行のnightはnon-active（autoWeather中はTimeの手動選択が表示されない）
+  await expect(page.locator('[data-testid="time-night"]')).not.toHaveClass(/active/)
+
+  // 天気アイコンでautoWeather解除
+  await page.locator('[data-testid="weather-sunny"]').click()
+  await expect(page.locator('[data-testid="weather-auto"]')).not.toHaveClass(/active/)
+
+  // sunnyに戻す + dayに戻す
+  await page.locator('[data-testid="time-day"]').click()
   await page.locator('[data-testid="weather-close"]').click()
 })
 

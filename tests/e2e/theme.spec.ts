@@ -38,6 +38,45 @@ test('テーマ切替でcolorSchemeが即座に反映される', async () => {
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
+test('Autoテーマ選択でcolorSchemeが反映される', async () => {
+  const { page } = app
+
+  // 展開
+  await page.locator('[data-testid="settings-toggle"]').click()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // Autoをクリック → colorSchemeがlight/darkのいずれかになる（isDaytimeに依存）
+  await page.getByRole('button', { name: 'Auto' }).click()
+  const autoScheme = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).colorScheme
+  )
+  expect(['light', 'dark']).toContain(autoScheme)
+
+  // 他モードとの相互切替: Auto→Light→Dark→Auto
+  await page.getByRole('button', { name: 'Light' }).click()
+  const lightScheme = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).colorScheme
+  )
+  expect(lightScheme).toBe('light')
+
+  await page.getByRole('button', { name: 'Dark' }).click()
+  const darkScheme = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).colorScheme
+  )
+  expect(darkScheme).toBe('dark')
+
+  await page.getByRole('button', { name: 'Auto' }).click()
+  const autoScheme2 = await page.evaluate(() =>
+    getComputedStyle(document.documentElement).colorScheme
+  )
+  expect(['light', 'dark']).toContain(autoScheme2)
+
+  // Systemに戻してSetで確定（後片付け）
+  await page.getByRole('button', { name: 'System' }).click()
+  await page.locator('[data-testid="set-button"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+})
+
 test('テーマ変更をSetを押さずに閉じるとスナップショットから復元される', async () => {
   const { page } = app
 

@@ -10,6 +10,7 @@ import { DEFAULT_CLIMATE } from '../../../src/domain/environment/value-objects/C
 import type { ThemeTransitionService } from '../../../src/application/environment/ThemeTransitionService'
 import type { EnvironmentThemeParams } from '../../../src/domain/environment/value-objects/EnvironmentTheme'
 import { createEventBus, type EventBus } from '../../../src/domain/shared/EventBus'
+import { THEME_TRANSITION_DURATION_MANUAL_MS } from '../../../src/domain/environment/value-objects/ThemeLerp'
 
 // --- モック ---
 
@@ -156,16 +157,26 @@ describe('EnvironmentSimulationService', () => {
     expect(climateGrid.getMonthlyClimate).toHaveBeenCalledWith(51.5, -0.1)
   })
 
-  it('start()でWeatherDecisionChangedイベントが発行される', () => {
+  it('autoWeather有効時、start()でWeatherDecisionChangedイベントが発行される', () => {
     const handler = vi.fn()
     eventBus.subscribe('WeatherDecisionChanged', handler)
 
+    service.setAutoWeather(true)
     service.start(DEFAULT_CLIMATE, 'meadow')
 
     expect(handler).toHaveBeenCalledTimes(1)
     const event = handler.mock.calls[0][0] as WeatherDecisionChangedEvent
     expect(event.type).toBe('WeatherDecisionChanged')
     expect(event.decision).toBeDefined()
+  })
+
+  it('autoWeather無効時、start()でWeatherDecisionChangedイベントは発行されない', () => {
+    const handler = vi.fn()
+    eventBus.subscribe('WeatherDecisionChanged', handler)
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    expect(handler).not.toHaveBeenCalled()
   })
 
   it('climateGridがunloadedの場合でも安全に動作する', () => {
@@ -176,7 +187,192 @@ describe('EnvironmentSimulationService', () => {
     const svc = createEnvironmentSimulationService(
       astronomy, unloadedGrid, themeTransition, eventBus
     )
+    svc.setAutoWeather(true)
     expect(() => svc.start(DEFAULT_CLIMATE, 'meadow')).not.toThrow()
     expect(svc.currentWeather).not.toBeNull()
+  })
+
+  // --- setAutoWeather / setManualWeather ---
+
+  it('setAutoWeather(true)でautoWeather=trueになる', () => {
+    service.setAutoWeather(true)
+    expect(service.autoWeather).toBe(true)
+  })
+
+  it('setAutoWeather(false)でautoWeather=falseに戻る', () => {
+    service.setAutoWeather(true)
+    service.setAutoWeather(false)
+    expect(service.autoWeather).toBe(false)
+  })
+
+  it('autoWeather=falseの場合currentWeatherはmanual天気を返す', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    expect(service.autoWeather).toBe(false)
+    expect(service.currentWeather).toEqual({
+      weather: 'sunny',
+      precipIntensity: 0,
+      cloudDensity: 0.1,
+    })
+  })
+
+  it('setManualWeather()で手動天気が反映される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    service.setManualWeather({ weather: 'rainy', precipIntensity: 0.8, cloudDensity: 0.7 })
+    expect(service.currentWeather).toEqual({
+      weather: 'rainy',
+      precipIntensity: 0.8,
+      cloudDensity: 0.7,
+    })
+  })
+
+  it('autoWeather切替で天気ソースが切り替わる', () => {
+    service.setAutoWeather(true)
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    const autoWeather = service.currentWeather
+
+    service.setManualWeather({ weather: 'snowy', precipIntensity: 0.5, cloudDensity: 0.6 })
+    service.setAutoWeather(false)
+    // tick()で再計算を発火
+    service.tick(30001)
+
+    expect(service.currentWeather).toEqual({
+      weather: 'snowy',
+      precipIntensity: 0.5,
+      cloudDensity: 0.6,
+    })
+
+    service.setAutoWeather(true)
+    service.tick(30001)
+    // autoに戻ると自動決定天気が返る
+    expect(service.currentWeather).toEqual(autoWeather)
+  })
+
+  it('setAutoWeather切替でテーマが即座に再計算される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setAutoWeather(true)
+    service.tick(0) // timeSinceLastAstronomyUpdateがINTERVAL以上なので再計算
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+  })
+
+  // --- setManualTimeOfDay ---
+
+  it('setManualTimeOfDay(night)でテーマが夜間の値で再計算される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualTimeOfDay('night')
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+    const themeParams = vi.mocked(themeTransition.transitionTo).mock.calls[0][0]
+    // night（altitude=-20）ではexposureが低い値になる
+    expect(themeParams.exposure).toBeLessThan(0.5)
+  })
+
+  it('setManualTimeOfDay(day)でテーマが昼間の値で再計算される', () => {
+    // モックを夜間太陽に設定（実時刻=夜でも手動day→昼テーマになることを確認）
+    const nightSolar: SolarPosition = { altitude: -30, azimuth: 0, eclipticLon: 90 }
+    vi.mocked(astronomy.getSolarPosition).mockReturnValue(nightSolar)
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualTimeOfDay('day')
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+    const themeParams = vi.mocked(themeTransition.transitionTo).mock.calls[0][0]
+    // day（altitude=50）ではexposureが高い値になる
+    expect(themeParams.exposure).toBeGreaterThan(0.8)
+  })
+
+  it('setManualTimeOfDay(null)で実太陽位置に戻る', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    service.setManualTimeOfDay('night')
+    service.tick(0)
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualTimeOfDay(null)
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+    const themeParams = vi.mocked(themeTransition.transitionTo).mock.calls[0][0]
+    // MOCK_SOLAR.altitude=45 → 昼間の高いexposure
+    expect(themeParams.exposure).toBeGreaterThan(0.8)
+  })
+
+  it('setManualTimeOfDayは候計算に影響しない', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    const kouBefore = service.currentKou
+
+    service.setManualTimeOfDay('night')
+    service.tick(0)
+
+    // 候は実太陽のeclipticLonで決まるため変化しない
+    expect(service.currentKou).toEqual(kouBefore)
+  })
+
+  it('setManualTimeOfDay切替でテーマが即時再計算される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualTimeOfDay('evening')
+    service.tick(0)
+    expect(themeTransition.transitionTo).toHaveBeenCalledTimes(1)
+  })
+
+  it('stop()でtimeOfDayOverrideがリセットされる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    service.setManualTimeOfDay('night')
+    service.stop()
+
+    // 再start時にnullと同等（実太陽位置を使用）
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    const themeParams = vi.mocked(themeTransition.transitionTo).mock.calls.at(-1)?.[0]
+    // MOCK_SOLAR.altitude=45 → 昼間のexposure
+    expect(themeParams?.exposure).toBeGreaterThan(0.8)
+  })
+
+  // --- 手動操作時の遷移時間 ---
+
+  it('setManualTimeOfDay時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualTimeOfDay('night')
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalledWith(
+      expect.any(Object),
+      THEME_TRANSITION_DURATION_MANUAL_MS
+    )
+  })
+
+  it('setManualWeather時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualWeather({ weather: 'rainy', precipIntensity: 0.5, cloudDensity: 0.6 })
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalledWith(
+      expect.any(Object),
+      THEME_TRANSITION_DURATION_MANUAL_MS
+    )
+  })
+
+  it('通常tick()の遷移時間が30秒になる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.tick(30001) // 30秒超で通常の再計算
+
+    expect(themeTransition.transitionTo).toHaveBeenCalledWith(
+      expect.any(Object),
+      30_000
+    )
   })
 })

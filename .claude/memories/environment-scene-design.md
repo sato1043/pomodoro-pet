@@ -56,6 +56,8 @@
 | `src/adapters/ui/WeatherPanel.tsx` | 天気設定UI（Weather/Cloud/Time/Scene選択） |
 | `src/adapters/ui/WeatherButton.tsx` | WeatherPanel表示トグルボタン |
 | `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合 |
+| `src/adapters/ui/EnvironmentContext.tsx` | 環境パラメータのReact Context一元管理（climate/currentKou/solarAltitude/isDaytime/timezone） |
+| `src/adapters/ui/hooks/useResolvedTheme.ts` | ThemePreference→ResolvedTheme解決（system/light/dark/auto） |
 
 ### テスト（実装済み）
 
@@ -77,7 +79,7 @@
 | `src/domain/environment/value-objects/WeatherDecision.ts` | WeatherDecision型、decideWeather()、computeParticleCount() |
 | `src/domain/environment/value-objects/CelestialTheme.ts` | computeThemeFromCelestial()、computeLightDirection()、temperatureToGroundColor() |
 | `src/domain/environment/value-objects/Terminator.ts` | TerminatorResult型、getSubSolarPoint()、getTerminatorPoints()、buildTerminatorPolygon() |
-| `src/domain/environment/value-objects/Timezone.ts` | resolveTimezone()（tz-lookupラッパー）、getLocationTime()、formatTimezoneLabel()。timezone-abbr.json参照 |
+| `src/domain/environment/value-objects/Timezone.ts` | resolveTimezone()（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime()、formatTimezoneLabel()。timezone-abbr.json参照 |
 
 **アプリケーション層**:
 
@@ -92,7 +94,7 @@
 | `src/infrastructure/astronomy/AstronomyAdapter.ts` | astronomy-engineラッパー。AstronomyPort実装（太陽+月） |
 | `src/infrastructure/climate/ClimateGridAdapter.ts` | `createClimateGridAdapter(data: ClimateGridJson)` — ビルド時バンドルJSONデータ注入。双線形補間・海洋スナッピング。ClimateGridPort実装 |
 | `scripts/generate-climate-grid.ts` | NASA POWER APIから5度格子気候データを生成 → `assets/data/climate-grid.json` |
-| `scripts/generate-timezone-abbr.ts` | tz-lookup全座標スキャン+system tzdataでTZ略称マッピング生成 → `assets/data/timezone-abbr.json`（386エントリ） |
+| `scripts/generate-timezone-abbr.ts` | tz-lookup全座標スキャン+system tzdataでTZ略称マッピング生成 → `assets/data/timezone-abbr.json`（386エントリ）。Argentina `-03`→`ART`ポストプロセス |
 
 **アダプター層**:
 
@@ -1446,10 +1448,10 @@ function decideWeather(
 #### 手動/auto共存
 
 ```
-autoWeather=false: 従来通りWeatherPanelで手動選択（THEME_TABLE参照）
-autoWeather=true:  decideWeather()で天気を自動決定
-                   WeatherPanelは現在の自動決定結果を読み取り専用で表示
-                   地点設定は世界地図UI（5.5i）から行う
+autoWeather=false: WeatherPanelで手動選択。天文計算ベースのテーマ生成は継続（手動天気をテーマ計算に渡す）
+autoWeather=true:  decideWeather()で天気を自動決定。WeatherPanelのWeather/Cloud/Time行はグレーアウト
+地点設定: autoWeatherの状態に関わらず常に利用可能（LocationButton・WorldMapModal）
+天文計算: autoWeatherの状態に関わらずenvSimServiceが常に稼働し天体位置・候・テーマを生成
 ```
 
 ---
@@ -1517,7 +1519,7 @@ function cloudDensityToLevel(cloudDensity: number): CloudDensityLevel {
 ```typescript
 interface KouDisplayProps {
   readonly kou: KouDefinition | null
-  readonly visible: boolean  // autoWeather=true時のみ表示
+  readonly visible: boolean  // currentKou !== null かつ hideButtons=false 時に表示（autoWeather非依存）
 }
 
 function KouDisplay({ kou, visible }: KouDisplayProps): JSX.Element | null
@@ -1669,7 +1671,12 @@ interface WeatherConfig {
 
 autoWeather=true 時:
 - Weather行、Cloud行、Time行はグレーアウト（自動計算結果を表示のみ）
-- 地点設定は世界地図UI（5.5i）から行う
+- Scene行は常に操作可能
+- Locationボタン（GlobeIcon）は常に表示（autoWeather非依存）
+
+autoWeather=false 時:
+- Weather行、Cloud行、Time行は手動操作可能
+- 天文計算ベースのテーマ生成は継続（手動天気をenvSimServiceに渡してテーマ計算）
 
 ---
 
@@ -2083,66 +2090,90 @@ stop()
 
 ### 統合シーケンス
 
-#### auto時の起動シーケンス
+#### 起動シーケンス（autoWeather状態に関わらず共通）
 
 ```
 1. AppSettingsService.loadFromStorage()
    → WeatherConfig復元（climate含む）
-2. autoWeather=true を検出
-3. EnvironmentSimulationService.start(climate)
-   a. climateGridPort.getMonthlyClimate(lat, lon)
-   b. interpolateToKouClimate(monthlyData)
-   c. 天体位置・候・気温・天気・テーマを即時計算
-   d. themeTransitionService.applyImmediate(initialTheme) — 遷移なしで即時適用
-   e. WeatherEffect設定（rain/snow粒子数、cloud密度）
-4. 毎フレームのtick()ループ開始
+   → WeatherConfigChangedイベント発行
+
+2. WeatherConfigChangedハンドラ:
+   a. オーバーライド設定をstart()より前に適用:
+      envSimService.setAutoWeather(autoWeather)
+      envSimService.setManualTimeOfDay(timeOfDay) — autoWeather=false かつ autoTimeOfDay=false の場合
+      envSimService.setManualWeather({...}) — autoWeather=false の場合
+   b. envSimService.start(climate, scenePreset)
+      → runFullComputation()で正しいオーバーライド付きテーマ生成
+      → applyImmediate()で内部状態設定
+
+3. フォールバックブロック（loadFromStorage後に必ず実行）:
+   a. 同じオーバーライド設定を再適用
+   b. envSimService.start(climate, scenePreset) — 正しいオーバーライドで再計算
+   c. applyThemeToScene(themeTransition.currentParams)
+      — applyImmediate()は内部状態のみ更新しtick()はnullを返すため、
+        シーンへの反映はここで明示的に行う
+
+4. applyWeatherEffects(wc, true) — 雨/雪/雲パーティクル即座適用（autoWeather=false時）
+5. 毎フレームのtick()ループ開始
 ```
 
-#### auto時のtick()データフロー（30秒間隔）
+envSimServiceは常に稼働し、天文計算ベースのテーマ生成を行う。autoWeatherはenvSimService内部の天気決定（decideWeather）の有効/無効のみを制御する。
 
-正しい実行順序（データ依存関係に基づく）:
+**重要**: オーバーライド設定（setAutoWeather/setManualTimeOfDay/setManualWeather）は必ず`start()`より前に呼ぶ。`start()`内の`runFullComputation()`が正しいオーバーライド値を使用するため。
+
+#### tick()データフロー（30秒間隔、autoWeather状態に関わらず実行）
 
 ```
 1. 天体位置取得        (5.5a) → SolarPosition, LunarPosition
 2. 候解決              (5.5d) → KouDefinition, progress
 3. 気温推定            (5.5e) → estimatedTempC
-4. 天気決定（日変更時） (5.5f) → WeatherDecision
-5. テーマ生成          (5.5b) → EnvironmentThemeParams
-6. 光源方向            (5.5c) → position, color, intensity
+4. 天気決定（autoWeather時のみ、日変更時） (5.5f) → WeatherDecision
+5. テーマ生成          (5.5b) → EnvironmentThemeParams（effectiveWeather = auto or manual、timeOfDayOverride時は擬似太陽/月位置を使用）
+6. 光源方向            (5.5c) → position, color, intensity（timeOfDayOverride時は擬似位置から算出）
 7. 粒子数（天気変更時） (5.5g) → particleCount
 ```
-
-#### 手動時
-
-- 従来通りTHEME_TABLE参照 + 手動選択
-- 天文計算は使用しない
-- EnvironmentSimulationServiceは停止状態
 
 #### 地点変更時
 
 ```
-1. 世界地図UIでSet押下 → ClimateConfig更新
-2. EnvironmentSimulationService.onClimateChanged(newClimate)
+1. WorldMapModalでApply → ClimateConfig更新
+2. autoWeather状態を変更しない（ロケーション設定とautoWeatherは独立）
+3. EnvironmentSimulationService.onClimateChanged(newClimate)
    a. climateGridPort.getMonthlyClimate(lat, lon) → 月別気候データ
    b. interpolateToKouClimate(monthlyData) → 72候分KouClimate再生成
-   c. 即時再計算を強制 → 天気再決定 → テーマ遷移
-3. settings.jsonに永続化
+   c. 即時再計算を強制 → テーマ遷移
+4. settings.jsonに永続化
 ```
 
 #### auto↔手動の切替
 
 ```
 autoWeather=false → true:
-  1. EnvironmentSimulationService.start(climate)
-  2. 初回計算で現在のテーマから天文計算テーマへ5000msで遷移
-  3. WeatherPanelのWeather/Cloud/Time行をグレーアウト
+  1. envSimService.setAutoWeather(true)
+  2. lastWeatherDecisionDayOfYear=-1（天気再決定を強制）
+  3. pendingTransitionDurationMs=1500（手動操作時の短い遷移）
+  4. timeSinceLastAstronomyUpdate=INTERVAL（即時再計算）
+  5. WeatherPanelのCloud行をdisabled（Weather/Time行はクリック可能）
 
 autoWeather=true → false:
-  1. EnvironmentSimulationService.stop()
-  2. 手動設定のweather/timeOfDayでTHEME_TABLE参照
-  3. resolveEnvironmentTheme()結果へ1500msで遷移
-  4. WeatherPanelのグレーアウト解除
+  1. envSimService.setAutoWeather(false)
+  2. 手動天気（manualWeatherDecision）でテーマ再計算（遷移1.5秒）
+  3. envSimServiceは停止しない（天文計算は継続）
+  4. WeatherPanelのCloud行disabled解除
 ```
+
+#### テーマ遷移時間
+
+手動操作と通常の天体更新で異なる遷移時間を使い分ける。`pendingTransitionDurationMs`で次回の`runFullComputation()`が使う遷移時間を制御する。
+
+| トリガー | 遷移時間 | 設定元 |
+|---------|---------|--------|
+| 通常30秒間隔tick | 30秒 | ASTRONOMY_UPDATE_INTERVAL_MS（デフォルト） |
+| setManualTimeOfDay | 1.5秒 | THEME_TRANSITION_DURATION_MANUAL_MS |
+| setManualWeather | 1.5秒 | THEME_TRANSITION_DURATION_MANUAL_MS |
+| setAutoWeather | 1.5秒 | THEME_TRANSITION_DURATION_MANUAL_MS |
+| onClimateChanged | 1.5秒 | THEME_TRANSITION_DURATION_MANUAL_MS |
+| onScenePresetChanged | 1.5秒 | THEME_TRANSITION_DURATION_MANUAL_MS |
 
 ### 考慮事項
 
@@ -2151,8 +2182,10 @@ autoWeather=true → false:
 - **グリッドデータの精度**: 5度解像度は都市レベルの気候差を表現するには粗いが、バーチャルペットの演出目的には十分。将来的に2度解像度（約2.3MB）に上げる選択肢あり
 - **グリッドデータの更新**: WorldClimの平年値は30年平均。数年に1回程度の更新で十分。npm scriptで再ダウンロード→再生成
 - **オフライン動作**: グリッドデータはアプリに同梱されるため、完全オフラインで動作。外部API不要
-- **既存THEME_TABLEとの共存**: auto時は天文計算+グリッドデータ、手動時はTHEME_TABLE参照。THEME_TABLEは手動モードのフォールバックとして維持
-- **autoWeatherとautoTimeOfDayの統合**: 将来的には`autoEnvironment`に統合する選択肢あり。初期実装ではautoWeather=trueでautoTimeOfDayも暗黙的にtrueとする
+- **既存THEME_TABLEとの共存**: envSimServiceが常に稼働し天文計算ベースのテーマを生成。autoWeather=false時は手動天気をenvSimServiceに渡してテーマ計算に使用（THEME_TABLE直接参照は廃止済み）。手動timeOfDay時は擬似太陽/月位置でテーマを生成
+- **起動時テーマ適用の注意**: `ThemeTransitionService.applyImmediate()`は内部状態（`current`）を更新するが、`tick()`は`transitionState=null`のため`null`を返す。main.tsのアニメーションループは`tick()≠null`の場合のみ`applyThemeToScene()`を呼ぶため、起動時は`applyThemeToScene(themeTransition.currentParams)`を明示的に呼ぶ必要がある
+- **手動timeOfDayの擬似太陽位置**: autoWeather=false かつ autoTimeOfDay=false 時、`setManualTimeOfDay(timeOfDay)`で擬似太陽/月位置を使用してテーマを生成する。擬似値は morning=高度10°/方位90°(東)、day=50°/180°(南)、evening=5°/270°(西)、night=-20°/0°(地平線下)。夜間は半月（illuminationFraction=0.5）の月光も擬似的に表現する。候計算（eclipticLon）には実太陽位置を使用し影響しない
+- **autoWeatherとautoTimeOfDayの関係**: autoWeather=true時はWeather/Cloud/Time行すべてをグレーアウト。autoWeather=false時にautoTimeOfDayを個別に設定可能。将来的には`autoEnvironment`に統合する選択肢あり
 - **Natural Earth SVGのライセンス**: パブリックドメイン。同梱に制約なし
 - **WorldClimのライセンス**: CC BY 4.0。クレジット表記が必要。THIRD_PARTY_LICENSES.txtに追記する
 - **極地の天文計算**: 白夜（太陽altitude常に正）や極夜（常に負）が発生する。Reykjavik（北緯64°）では夏至に太陽が沈まず、冬至に最大高度約3°になる。これらのケースではcomputeThemeFromCelestialが自然に対応する（altitudeが常に正なら常に日中パラメータ、常に低角度なら常に薄暗い日中パラメータになる）
@@ -2433,10 +2466,12 @@ const isAutoMode = weatherConfig.autoWeather
 ```
 
 autoWeather=true時の表示挙動:
-- Weather/Cloud/Time行の全ボタン: `pointer-events: none; opacity: 0.4`
-- 各行の選択状態はdecideWeatherの結果と太陽高度角から推定したTimeOfDayを反映
-- Autoトグルボタンのみ操作可能（autoを解除できる）
-- Scene行は常に操作可能（autoモードでもscenePresetは手動選択）
+- Weather行/Time行: 常に操作可能。操作するとautoWeatherが自動的にfalseに切り替わる
+- Cloud行: disabled（autoWeather時は雲量も自動決定）。autoWeather解除後に操作可能
+- Autoボタンは天気アイコン（Sunny/Cloudy/Rainy/Snowy）と排他選択。Autoクリック→autoWeather=true、Weather/Time行のボタンクリック→autoWeather=false
+- autoWeather=true時はAutoのみがactive。Weather/Cloud/Time行のボタンはactive表示されない
+- Scene行は常に操作可能（autoモードでもscenePresetは手動選択、autoWeatherに影響しない）
+- Locationボタン（GlobeIcon）はフリーモードに常時配置（WeatherPanelから削除済み）
 
 ---
 
