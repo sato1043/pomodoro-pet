@@ -13,6 +13,7 @@ import type { StatisticsService } from '../../application/statistics/StatisticsS
 import type { FureaiCoordinator } from '../../application/fureai/FureaiCoordinator'
 import type { GalleryCoordinator } from '../../application/gallery/GalleryCoordinator'
 import type { EmotionHistoryService } from '../../application/character/EmotionHistoryService'
+import type { EnvironmentSimulationService } from '../../application/environment/EnvironmentSimulationService'
 
 export interface AppDeps {
   readonly bus: EventBus
@@ -30,6 +31,7 @@ export interface AppDeps {
   readonly fureaiCoordinator: FureaiCoordinator
   readonly galleryCoordinator: GalleryCoordinator
   readonly emotionHistoryService: EmotionHistoryService
+  readonly envSimService: EnvironmentSimulationService
 }
 
 const AppContext = createContext<AppDeps | null>(null)

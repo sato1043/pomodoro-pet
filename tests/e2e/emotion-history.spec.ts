@@ -148,6 +148,7 @@ test('ポモドーロ完了後にemotion-history.jsonが生成される', async 
 })
 
 test('アプリ再起動後に感情パラメータが復元される', async () => {
+  test.setTimeout(60_000)
   // 1回目: 全サイクル完走で感情を変化させる
   const { electronApp: app1, page: page1 } = await launchFresh()
 

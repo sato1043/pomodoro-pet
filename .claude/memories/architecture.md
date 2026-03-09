@@ -45,6 +45,8 @@ EventBus（UI/インフラ通知）:
   PomodoroCompleted/PomodoroAborted/FeedingSuccess → EmotionHistoryBridge（感情履歴記録）
   FeedingSuccess → SceneFureai（ハートエフェクト発火）、main.ts（EmotionService fed + InteractionTracker recordFeeding）
   PomodoroCompleted/PomodoroAborted → main.ts（EmotionService pomodoro_completed/pomodoro_aborted）
+  KouChanged → KouDisplay（七十二候UI更新）
+  WeatherDecisionChanged → main.ts（天気エフェクト更新）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
   BackgroundSettingsLoaded → main.ts（バックグラウンド設定適用）
@@ -77,9 +79,15 @@ EventBus（UI/インフラ通知）:
 - `ChunkSpec` — チャンク寸法（幅・奥行き）とオブジェクト配置数（木・草・岩・花）。ScenePreset.tsで定義
 - `shouldScroll()` — 現在の状態でスクロールすべきか判定する純粋関数
 - `SceneObject` — シーンオブジェクト型定義
-- `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay, scenePreset）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
+- `WeatherConfig` — 天気設定値オブジェクト（WeatherType, TimeOfDay, CloudDensityLevel 0-5, autoTimeOfDay, scenePreset, climate?）。`createDefaultWeatherConfig()`, `resolveTimeOfDay(hour)`, `cloudPresetLevel(weather)`
 - `EnvironmentThemeParams` — 描画パラメータ（空色・霧・ライト・地面色・露出）。`resolveEnvironmentTheme(weather, timeOfDay)`で20パターンルックアップ
 - `ThemeLerp` — テーマ遷移の純粋関数群。`lerpFloat`/`lerpHexColor`（RGB分解）/`lerpVec3`/`smoothstep`（3t²-2t³）/`lerpThemeParams`（全14フィールド一括補間）/`themeParamsEqual`（不要補間スキップ用）/`startThemeTransition`/`tickThemeTransition`。`ThemeTransitionState`/`ThemeTransitionResult`型。定数: `THEME_TRANSITION_DURATION_AUTO_MS`(5000)/`THEME_TRANSITION_DURATION_MANUAL_MS`(1500)
+- `SolarPosition` — 太陽位置値オブジェクト（altitude/azimuth/eclipticLon）、LunarPosition値オブジェクト（altitude/azimuth/phase/illumination）、AstronomyPort（ドメインポート）
+- `Kou` — 七十二候。KouDefinition型、KOU_DEFINITIONS（72候定義）、resolveKou()、kouProgress()
+- `ClimateData` — 気候プロファイル。ClimateConfig（mode/presetName/latitude/longitude/label）、KouClimate、MonthlyClimateData、ClimateGridPort（ドメインポート）、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()
+- `WeatherDecision` — 天気自動決定。WeatherDecision型、mulberry32（PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
+- `CelestialTheme` — 天体→テーマ連続生成。computeThemeFromCelestial()、computeLightDirection()、altitudeToSunColor()、altitudeToSkyColor()
+- `Timezone` — タイムゾーン解決。resolveTimezone()（tz-lookupラッパー）、getLocationTime()、formatTimezoneLabel()。事前生成済みtimezone-abbr.json（386エントリ）による略称マッピング
 
 ### 4. 統計
 - `StatisticsTypes` — DailyStats型（日次集計）、emptyDailyStats()、todayKey()、formatDateKey()ヘルパー。StatisticsData型（Record<'YYYY-MM-DD', DailyStats>）
@@ -122,6 +130,12 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/WeatherConfig.ts` — WeatherConfig（scenePreset含む）, WeatherType, TimeOfDay, CloudDensityLevel, resolveTimeOfDay(), cloudPresetLevel(). ScenePresetNameをre-export
 - `environment/value-objects/EnvironmentTheme.ts` — EnvironmentThemeParams, resolveEnvironmentTheme()（20パターンルックアップ）
 - `environment/value-objects/ThemeLerp.ts` — テーマ遷移の純粋関数群（lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/startThemeTransition/tickThemeTransition）+ ThemeTransitionState/ThemeTransitionResult型 + 遷移時間定数
+- `environment/value-objects/SolarPosition.ts` — SolarPosition型（altitude/azimuth/eclipticLon）、LunarPosition型（altitude/azimuth/phase/illumination）、AstronomyPortインターフェース
+- `environment/value-objects/Kou.ts` — KouDefinition型、KOU_DEFINITIONS定数（本朝七十二候全72候、和名/読み/英名/説明）、resolveKou(eclipticLon)、kouProgress(eclipticLon)
+- `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()
+- `environment/value-objects/WeatherDecision.ts` — WeatherDecision型、mulberry32（決定論的PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
+- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成）、computeLightDirection()（太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
 
@@ -150,6 +164,7 @@ EventBus（UI/インフラ通知）:
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
 - `statistics/StatisticsBridge.ts` — EventBus購読→StatisticsService更新。PhaseCompleted(work/break/long-break)→addWorkPhase/addBreakPhase、PomodoroCompleted→addCompletedCycle、PomodoroAborted→addAbortedCycle。NotificationBridgeと同パターン
 - `environment/ThemeTransitionService.ts` — テーマ遷移サービス。`transitionTo(target, durationMs)`で補間開始、`applyImmediate(target)`で即座適用、`tick(deltaMs)`で補間更新（変化時のみパラメータ返却）。currentParams=null時のtransitionToは即座適用にフォールバック。補間中の新transitionToは現在の中間値をfromとして再補間
+- `environment/EnvironmentSimulationService.ts` — 天文計算ベース環境シミュレーション統合オーケストレーター。start(climate, scenePreset)/tick(deltaMs)/onClimateChanged()/stop()。30秒間隔で天体位置更新→テーマ生成→ThemeTransitionService適用。日単位で天気再決定。KouChanged/WeatherDecisionChangedイベント発行
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
 ### src/adapters/ — UIとThree.jsアダプター
@@ -200,6 +215,11 @@ EventBus（UI/インフラ通知）:
 - `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
+- `ui/KouDisplay.tsx` — 七十二候UIオーバーレイ。createPortalでdocument.bodyに描画。候名（solarTermName+phase）、nameJa、readingJaを表示。候変更時にフェードアニメーション（opacity 0→0.8→0.4）
+- `ui/WorldMapModal.tsx` — 世界地図SVGモーダル。等距円筒図法（viewBox "-180 -90 360 180"）。astronomy-engineによるterminator昼夜境界描画。8都市プリセットピン+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅表示・全画面化。Natural Earth IDLライン描画。ClimateConfig生成
+- `ui/LocationButton.tsx` — フリーモード右端の地球アイコンボタン。クリックでWorldMapModal起動
+- `ui/styles/kou-display.css.ts` — 七十二候UI用vanilla-extractスタイル
+- `ui/styles/world-map-modal.css.ts` — 世界地図モーダル用vanilla-extractスタイル
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
 - `ui/styles/*.css.ts` — コンポーネント別vanilla-extractスタイル（free-timer-panel, pomodoro-timer-panel, congrats-panel, heart-effect, scene-transition, volume-control, prompt-input, overlay, stats-drawer, biorhythm-chart, fureai-entry, stats-button, settings-button, registration, update-notification, license-toast, gallery, trial-badge, feature-locked, emotion-indicator, character-name-editor）
@@ -217,9 +237,11 @@ EventBus（UI/インフラ通知）:
 - `three/decorators/ParkDecorator.ts` — 公園プリセットのデコレータ。歩道（中央PlaneGeometry）、街灯（歩道脇等間隔・左右交互配置）、植え込み・花壇（歩道脇沿い配置）、ベンチ（歩道脇配置）、広葉樹（歩道近傍）
 - `three/EnvironmentChunk.ts` — 1チャンク分の環境オブジェクト生成（ChunkDecorator委譲方式、地面メッシュ所有、regenerate対応）
 - `three/InfiniteScrollRenderer.ts` — 3チャンクの3D配置管理（ScrollState→位置反映、リサイクル時regenerate、霧・背景色設定）。`applyTheme(params)`でEnvironmentThemeParamsに基づく空色・霧・地面色の動的更新。`rebuildChunks(spec, decorator)`でランタイムプリセット切替
-- `three/RainEffect.ts` — 雨エフェクト。LineSegments（650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。WeatherEffectインターフェース定義
-- `three/SnowEffect.ts` — 雪エフェクト。Points（750個）sin/cosゆらゆら揺れ
+- `three/RainEffect.ts` — 雨エフェクト。LineSegments（最大1200本、デフォルト650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。setDrawRange()で動的粒子数制御。WeatherEffectインターフェース定義（setParticleCount含む）
+- `three/SnowEffect.ts` — 雪エフェクト。Points（最大900個、デフォルト750個）sin/cosゆらゆら揺れ。setDrawRange()で動的粒子数制御
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
+- `astronomy/AstronomyAdapter.ts` — astronomy-engineラッパー。AstronomyPort実装。Observer/SunPosition/Horizon/MoonPhase/Illumination使用。getSolarDeclinationAndGHA()ヘルパー（terminator UI用）
+- `climate/ClimateGridAdapter.ts` — ClimateGridPort実装。`createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルJSONを注入。36lat×72lon 5度解像度、双線形補間、海洋スナッピング
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
 - `audio/AudioAdapter.ts` — 環境音の再生/停止/音量/ミュート管理。`MAX_GAIN=0.25`でUI音量値をスケーリング。初期値はvolume=0/isMuted=true（起動時のデフォルト音量フラッシュ防止）。ミュート時は`AudioContext.suspend()`でシステムリソース（PulseAudioストリーム等）を解放し、解除時に`resume()`で復帰する。`setBackgroundMuted()`でバックグラウンド時のオーディオ抑制に対応（ユーザーミュートとの共存: `updateSuspendState()`で`isMuted || backgroundMuted`を統合判定）
 - `audio/SfxPlayer.ts` — MP3ワンショット再生（`play`）およびループ再生（`playLoop`/`stop`）。`crossfadeMs`指定時はループ境界・曲間切替でクロスフェード。per-source GainNodeで個別フェード制御+ファイル別音量補正（`gain`パラメータ）。fetch+decodeAudioData+バッファキャッシュ。`MAX_GAIN=0.25`でUI音量値をスケーリング。ミュート時はループ停止+クロスフェードタイマー解除+`ctx.suspend()`、`play()`/`playLoop()`はミュート中早期リターン。`setBackgroundMuted()`でバックグラウンド時のSFX抑制に対応
@@ -230,6 +252,10 @@ EventBus（UI/インフラ通知）:
 - `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）
 - `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
+
+### scripts/ — ビルド・データ生成ツール
+- `generate-climate-grid.ts` — NASA POWER API (1991-2020 climatology) から5度格子気候データを生成。2592地点をレート制限付きで取得し `assets/data/climate-grid.json` に出力。中間キャッシュ(`tmp/climate-cache/`)で中断・再開対応。`npm run generate:climate` で実行
+- `generate-coastline-path.ts` — Natural Earth 110mデータ（ne_110m_land陸地ポリゴン + ne_110m_geographic_lines日付変更線）をダウンロードしSVGパス文字列に変換。`assets/data/coastline-path.json` に `{path, idlPath}` として出力。`npm run generate:coastline` で実行
 
 ### tests/
 
@@ -251,12 +277,19 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/WeatherConfig.test.ts` — createDefaultWeatherConfig（scenePreset含む）・resolveTimeOfDay境界値・cloudPresetLevel全天気タイプ
 - `domain/environment/EnvironmentTheme.test.ts` — resolveEnvironmentTheme全20組み合わせ・sunny/day現行値一致・cloudy/snowyテーマ検証
 - `domain/environment/ThemeLerp.test.ts` — lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/tickThemeTransition（24テスト）
+- `domain/environment/SolarPosition.test.ts` — AstronomyPort型定義・SolarPosition/LunarPosition型検証（11テスト）
+- `domain/environment/Kou.test.ts` — KOU_DEFINITIONS検証・resolveKou境界値・kouProgress連続性（17テスト）
+- `domain/environment/ClimateData.test.ts` — CITY_PRESETS・interpolateToKouClimate・estimateTemperature・temperatureToGroundColor（15テスト）
+- `domain/environment/Timezone.test.ts` — resolveTimezone・getLocationTime・formatTimezoneLabel・DST対応（13テスト）
+- `domain/environment/WeatherDecision.test.ts` — mulberry32決定論性・decideWeather確率分布・computeParticleCount範囲・cloudDensityToLevel（18テスト）
+- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial・computeLightDirection（19テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
 - `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
 - `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ThemeTransitionService.test.ts` — transitionTo/applyImmediate/tick/補間中割り込み/同一テーマスキップ（9テスト）
+- `application/environment/EnvironmentSimulationService.test.ts` — start/tick/onClimateChanged/stop・30秒更新間隔・イベント発行・即座テーマ適用（14テスト）
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・電源設定（powerConfig）・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行

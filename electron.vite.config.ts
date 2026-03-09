@@ -37,6 +37,9 @@ export default defineConfig({
     root: 'src',
     publicDir: '../assets',
     plugins: [react(), vanillaExtractPlugin()],
+    optimizeDeps: {
+      include: ['tz-lookup'],
+    },
     server: {
       port: Number(env.VITE_DEV_PORT) || 5173
     },

@@ -1,7 +1,8 @@
 import * as THREE from 'three'
 import type { WeatherEffect } from './RainEffect'
 
-const PARTICLE_COUNT = 750
+const PARTICLE_COUNT_MAX = 900
+const DEFAULT_PARTICLE_COUNT = 750
 const AREA_X = 30
 const AREA_Y = 15
 const Z_MIN = -15 // 奥端
@@ -18,15 +19,17 @@ function randomZ(): number {
 }
 
 export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
+  let currentParticleCount = DEFAULT_PARTICLE_COUNT
+
   const geometry = new THREE.BufferGeometry()
-  const positions = new Float32Array(PARTICLE_COUNT * 3)
+  const positions = new Float32Array(PARTICLE_COUNT_MAX * 3)
 
-  const phaseX = new Float32Array(PARTICLE_COUNT)
-  const phaseZ = new Float32Array(PARTICLE_COUNT)
-  const freqX = new Float32Array(PARTICLE_COUNT)
-  const freqZ = new Float32Array(PARTICLE_COUNT)
+  const phaseX = new Float32Array(PARTICLE_COUNT_MAX)
+  const phaseZ = new Float32Array(PARTICLE_COUNT_MAX)
+  const freqX = new Float32Array(PARTICLE_COUNT_MAX)
+  const freqZ = new Float32Array(PARTICLE_COUNT_MAX)
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  for (let i = 0; i < PARTICLE_COUNT_MAX; i++) {
     positions[i * 3] = (Math.random() - 0.5) * AREA_X
     positions[i * 3 + 1] = Math.random() * AREA_Y
     positions[i * 3 + 2] = randomZ()
@@ -37,6 +40,7 @@ export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
   }
 
   geometry.setAttribute('position', new THREE.BufferAttribute(positions, 3))
+  geometry.setDrawRange(0, currentParticleCount)
 
   const material = new THREE.PointsMaterial({
     color: 0xddddee,
@@ -89,7 +93,7 @@ export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
       const posAttr = geometry.attributes.position as THREE.BufferAttribute
       const arr = posAttr.array as Float32Array
 
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
+      for (let i = 0; i < currentParticleCount; i++) {
         arr[i * 3 + 1] -= fall
         const swayX = Math.sin(elapsed * freqX[i] * Math.PI * 2 + phaseX[i]) * SWAY_AMPLITUDE * deltaSec
         const swayZ = Math.cos(elapsed * freqZ[i] * Math.PI * 2 + phaseZ[i]) * SWAY_AMPLITUDE * deltaSec
@@ -128,6 +132,11 @@ export function createSnowEffect(scene: THREE.Scene): WeatherEffect {
       fadeDuration = durationMs
       fadeElapsed = (1 - ratio) * durationMs
       fadeState = 'out'
+    },
+
+    setParticleCount(count: number): void {
+      currentParticleCount = Math.max(0, Math.min(PARTICLE_COUNT_MAX, count))
+      geometry.setDrawRange(0, currentParticleCount)
     },
 
     dispose(): void {

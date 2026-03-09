@@ -5,10 +5,12 @@ export interface WeatherEffect {
   setVisible(visible: boolean): void
   fadeIn(durationMs: number): void
   fadeOut(durationMs: number): void
+  setParticleCount(count: number): void
   dispose(): void
 }
 
-const PARTICLE_COUNT = 650
+const PARTICLE_COUNT_MAX = 1200
+const DEFAULT_PARTICLE_COUNT = 650
 const AREA_X = 30
 const AREA_Y = 15
 const Z_MIN = -15 // 奥端
@@ -33,10 +35,12 @@ function randomZ(): number {
 
 export function createRainEffect(scene: THREE.Scene): WeatherEffect {
   // --- 雨粒（LineSegments）---
-  const rainGeo = new THREE.BufferGeometry()
-  const rainPositions = new Float32Array(PARTICLE_COUNT * 2 * 3)
+  let currentParticleCount = DEFAULT_PARTICLE_COUNT
 
-  for (let i = 0; i < PARTICLE_COUNT; i++) {
+  const rainGeo = new THREE.BufferGeometry()
+  const rainPositions = new Float32Array(PARTICLE_COUNT_MAX * 2 * 3)
+
+  for (let i = 0; i < PARTICLE_COUNT_MAX; i++) {
     const x = (Math.random() - 0.5) * AREA_X
     const y = Math.random() * AREA_Y
     const z = randomZ()
@@ -49,6 +53,7 @@ export function createRainEffect(scene: THREE.Scene): WeatherEffect {
   }
 
   rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPositions, 3))
+  rainGeo.setDrawRange(0, currentParticleCount * 2)
 
   const rainMat = new THREE.LineBasicMaterial({
     color: 0xaaaacc,
@@ -144,7 +149,7 @@ export function createRainEffect(scene: THREE.Scene): WeatherEffect {
 
       // --- 雨粒更新 ---
       const rainArr = (rainGeo.attributes.position as THREE.BufferAttribute).array as Float32Array
-      for (let i = 0; i < PARTICLE_COUNT; i++) {
+      for (let i = 0; i < currentParticleCount; i++) {
         rainArr[i * 6 + 1] -= fall
         rainArr[i * 6 + 4] -= fall
 
@@ -217,6 +222,11 @@ export function createRainEffect(scene: THREE.Scene): WeatherEffect {
       fadeDuration = durationMs
       fadeElapsed = (1 - ratio) * durationMs
       fadeState = 'out'
+    },
+
+    setParticleCount(count: number): void {
+      currentParticleCount = Math.max(0, Math.min(PARTICLE_COUNT_MAX, count))
+      rainGeo.setDrawRange(0, currentParticleCount * 2)
     },
 
     dispose(): void {

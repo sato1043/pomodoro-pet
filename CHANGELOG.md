@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+- 気候グリッドデータ生成スクリプト (`scripts/generate-climate-grid.ts`) — NASA POWER API (1991-2020 climatology) から5度格子の月別気候データを取得し `assets/data/climate-grid.json` に出力。中間キャッシュによる中断・再開対応。`npm run generate:climate` で実行
+- 海岸線SVGパス生成スクリプト (`scripts/generate-coastline-path.ts`) — Natural Earth 110m GeoJSONから世界地図用SVGパスを生成し `assets/data/coastline-path.json` に出力。`npm run generate:coastline` で実行
+- NASA POWERデータ帰属表示 — `licenses/ASSET_CREDITS.txt` にNASA POWER CERES/MERRA-2 Climatologyのクレジットを追加
+- Phase 5.5アプリ統合 — EnvironmentSimulationServiceをmain.tsに接続。autoWeatherオン/オフ切替、WeatherDecisionChangedによるエフェクト反映、animateループ内tick()、autoTimeInterval連動
+- フリーモードLocationButton — 右端ふれあいボタン上に地球アイコンボタン配置。クリックでWorldMapModalを開き地域選択→autoWeather自動有効化
+- WeatherPanelのautoWeather有効化 — Autoボタンのdisabled解除。autoWeather時にWeather/Clouds/Time行をdisabled化。Locationボタン（GlobeIcon）でWorldMapModal起動
+- 天文計算ベース環境シミュレーション（Phase 5.5） — astronomy-engineによる太陽/月位置のリアルタイム計算。太陽高度角・方位角・黄経・月齢・月照度から環境パラメータ（空色・露出・光源方向・月光色）を連続生成。薄明時の太陽/月クロスフェード対応
+- 七十二候システム — 太陽黄経5度刻みで現在の候を特定。本朝七十二候の全72候定義（和名・読み・英名・説明）。候名UIオーバーレイ表示（フェードアニメーション付き）。候変更EventBusイベント
+- 気候プロファイルシステム — 全球5度解像度気候グリッドデータ（ClimateGridPort）対応。月次気候データから72候単位へのコサイン補間。緯度経度から気温・降水量・降雪確率を自動推定
+- 天気自動決定 — 気候データ+気温から天気タイプ・降水強度・雲密度を確率的に決定。決定論的PRNG（mulberry32）で日単位のシード。WeatherDecisionChangedイベント
+- 雨量連動パーティクル数 — 降水強度に応じて雨（100〜1200本）/雪（100〜900個）のパーティクル数を動的変更。setDrawRange()によるBufferGeometry再作成なしの効率的な粒子数制御
+- 世界地図UIモーダル — SVG等距円筒図法の世界地図。astronomy-engineによるterminator昼夜境界描画。8都市プリセット（Sydney/Tokyo/London/New York/Hawaii/Dubai/Reykjavik/Ushuaia）+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅拡大表示・全画面化。Natural Earth IDLライン描画
+- EnvironmentSimulationService — 天文計算・気候・天気決定・テーマ生成を統合するオーケストレーター。30秒間隔で天体位置を更新、日単位で天気を再決定
+- 設定永続化にclimateフィールド追加 — settings.jsonのweather.climateに緯度・経度・ラベル・プリセット名を保存・復元（後方互換: 未設定時はDEFAULT_CLIMATE）
+- タイムゾーン表示 — tz-lookupで緯度経度→IANAタイムゾーン自動解決。事前生成済み略称マッピング（386エントリ、103 DST対応）で正確な略称表示（JST/EST/AEDT等）。フリーモードの時計・タイムラインを選択地域の現地時刻で表示。`scripts/generate-timezone-abbr.ts`で生成
+
+### Changed
+- ClimateGridAdapter APIをデータ注入方式に変更 — `createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルされたJSONデータを直接受け取る。`load(url)` / `fetch` / `isLoaded=false` フォールバックを廃止。`ClimateGridJson` 型をexport
+- 陸地データをne_110m_coastline（LineString）からne_110m_land（Polygon）に変更 — 閉じたポリゴンでSVG fillが正しく機能し、180°境界でのアーティファクトを解消
+- 日付変更線をNatural Earth ne_110m_geographic_linesの正確なデータに変更（手動14点概略→2047座標）
+- generate-coastline-path.tsの出力を `{path, idlPath}` に拡張
+
+### Fixed
+- Terminator昼夜境界の反転バグ修正 — `Math.atan2`を`Math.atan`に変更。負の赤緯（9月〜3月）でatan2が2/3象限の値を返しclampで誤った緯度になる問題を解消
+
 ## [0.7.0] - 2026-03-05
 
 ### Added

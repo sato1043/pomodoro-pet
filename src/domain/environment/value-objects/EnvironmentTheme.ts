@@ -308,7 +308,7 @@ const SEASIDE_GROUND: Record<string, number> = {
 }
 
 /** 色を白方向にlerp（明度を上げる） */
-function lightenColor(hex: number, factor: number): number {
+export function lightenColor(hex: number, factor: number): number {
   const r = (hex >> 16) & 0xff
   const g = (hex >> 8) & 0xff
   const b = hex & 0xff

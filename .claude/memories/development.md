@@ -17,6 +17,9 @@ npm run test:e2e:headed  # E2Eテスト（GUI表示あり、Windows/GUI環境用
 npm run deploy:local # win-unpackedをC:\temp\pomodoro-petにコピーしてexe起動
 npm run icon         # build/icon.pngからマルチサイズICO生成（要ImageMagick）
 npm run licenses     # THIRD_PARTY_LICENSES.txt生成（npmライセンス+ASSET_CREDITS.txt結合）
+npm run generate:climate    # 気候グリッドデータ生成（NASA POWER API → assets/data/climate-grid.json）
+npm run generate:coastline  # 海岸線SVGパス生成（Natural Earth 110m → assets/data/coastline-path.json）
+npm run generate:tz-abbr    # タイムゾーン略称マッピング生成（tz-lookup + system tzdata → assets/data/timezone-abbr.json）
 ```
 
 ### WSL2で必要なシステムパッケージ
@@ -101,6 +104,52 @@ assets/
 ファイル名はコード内でハードコードされている（`src/main.ts`、`src/application/timer/TimerSfxBridge.ts`）。名前を変える場合はコード側も修正が必要。
 
 素材の入手先は [asset-licensing-distribution.md](asset-licensing-distribution.md) を参照。
+
+### 気候グリッドデータ
+
+`assets/data/climate-grid.json` はNASA POWER APIから生成した5度格子の月別気候データ（1991-2020 climatology）。天気自動決定機能（Phase 5.5）で使用する。
+
+このデータはビルド時にJSバンドルにインポートされる（`import data from '../assets/data/climate-grid.json'`）。データが存在しない場合はビルドエラーになる。
+
+**生成手順:**
+
+```bash
+# 前提: assets/ サブモジュールが初期化済みであること
+git submodule update --init
+
+# 気候データ生成（約30分、中断・再開可能）
+npm run generate:climate
+
+# 中間キャッシュのクリア（再生成したい場合）
+rm -rf tmp/climate-cache/
+```
+
+生成スクリプト（`scripts/generate-climate-grid.ts`）は2592地点を700ms間隔でAPI呼び出しする。中間結果は `tmp/climate-cache/` にキャッシュされるため、中断しても途中から再開できる。
+
+生成完了後、assetsサブモジュールへのコミットが必要（下記「サブモジュールへのコミット手順」参照）。
+
+### サブモジュールへのコミット手順
+
+`assets/` サブモジュール内のファイルを変更した場合、2段階のコミットが必要。
+
+```bash
+# 1. サブモジュール内でコミット
+cd assets
+git add data/climate-grid.json
+git commit -m "Add climate grid data (NASA POWER 1991-2020)"
+git push origin main
+cd ..
+
+# 2. 親リポジトリでサブモジュール参照を更新
+git add assets
+git commit -m "Update assets submodule (climate grid data)"
+```
+
+**注意事項:**
+- サブモジュール内の `git push` には `sato1043/pomodoro-pet-assets` への書き込み権限（SSH鍵）が必要
+- `git clone` 後にサブモジュールを初期化していない場合、`assets/` は空ディレクトリになる
+- CIでは `git submodule update --init` をビルド前に実行する必要がある
+- サブモジュールの参照（コミットハッシュ）は親リポジトリの `git add assets` で記録される
 
 ## デバッグ設定
 

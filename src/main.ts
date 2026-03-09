@@ -56,6 +56,12 @@ import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
 import { createThemeTransitionService } from './application/environment/ThemeTransitionService'
 import { THEME_TRANSITION_DURATION_AUTO_MS, THEME_TRANSITION_DURATION_MANUAL_MS } from './domain/environment/value-objects/ThemeLerp'
+import { createEnvironmentSimulationService, type EnvironmentSimulationService, type WeatherDecisionChangedEvent } from './application/environment/EnvironmentSimulationService'
+import { createAstronomyAdapter } from './infrastructure/astronomy/AstronomyAdapter'
+import { createClimateGridAdapter, type ClimateGridJson } from './infrastructure/climate/ClimateGridAdapter'
+import { computeParticleCount, cloudDensityToLevel } from './domain/environment/value-objects/WeatherDecision'
+import { DEFAULT_CLIMATE } from './domain/environment/value-objects/ClimateData'
+import climateGridData from '../assets/data/climate-grid.json'
 
 // シーンプリセットに連動するデフォルト環境音
 const SCENE_SOUND_MAP: Record<ScenePresetName, SoundPreset> = {
@@ -230,6 +236,13 @@ async function main(): Promise<void> {
 
   // ポモドーロタイマー初期化
   const bus = createEventBus()
+
+  // 環境シミュレーションサービス（天文計算・候・気候・天気自動決定）
+  const astronomyAdapter = createAstronomyAdapter()
+  const climateGridAdapter = createClimateGridAdapter(climateGridData as ClimateGridJson)
+  const envSimService: EnvironmentSimulationService = createEnvironmentSimulationService(
+    astronomyAdapter, climateGridAdapter, themeTransition, bus
+  )
   const debugConfig = parseDebugTimer(import.meta.env.VITE_DEBUG_TIMER ?? '')
   const isDebugTimer = debugConfig !== null
   const initialConfig = debugConfig ?? createDefaultConfig()
@@ -429,7 +442,7 @@ async function main(): Promise<void> {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
       character, behaviorSM, charHandle, statisticsService, fureaiCoordinator,
-      galleryCoordinator, emotionHistoryService
+      galleryCoordinator, emotionHistoryService, envSimService
     }
     appRoot.render(createElement(App, { deps }))
   }
@@ -450,11 +463,70 @@ async function main(): Promise<void> {
     renderReactUI()
   })
 
-  // WeatherConfigChanged → 天気適用 + プリセット切替
+  // autoTimeOfDay: 1分間隔で時間帯を監視し天気を再適用
+  let autoTimeInterval: ReturnType<typeof setInterval> | null = null
+  function startAutoTimeInterval(): void {
+    if (autoTimeInterval !== null) return
+    autoTimeInterval = setInterval(() => {
+      applyWeather(settingsService.weatherConfig)
+    }, 60000)
+  }
+  function stopAutoTimeInterval(): void {
+    if (autoTimeInterval !== null) {
+      clearInterval(autoTimeInterval)
+      autoTimeInterval = null
+    }
+  }
+
+  // WeatherConfigChanged → 天気適用 + プリセット切替 + envSim連動
   bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
     if (event.type !== 'WeatherConfigChanged') return
-    applyWeather(event.weather)
     switchScenePreset(event.weather.scenePreset)
+
+    if (event.weather.autoWeather) {
+      // autoWeather有効: envSimServiceに委譲
+      const climate = event.weather.climate ?? DEFAULT_CLIMATE
+      if (!envSimService.isRunning) {
+        envSimService.start(climate, event.weather.scenePreset)
+      } else {
+        envSimService.onClimateChanged(climate)
+        envSimService.onScenePresetChanged(event.weather.scenePreset)
+      }
+      stopAutoTimeInterval()
+    } else {
+      // autoWeather無効: envSimService停止、手動テーマ適用
+      if (envSimService.isRunning) {
+        envSimService.stop()
+      }
+      applyWeather(event.weather)
+    }
+  })
+
+  // WeatherDecisionChanged → envSimServiceが発行する天気決定をエフェクトに反映
+  bus.subscribe<WeatherDecisionChangedEvent>('WeatherDecisionChanged', (event) => {
+    const { weather, precipIntensity, cloudDensity } = event.decision
+    const duration = THEME_TRANSITION_DURATION_AUTO_MS
+
+    // 雨/雪エフェクト切替
+    if (weather === 'rainy') {
+      rainEffect.fadeIn(duration)
+      rainEffect.setParticleCount(computeParticleCount('rainy', precipIntensity))
+    } else {
+      rainEffect.fadeOut(duration)
+    }
+    if (weather === 'snowy') {
+      snowEffect.fadeIn(duration)
+      snowEffect.setParticleCount(computeParticleCount('snowy', precipIntensity))
+    } else {
+      snowEffect.fadeOut(duration)
+    }
+
+    // 雲エフェクト
+    const cloudLevel = cloudDensityToLevel(cloudDensity)
+    cloudEffect.setWeatherColor(weather)
+    cloudEffect.setDensity(cloudLevel)
+    if (cloudLevel > 0) cloudEffect.fadeIn(duration)
+    else cloudEffect.fadeOut(duration)
   })
 
   // WeatherPreviewOpen → カメラ位置切替 + キャラクター歩行
@@ -516,8 +588,13 @@ async function main(): Promise<void> {
   await statisticsService.loadFromStorage()
 
   // 初期天気・プリセット適用（loadFromStorageでWeatherConfigChangedが発行されない場合のフォールバック）
-  applyWeather(settingsService.weatherConfig, true)
   switchScenePreset(settingsService.weatherConfig.scenePreset)
+  if (settingsService.weatherConfig.autoWeather) {
+    const climate = settingsService.weatherConfig.climate ?? DEFAULT_CLIMATE
+    envSimService.start(climate, settingsService.weatherConfig.scenePreset)
+  } else {
+    applyWeather(settingsService.weatherConfig, true)
+  }
 
   // 初回React UIレンダリング
   renderReactUI()
@@ -584,32 +661,20 @@ async function main(): Promise<void> {
     () => settingsService.powerConfig.preventSleep
   )
 
-  // autoTimeOfDay: 1分間隔で時間帯を監視し天気を再適用
-  let autoTimeInterval: ReturnType<typeof setInterval> | null = null
-  function startAutoTimeInterval(): void {
-    if (autoTimeInterval !== null) return
-    autoTimeInterval = setInterval(() => {
-      applyWeather(settingsService.weatherConfig)
-    }, 60000)
-  }
-  function stopAutoTimeInterval(): void {
-    if (autoTimeInterval !== null) {
-      clearInterval(autoTimeInterval)
-      autoTimeInterval = null
-    }
-  }
-  // WeatherConfigChanged購読でinterval管理（プレビュー中はinterval開始しない）
+  // WeatherConfigChanged購読でinterval管理（プレビュー中やautoWeather時はinterval開始しない）
   bus.subscribe<SettingsEvent>('WeatherConfigChanged', (event) => {
     if (event.type !== 'WeatherConfigChanged') return
     if (weatherPreviewOpen) return
-    if (event.weather.autoTimeOfDay) {
+    if (event.weather.autoWeather) {
+      stopAutoTimeInterval()
+    } else if (event.weather.autoTimeOfDay) {
       startAutoTimeInterval()
     } else {
       stopAutoTimeInterval()
     }
   })
-  // 初期状態でautoTimeOfDay有効ならinterval開始
-  if (settingsService.weatherConfig.autoTimeOfDay) {
+  // 初期状態でautoTimeOfDay有効（かつautoWeather無効）ならinterval開始
+  if (settingsService.weatherConfig.autoTimeOfDay && !settingsService.weatherConfig.autoWeather) {
     startAutoTimeInterval()
   }
 
@@ -703,6 +768,9 @@ async function main(): Promise<void> {
         behaviorOptions
       )
     }
+    // 環境シミュレーション更新（autoWeather有効時のみ実行。内部でthemeTransition.transitionTo()を呼ぶ）
+    envSimService.tick(deltaMs)
+
     // テーマ遷移の補間更新
     const interpolatedParams = themeTransition.tick(deltaMs)
     if (interpolatedParams) {

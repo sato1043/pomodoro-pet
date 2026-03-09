@@ -241,6 +241,20 @@ export function createAppSettingsService(
         const w = data.weather as Record<string, unknown>
         if (typeof w.weather === 'string' && typeof w.timeOfDay === 'string') {
           const validPresets = ['meadow', 'seaside', 'park']
+          // climate フィールドの復元（後方互換: 未設定時はundefined→DEFAULT_CLIMATEにフォールバック）
+          let restoredClimate: WeatherConfig['climate'] = undefined
+          if (w.climate && typeof w.climate === 'object') {
+            const c = w.climate as Record<string, unknown>
+            if (typeof c.latitude === 'number' && typeof c.longitude === 'number' && typeof c.label === 'string') {
+              restoredClimate = {
+                mode: c.mode === 'custom' ? 'custom' : 'preset',
+                presetName: typeof c.presetName === 'string' ? c.presetName : undefined,
+                latitude: c.latitude,
+                longitude: c.longitude,
+                label: c.label,
+              }
+            }
+          }
           currentWeather = {
             weather: w.weather as WeatherConfig['weather'],
             timeOfDay: w.timeOfDay as WeatherConfig['timeOfDay'],
@@ -250,6 +264,7 @@ export function createAppSettingsService(
             scenePreset: typeof w.scenePreset === 'string' && validPresets.includes(w.scenePreset)
               ? w.scenePreset as WeatherConfig['scenePreset']
               : 'meadow',
+            climate: restoredClimate,
           }
           publishWeatherChanged(currentWeather)
         }

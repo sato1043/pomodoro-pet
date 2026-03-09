@@ -230,6 +230,26 @@ export const tlContainer = style({
   margin: '16px 0 24px',
 })
 
+export const tlClockSuffix = style({
+  display: 'inline-block',
+  position: 'relative',
+  verticalAlign: 'baseline',
+  marginLeft: 2,
+})
+
+export const tlTimezone = style({
+  position: 'absolute',
+  bottom: '65%',
+  left: '50%',
+  transform: 'translateX(-50%)',
+  fontSize: '0.18em',
+  color: vars.color.textCaption,
+  fontWeight: 400,
+  letterSpacing: '0.05em',
+  lineHeight: 1,
+  whiteSpace: 'nowrap',
+})
+
 export const tlClock = style({
   fontSize: 80,
   color: vars.color.text,

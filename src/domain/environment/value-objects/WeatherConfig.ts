@@ -1,4 +1,5 @@
 import type { ScenePresetName } from './ScenePreset'
+import type { ClimateConfig } from './ClimateData'
 export type { ScenePresetName }
 
 export type WeatherType = 'sunny' | 'cloudy' | 'rainy' | 'snowy'
@@ -15,6 +16,7 @@ export interface WeatherConfig {
   readonly autoTimeOfDay: boolean
   readonly cloudDensityLevel: CloudDensityLevel
   readonly scenePreset: ScenePresetName
+  readonly climate?: ClimateConfig
 }
 
 const CLOUD_PRESET: Record<WeatherType, CloudDensityLevel> = {

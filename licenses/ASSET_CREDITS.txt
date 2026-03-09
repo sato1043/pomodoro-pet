@@ -12,3 +12,23 @@ The following asset may be included in this product:
 
 -----------
 
+The following data may be included in this product:
+
+ - Climate Grid Data (5-degree resolution, monthly normals 1991-2020)
+
+  Source: NASA POWER (Prediction Of Worldwide Energy Resources)
+          https://power.larc.nasa.gov/
+  Data: CERES/MERRA-2 Climatology — T2M, T2M_MAX, T2M_MIN, PRECTOTCORR, RH2M
+  License: NASA POWER data is freely available for use with proper attribution.
+           See https://power.larc.nasa.gov/ for terms of use.
+
+ - Geographic Vector Data (110m resolution)
+
+  Source: Natural Earth (https://www.naturalearthdata.com/)
+  Data: ne_110m_land — land polygon data
+        ne_110m_geographic_lines — International Date Line
+  License: Public domain. Free for any use without restriction.
+           See https://www.naturalearthdata.com/about/terms-of-use/
+
+-----------
+

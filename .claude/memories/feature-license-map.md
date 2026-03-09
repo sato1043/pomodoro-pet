@@ -169,6 +169,12 @@
 | 67 | ライティング | main.ts, EnvironmentTheme.ts | 自動 | （制限不要） | 時間帯×天気のルックアップテーブル適用 |
 | 68 | オートタイムオブデイ | main.ts | 自動 | （制限不要） | 1分間隔の時間帯更新 |
 | 69 | 天気プレビューカメラ | main.ts | 自動 | weatherSettings | パネル表示中のカメラ後退 |
+| 100 | 天文計算シミュレーション | EnvironmentSimulationService.ts | 自動 | （制限不要） | astronomy-engineによる太陽/月位置→環境パラメータ連続生成 |
+| 101 | 七十二候UI表示 | KouDisplay.tsx | 自動 | （制限不要） | 候名オーバーレイ（フェードアニメーション付き） |
+| 102 | 世界地図UI | WorldMapModal.tsx | 操作 | weatherSettings | SVG世界地図+terminator+都市プリセット+座標選択 |
+| 103 | 気候プロファイル | ClimateData.ts, ClimateGridAdapter.ts | 自動 | （制限不要） | 緯度経度から72候分気候データ自動生成 |
+| 104 | 天気自動決定 | WeatherDecision.ts | 自動 | （制限不要） | 気候データ+気温→天気タイプ確率的決定 |
+| 105 | 雨量連動パーティクル | RainEffect.ts, SnowEffect.ts | 自動 | （制限不要） | 降水強度→粒子数動的変更 |
 
 ### L. バックグラウンド動作
 
@@ -251,6 +257,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| (未リリース) | 機能追加 | 天文計算ベース環境シミュレーション追加（#100-105）。astronomy-engine太陽/月計算、七十二候UI、世界地図UI、気候プロファイル、天気自動決定、雨量連動パーティクル |
 | 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行（即座反映・Setボタン廃止）、環境音連動、settings.json永続化。seaside演出強化（ヤシの木・波打ち際・砂浜地面色・空色明化・輝度ブースト・mergeGeometries描画最適化）。天気別雲色（sunny=白emissive/それ以外=灰色）。park改善（歩道・街灯等間隔・植え込み歩道脇沿い・街路樹5本） |
 | 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
 | 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |

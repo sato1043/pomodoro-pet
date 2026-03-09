@@ -19,6 +19,7 @@ import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
 import { LegalDocContent } from './LegalDocContent'
 import { RegistrationContent } from './RegistrationContent'
+import { getLocationTime, formatTimezoneLabel } from '../../domain/environment/value-objects/Timezone'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
 import * as aboutStyles from './styles/about.css'
@@ -79,11 +80,20 @@ function buildSetViews(plan: CyclePhase[], startTime: Date): TimelineSetView[] {
   return views
 }
 
-function fmtClock(date: Date): { h12: number; mi: string; ampm: string } {
-  const h = date.getHours()
+function fmtClock(date: Date, timezone?: string): { h12: number; mi: string; ampm: string } {
+  let h: number
+  let m: number
+  if (timezone) {
+    const t = getLocationTime(date, timezone)
+    h = t.hours
+    m = t.minutes
+  } else {
+    h = date.getHours()
+    m = date.getMinutes()
+  }
   return {
     h12: h % 12 || 12,
-    mi: String(date.getMinutes()).padStart(2, '0'),
+    mi: String(m).padStart(2, '0'),
     ampm: h < 12 ? 'AM' : 'PM',
   }
 }
@@ -300,9 +310,10 @@ interface TimelineScheduleProps {
   readonly timerConfig: TimerConfig
   readonly setViews: TimelineSetView[]
   readonly nowClock: { h12: number; mi: string; ampm: string }
+  readonly timezone?: string
 }
 
-function TimelineSchedule({ timerConfig, setViews, nowClock }: TimelineScheduleProps): JSX.Element {
+function TimelineSchedule({ timerConfig, setViews, nowClock, timezone }: TimelineScheduleProps): JSX.Element {
   return (
     <div className={styles.tlRow}>
       <div className={styles.tlLabels}>
@@ -316,7 +327,7 @@ function TimelineSchedule({ timerConfig, setViews, nowClock }: TimelineScheduleP
           {nowClock.h12}:{nowClock.mi}<span className={styles.tlAmpm}>{nowClock.ampm}</span>
         </span>
         {setViews.map((sv, i) => {
-          const c = fmtClock(sv.endTime)
+          const c = fmtClock(sv.endTime, timezone)
           return (
             <span key={i}>
               {c.h12}:{c.mi}<span className={styles.tlAmpm}>{c.ampm}</span>
@@ -351,13 +362,14 @@ function TimelineConfig({ timerConfig, totalMs }: TimelineConfigProps): JSX.Elem
 
 // --- タイムラインサマリー ---
 
-function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Element {
+function TimelineSummary({ timerConfig, timezone }: { timerConfig: TimerConfig; timezone?: string }): JSX.Element {
   const plan = buildCyclePlan(timerConfig)
   const now = new Date()
   const setViews = buildSetViews(plan, now)
   const displayPlan = plan.filter(p => p.type !== 'congrats')
   const totalMs = cycleTotalMs(displayPlan)
-  const nowClock = fmtClock(now)
+  const nowClock = fmtClock(now, timezone)
+  const tzLabel = timezone ? formatTimezoneLabel(timezone, now) : ''
 
   return (
     <div className={styles.tlContainer}>
@@ -365,9 +377,12 @@ function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Ele
         {String(nowClock.h12).padStart(2, '0')}
         <span className={styles.tlBlink}>:</span>
         {nowClock.mi}
-        <span className={styles.tlDateSub}>{nowClock.ampm}</span>
+        <span className={styles.tlClockSuffix}>
+          {tzLabel && <span className={styles.tlTimezone}>{tzLabel}</span>}
+          <span className={styles.tlDateSub}>{nowClock.ampm}</span>
+        </span>
       </div>
-      <TimelineSchedule timerConfig={timerConfig} setViews={setViews} nowClock={nowClock} />
+      <TimelineSchedule timerConfig={timerConfig} setViews={setViews} nowClock={nowClock} timezone={timezone} />
       <TimelineConfig timerConfig={timerConfig} totalMs={totalMs} />
     </div>
   )
@@ -375,7 +390,7 @@ function TimelineSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Ele
 
 // --- 折りたたみ時サマリー ---
 
-function FreeTimerSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.Element {
+function FreeTimerSummary({ timerConfig, timezone }: { timerConfig: TimerConfig; timezone?: string }): JSX.Element {
   const [, setClockTick] = useState(0)
   useEffect(() => {
     const id = setInterval(() => setClockTick(t => t + 1), 1000)
@@ -384,7 +399,7 @@ function FreeTimerSummary({ timerConfig }: { timerConfig: TimerConfig }): JSX.El
 
   return (
     <div className={styles.settingsSummary}>
-      <TimelineSummary timerConfig={timerConfig} />
+      <TimelineSummary timerConfig={timerConfig} timezone={timezone} />
     </div>
   )
 }
@@ -425,12 +440,13 @@ interface FreeSummaryViewProps {
   readonly editor: SettingsEditorResult
   readonly audio: AudioAdapter
   readonly sfx: SfxPlayer | null
+  readonly timezone?: string
 }
 
-function FreeSummaryView({ editor, audio, sfx }: FreeSummaryViewProps): JSX.Element {
+function FreeSummaryView({ editor, audio, sfx, timezone }: FreeSummaryViewProps): JSX.Element {
   return (
     <>
-      <FreeTimerSummary timerConfig={editor.currentTimerConfig} />
+      <FreeTimerSummary timerConfig={editor.currentTimerConfig} timezone={timezone} />
       <VolumeControl
         audio={audio}
         sfx={sfx}
@@ -514,9 +530,10 @@ interface OverlayFreeProps {
   readonly expanded?: boolean
   readonly onExpandedChange?: (expanded: boolean) => void
   readonly onToggleRef?: (toggle: () => void) => void
+  readonly timezone?: string
 }
 
-export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: OverlayFreeProps): JSX.Element {
+export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone }: OverlayFreeProps): JSX.Element {
   const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const { canUse } = useLicenseMode()
@@ -569,7 +586,7 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef }: Overlay
 
   const renderContent = (): JSX.Element => {
     if (!editor.expanded) {
-      return <FreeSummaryView editor={editor} audio={audio} sfx={sfx} />
+      return <FreeSummaryView editor={editor} audio={audio} sfx={sfx} timezone={timezone} />
     }
     if (showAbout) {
       return <AboutContent onBack={() => setShowAbout(false)} />

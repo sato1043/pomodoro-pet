@@ -29,6 +29,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [scene-transition-design.md](./memories/scene-transition-design.md) — DisplayScene（5種）と宣言的シーン遷移グラフ（DISPLAY_SCENE_GRAPH）の設計。暗転トランジション演出のレイヤー分離。画面遷移演出を変更する際に参照
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
+- [environment-scene-design.md](./memories/environment-scene-design.md) — 環境シーンシステム全体設計。Phase 1-3実装済み仕様（型定義・プリセット・テーマ・エフェクト・補間・UI・永続化）+ Phase 5.5未実装設計（astronomy-engine天文計算・七十二候・気候プロファイル・天気自動決定・雨量連動）。環境シーン変更時に参照
 
 ### インフラ・技術
 
@@ -74,9 +75,9 @@ domain（最内層）← application ← adapters ← infrastructure（最外層
 ### レイヤー概要
 
 - **ドメイン層** (`src/domain/`) — 4コンテキスト: timer / character / environment / shared。外部依存なし
-- **アプリケーション層** (`src/application/`) — PomodoroOrchestrator、AppSceneManager、FureaiCoordinator、AppSettingsService、EmotionService、TimerSfxBridge、NotificationBridge、StatisticsService、LicenseState 等
+- **アプリケーション層** (`src/application/`) — PomodoroOrchestrator、AppSceneManager、FureaiCoordinator、AppSettingsService、EmotionService、TimerSfxBridge、NotificationBridge、StatisticsService、LicenseState、EnvironmentSimulationService 等
 - **アダプター層** (`src/adapters/`) — React UI（`.tsx`）+ Three.jsアダプター。createPortalでポータル化、vanilla-extract CSS
-- **インフラ層** (`src/infrastructure/`) — FBXModelLoader、AnimationController、環境チャンク、天気エフェクト、ProceduralSounds、AudioAdapter、SfxPlayer
+- **インフラ層** (`src/infrastructure/`) — FBXModelLoader、AnimationController、環境チャンク、天気エフェクト、ProceduralSounds、AudioAdapter、SfxPlayer、AstronomyAdapter、ClimateGridAdapter
 
 各レイヤーの詳細（Electronプロセス構成、ファイルマップ、通信パターン、テストファイル一覧）は [architecture.md](./memories/architecture.md) を参照。
 

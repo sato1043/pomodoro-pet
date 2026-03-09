@@ -299,17 +299,24 @@
 - 補間中の割り込みは中間値から新目標へシームレスに再補間
 - ThemeLerp純粋関数群（ドメイン層）+ ThemeTransitionService（アプリケーション層）で構成
 
-### 環境シーンのバリエーション — Phase 4: 天気API連携 autoWeather（独立）
-- 外部天気API（OpenWeatherMap等）からリアルタイム天気取得
-- autoWeatherボタン有効化
-- ElectronメインプロセスでのAPI呼び出し+IPC
-- APIキー管理・オフラインフォールバック
+### ~~環境シーンのバリエーション — Phase 4: 天気API連携 autoWeather~~ → Phase 5.5fに統合
+### ~~環境シーンのバリエーション — Phase 5: 時間帯に応じた影の向き~~ → Phase 5.5cに統合
 
-### 環境シーンのバリエーション — Phase 5: 時間帯に応じた影の向き
-- sunPositionの方向に合わせてDirectionalLightの影を連動させる
-- morning: 東（右）から低い角度、day: 真上付近、evening: 西（左）から低い角度、night: 月光（現行の固定位置）
-- テーマ遷移（lerp補間）と同期して影の方向も滑らかに変化
-- キャラクターやオブジェクトの影が時間帯に応じて自然に伸縮・回転する
+### ~~環境シーンのバリエーション — Phase 5.5: 天文計算ベース環境シミュレーション~~ — 完了
+astronomy-engineによる太陽位置計算 + 七十二候単位の気候定数テーブルで環境を連続シミュレート。全9サブフェーズ（5.5a〜5.5i）実装済み。94テスト追加（ユニットテスト合計965件）。
+
+- 5.5a: 天文計算基盤（AstronomyPort/AstronomyAdapter、astronomy-engine導入）
+- 5.5b: 天体→明るさ（altitudeToSunColor/altitudeToSkyColor/exposure連続生成）
+- 5.5c: 天体→光源の向き（太陽/月方向のDirectionalLight連動、薄明クロスフェード）
+- 5.5d: 七十二候（KOU_DEFINITIONS全72候、resolveKou/kouProgress）
+- 5.5e: 気候プロファイル（ClimateGridPort/ClimateGridAdapter、72候単位気候補間、5都市プリセット）
+- 5.5f: 天気自動決定（decideWeather、mulberry32 PRNG、WeatherDecisionChangedイベント）
+- 5.5g: 雨量連動（setDrawRange()でRain 100-1200/Snow 100-900の動的粒子数制御）
+- 5.5h: 七十二候UI表示（KouDisplay、フェードアニメーション付き候名オーバーレイ）
+- 5.5i: 世界地図UI（WorldMapModal、SVG terminator描画、5都市+任意座標選択）
+- EnvironmentSimulationServiceで全サブシステムを統合（30秒更新、日単位天気決定）
+- 手動モード維持（autoWeather=false時は従来のTHEME_TABLE参照）
+- 詳細設計: [environment-scene-design.md](environment-scene-design.md) Phase 5.5セクション
 
 ### 環境映像（背景動画）
 - 要件定義でnice-to-haveとされた機能

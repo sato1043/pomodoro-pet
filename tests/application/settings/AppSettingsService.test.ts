@@ -271,6 +271,43 @@ describe('AppSettingsService', () => {
         scenePreset: 'meadow',
       })
     })
+
+    it('updateWeatherConfigでclimateフィールドを設定できる', () => {
+      service.updateWeatherConfig({
+        climate: {
+          mode: 'preset',
+          presetName: 'Tokyo',
+          latitude: 35.68,
+          longitude: 139.77,
+          label: 'Tokyo',
+        },
+      })
+      expect(service.weatherConfig.climate).toEqual({
+        mode: 'preset',
+        presetName: 'Tokyo',
+        latitude: 35.68,
+        longitude: 139.77,
+        label: 'Tokyo',
+      })
+    })
+
+    it('updateWeatherConfigでclimate未指定時はundefinedのまま', () => {
+      service.updateWeatherConfig({ weather: 'rainy' })
+      expect(service.weatherConfig.climate).toBeUndefined()
+    })
+
+    it('resetToDefaultでclimateフィールドがクリアされる', () => {
+      service.updateWeatherConfig({
+        climate: {
+          mode: 'custom',
+          latitude: 40,
+          longitude: 140,
+          label: 'Custom',
+        },
+      })
+      service.resetToDefault()
+      expect(service.weatherConfig.climate).toBeUndefined()
+    })
   })
 
   describe('licenseSettings', () => {

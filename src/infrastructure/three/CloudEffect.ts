@@ -302,6 +302,10 @@ export function createCloudEffect(scene: THREE.Scene): CloudEffect {
       fadeState = 'out'
     },
 
+    setParticleCount(): void {
+      // CloudEffectは粒子数制御不要（密度はsetDensityLevelで制御）
+    },
+
     dispose(): void {
       clearClouds()
       clearRetiringBatches()
