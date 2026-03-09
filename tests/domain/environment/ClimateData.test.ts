@@ -108,25 +108,86 @@ describe('estimateTemperature', () => {
 })
 
 describe('temperatureToGroundColor', () => {
-  it('高温→濃い緑', () => {
-    const color = temperatureToGroundColor(30, 'meadow')
-    expect(color).toBe(0x4a7a2e)
+  it('湿潤+高温→深緑', () => {
+    const color = temperatureToGroundColor(30, 'meadow', 15)
+    // 湿潤テーブルの高温側: 0x3a6a22
+    const g = (color >> 8) & 0xff
+    expect(g).toBeGreaterThan(0x60) // 緑チャンネルが支配的
   })
 
-  it('低温→灰白', () => {
-    const color = temperatureToGroundColor(-5, 'meadow')
-    expect(color).toBe(0x8a8a7a)
+  it('湿潤+低温→灰オリーブ', () => {
+    const color = temperatureToGroundColor(-5, 'meadow', 15)
+    // 湿潤テーブルの厳冬: 0x729862
+    const g = (color >> 8) & 0xff
+    const r = (color >> 16) & 0xff
+    expect(g).toBeGreaterThan(r) // 緑 > 赤（茶色ではない）
   })
 
-  it('中間気温で中間色', () => {
-    const color = temperatureToGroundColor(10, 'meadow')
-    expect(color).not.toBe(0x4a7a2e)
-    expect(color).not.toBe(0x8a8a7a)
+  it('乾燥+高温→砂色', () => {
+    const color = temperatureToGroundColor(35, 'meadow', 0)
+    // 乾燥テーブルの高温: 0xd4b878
+    const r = (color >> 16) & 0xff
+    const g = (color >> 8) & 0xff
+    expect(r).toBeGreaterThan(g) // 赤 > 緑（砂色系）
   })
 
-  it('seasideプリセットは砂浜色固定', () => {
-    expect(temperatureToGroundColor(30, 'seaside')).toBe(0xd4b878)
-    expect(temperatureToGroundColor(-10, 'seaside')).toBe(0xd4b878)
+  it('乾燥+低温→灰砂', () => {
+    const color = temperatureToGroundColor(-5, 'meadow', 0)
+    // 乾燥テーブルの厳冬: 0x8a8578
+    const r = (color >> 16) & 0xff
+    const g = (color >> 8) & 0xff
+    expect(Math.abs(r - g)).toBeLessThan(20) // ほぼ灰色
+  })
+
+  it('中間降水量で乾燥と湿潤の中間色', () => {
+    const dry = temperatureToGroundColor(20, 'meadow', 0)
+    const wet = temperatureToGroundColor(20, 'meadow', 15)
+    const mid = temperatureToGroundColor(20, 'meadow', 5)
+    // 赤チャンネルは乾燥（砂色=高R）→湿潤（緑色=低R）で単調減少
+    const midR = (mid >> 16) & 0xff
+    const dryR = (dry >> 16) & 0xff
+    const wetR = (wet >> 16) & 0xff
+    expect(midR).toBeLessThan(dryR)
+    expect(midR).toBeGreaterThan(wetR)
+  })
+
+  it('湿潤テーブルの0-25°C帯で緑チャンネルが一定', () => {
+    const temps = [0, 5, 10, 15, 20, 25]
+    const greens = temps.map(t => {
+      const color = temperatureToGroundColor(t, 'meadow', 15)
+      return (color >> 8) & 0xff
+    })
+    // 全温度帯で同じ緑チャンネル値
+    for (const g of greens) {
+      expect(g).toBe(greens[0])
+    }
+  })
+
+  it('湿潤テーブルの25-35°C帯で緑チャンネルが減少', () => {
+    const g25 = (temperatureToGroundColor(25, 'meadow', 15) >> 8) & 0xff
+    const g30 = (temperatureToGroundColor(30, 'meadow', 15) >> 8) & 0xff
+    const g35 = (temperatureToGroundColor(35, 'meadow', 15) >> 8) & 0xff
+    expect(g30).toBeLessThan(g25)
+    expect(g35).toBeLessThan(g30)
+  })
+
+  it('湿潤テーブル35°C以上は固定色', () => {
+    const c35 = temperatureToGroundColor(35, 'meadow', 15)
+    const c40 = temperatureToGroundColor(40, 'meadow', 15)
+    const c50 = temperatureToGroundColor(50, 'meadow', 15)
+    expect(c35).toBe(c40)
+    expect(c40).toBe(c50)
+  })
+
+  it('seasideプリセットは降水量に関係なく砂浜色固定', () => {
+    expect(temperatureToGroundColor(30, 'seaside', 0)).toBe(0xd4b878)
+    expect(temperatureToGroundColor(-10, 'seaside', 20)).toBe(0xd4b878)
+  })
+
+  it('デフォルト降水量（省略時）で動作する', () => {
+    const color = temperatureToGroundColor(20, 'meadow')
+    expect(color).toBeDefined()
+    expect(typeof color).toBe('number')
   })
 })
 
@@ -151,24 +212,6 @@ describe('CITY_PRESETS', () => {
     for (const city of CITY_PRESETS) {
       expect(city.longitude).toBeGreaterThanOrEqual(-180)
       expect(city.longitude).toBeLessThanOrEqual(180)
-    }
-  })
-
-  it('全都市のclimateZoneが有効なケッペン気候区分コード', () => {
-    // ケッペン気候区分の主要コード（第1文字+第2〜3文字の組み合わせ）
-    const validZones = [
-      'Af', 'Am', 'Aw', 'As',           // 熱帯
-      'BWh', 'BWk', 'BSh', 'BSk',       // 乾燥帯
-      'Csa', 'Csb', 'Csc',              // 温帯（地中海性）
-      'Cwa', 'Cwb', 'Cwc',              // 温帯（温暖冬季少雨）
-      'Cfa', 'Cfb', 'Cfc',              // 温帯（湿潤）
-      'Dsa', 'Dsb', 'Dsc', 'Dsd',       // 亜寒帯（地中海性）
-      'Dwa', 'Dwb', 'Dwc', 'Dwd',       // 亜寒帯（冬季少雨）
-      'Dfa', 'Dfb', 'Dfc', 'Dfd',       // 亜寒帯（湿潤）
-      'ET', 'EF',                        // 寒帯
-    ]
-    for (const city of CITY_PRESETS) {
-      expect(validZones).toContain(city.climateZone)
     }
   })
 

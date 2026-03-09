@@ -125,6 +125,30 @@ describe('computeThemeFromCelestial', () => {
     expect(hot.groundColor).not.toBe(cold.groundColor)
   })
 
+  it('avgPrecipMmが地面色に影響する', () => {
+    const solar = makeSolar(45)
+    const lunar = makeLunar(-10, 0.0, false)
+
+    const dry = computeThemeFromCelestial(solar, lunar, sunnyWeather, 20, 'meadow', 0)
+    const wet = computeThemeFromCelestial(solar, lunar, sunnyWeather, 20, 'meadow', 15)
+
+    // 乾燥と湿潤で異なる地面色
+    expect(dry.groundColor).not.toBe(wet.groundColor)
+    // 湿潤の方が緑チャンネルが高い（赤チャンネルが低い）
+    const dryR = (dry.groundColor >> 16) & 0xff
+    const wetR = (wet.groundColor >> 16) & 0xff
+    expect(wetR).toBeLessThan(dryR)
+  })
+
+  it('avgPrecipMm省略時のデフォルト値で動作する', () => {
+    const solar = makeSolar(45)
+    const lunar = makeLunar(-10, 0.0, false)
+
+    const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 20, 'meadow')
+    expect(result.groundColor).toBeDefined()
+    expect(typeof result.groundColor).toBe('number')
+  })
+
   it('THEME_TABLE morning参照値に近い (sunny, altitude=10)', () => {
     const solar = makeSolar(10)
     const lunar = makeLunar(-10, 0.0, false)

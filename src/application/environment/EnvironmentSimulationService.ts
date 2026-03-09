@@ -124,6 +124,7 @@ export function createEnvironmentSimulationService(
   let manualWeatherDecision: WeatherDecision = { weather: 'sunny', precipIntensity: 0, cloudDensity: 0.1 }
   let currentKou: KouDefinition | null = null
   let currentEstimatedTempC: number = 20
+  let currentAvgPrecipMm: number = 5
 
   let timeSinceLastAstronomyUpdate = 0
   let lastWeatherDecisionDayOfYear = -1
@@ -150,10 +151,11 @@ export function createEnvironmentSimulationService(
     const previousKou = currentKou
     currentKou = kou
 
-    // Step 3: 気温推定
+    // Step 3: 気温・降水量推定
     if (cachedKouClimates.length > 0) {
       const kouClimate = cachedKouClimates[kou.index]
       currentEstimatedTempC = estimateTemperature(kouClimate, now.getHours())
+      currentAvgPrecipMm = kouClimate.avgPrecipMm
     }
 
     // Step 4: 天気決定（autoWeather有効時のみ、日変更時のみ）
@@ -190,7 +192,7 @@ export function createEnvironmentSimulationService(
       : cachedLunar
 
     const themeParams = computeThemeFromCelestial(
-      themeSolar, themeLunar, effectiveWeather, currentEstimatedTempC, scenePreset
+      themeSolar, themeLunar, effectiveWeather, currentEstimatedTempC, scenePreset, currentAvgPrecipMm
     )
 
     // Step 6: 光源方向

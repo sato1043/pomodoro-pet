@@ -111,7 +111,8 @@ export function computeThemeFromCelestial(
   lunar: LunarPosition,
   weatherDecision: WeatherDecision,
   estimatedTempC: number,
-  scenePreset: ScenePresetName
+  scenePreset: ScenePresetName,
+  avgPrecipMm: number = 5
 ): EnvironmentThemeParams {
   const { altitude } = solar
   const weather = weatherDecision.weather
@@ -179,7 +180,7 @@ export function computeThemeFromCelestial(
   const hemiSkyColor = skyColor
 
   // 13. groundColor
-  const groundColor = temperatureToGroundColor(estimatedTempC, scenePreset)
+  const groundColor = temperatureToGroundColor(estimatedTempC, scenePreset, avgPrecipMm)
 
   // 11. hemiGroundColor = groundColor
   const hemiGroundColor = groundColor

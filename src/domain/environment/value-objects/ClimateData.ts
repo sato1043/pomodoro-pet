@@ -44,18 +44,17 @@ export interface CityPreset {
   readonly name: string
   readonly latitude: number
   readonly longitude: number
-  readonly climateZone: string
 }
 
 export const CITY_PRESETS: readonly CityPreset[] = [
-  { name: 'Sydney', latitude: -33.8688, longitude: 151.2093, climateZone: 'Cfa' },
-  { name: 'Tokyo', latitude: 35.6762, longitude: 139.6503, climateZone: 'Cfa' },
-  { name: 'London', latitude: 51.5074, longitude: -0.1278, climateZone: 'Cfb' },
-  { name: 'New York', latitude: 40.7128, longitude: -74.0060, climateZone: 'Cfa' },
-  { name: 'Hawaii', latitude: 21.3069, longitude: -157.8583, climateZone: 'Af' },
-  { name: 'Dubai', latitude: 25.2048, longitude: 55.2708, climateZone: 'BWh' },
-  { name: 'Reykjavik', latitude: 64.1466, longitude: -21.9426, climateZone: 'Cfc' },
-  { name: 'Ushuaia', latitude: -54.8019, longitude: -68.3030, climateZone: 'Cfc' },
+  { name: 'Sydney', latitude: -33.8688, longitude: 151.2093 },
+  { name: 'Tokyo', latitude: 35.6762, longitude: 139.6503 },
+  { name: 'London', latitude: 51.5074, longitude: -0.1278 },
+  { name: 'New York', latitude: 40.7128, longitude: -74.0060 },
+  { name: 'Hawaii', latitude: 21.3069, longitude: -157.8583 },
+  { name: 'Dubai', latitude: 25.2048, longitude: 55.2708 },
+  { name: 'Reykjavik', latitude: 64.1466, longitude: -21.9426 },
+  { name: 'Ushuaia', latitude: -54.8019, longitude: -68.3030 },
 ]
 
 export const DEFAULT_CLIMATE: ClimateConfig = {
@@ -179,23 +178,49 @@ export function estimateTemperature(
   return kouClimate.avgTempC + amplitude * Math.cos((hourOfDay - 14) * Math.PI / 12)
 }
 
-/** 気温→地面色の連続マッピング */
-export function temperatureToGroundColor(tempC: number, scenePreset: ScenePresetName): number {
+/** 色のlerp */
+function lerpColor(c1: number, c2: number, t: number): number {
+  const r1 = (c1 >> 16) & 0xff, g1 = (c1 >> 8) & 0xff, b1 = c1 & 0xff
+  const r2 = (c2 >> 16) & 0xff, g2 = (c2 >> 8) & 0xff, b2 = c2 & 0xff
+  const r = Math.round(r1 + (r2 - r1) * t)
+  const g = Math.round(g1 + (g2 - g1) * t)
+  const b = Math.round(b1 + (b2 - b1) * t)
+  return (r << 16) | (g << 8) | b
+}
+
+/** 乾燥地テーブル: 気温→砂色〜土色 */
+function dryGroundColor(tempC: number): number {
+  if (tempC <= 0) return 0x8a8578      // 灰砂（厳冬）
+  if (tempC <= 15) return lerpColor(0x8a8578, 0xc4a862, tempC / 15)
+  if (tempC <= 30) return lerpColor(0xc4a862, 0xd4b878, (tempC - 15) / 15)
+  return 0xd4b878                       // 明るい砂色（酷暑）
+}
+
+/** 湿潤地テーブル: 気温→灰緑〜深緑 */
+function wetGroundColor(tempC: number): number {
+  if (tempC <= 0) return 0x729862      // 冬枯れ（緑味残す）
+  if (tempC <= 10) return lerpColor(0x729862, 0x509836, tempC / 10)
+  if (tempC <= 25) return lerpColor(0x509836, 0x469830, (tempC - 10) / 15)
+  if (tempC <= 35) return lerpColor(0x469830, 0x3a6a22, (tempC - 25) / 10)
+  return 0x3a6a22                       // 酷暑の深緑
+}
+
+/**
+ * 気温+降水量→地面色の連続マッピング。
+ * avgPrecipMm: 候あたり（約5日間）の平均降水量(mm)。
+ * 降水量 ≤1mm → 乾燥テーブル、≥10mm → 湿潤テーブル、間はlerp。
+ */
+export function temperatureToGroundColor(
+  tempC: number,
+  scenePreset: ScenePresetName,
+  avgPrecipMm: number = 5
+): number {
   if (scenePreset === 'seaside') return 0xd4b878  // 砂浜色固定
 
-  // 連続lerp: < 0℃ 灰白, 0-5℃ くすんだ茶, 5-15℃ 黄茶, 15-25℃ 明るい緑, > 25℃ 濃い緑
-  const lerpColor = (c1: number, c2: number, t: number): number => {
-    const r1 = (c1 >> 16) & 0xff, g1 = (c1 >> 8) & 0xff, b1 = c1 & 0xff
-    const r2 = (c2 >> 16) & 0xff, g2 = (c2 >> 8) & 0xff, b2 = c2 & 0xff
-    const r = Math.round(r1 + (r2 - r1) * t)
-    const g = Math.round(g1 + (g2 - g1) * t)
-    const b = Math.round(b1 + (b2 - b1) * t)
-    return (r << 16) | (g << 8) | b
-  }
+  const dry = dryGroundColor(tempC)
+  const wet = wetGroundColor(tempC)
 
-  if (tempC <= 0) return 0x8a8a7a     // 灰白（厳冬）
-  if (tempC <= 5) return lerpColor(0x8a8a7a, 0x6a5a3a, tempC / 5)
-  if (tempC <= 15) return lerpColor(0x6a5a3a, 0x8a7a3c, (tempC - 5) / 10)
-  if (tempC <= 25) return lerpColor(0x8a7a3c, 0x5d8a3c, (tempC - 15) / 10)
-  return 0x4a7a2e                      // 濃い緑（盛夏）
+  // 降水量による乾燥〜湿潤ブレンド
+  const moisture = Math.max(0, Math.min(1, (avgPrecipMm - 1) / 9))
+  return lerpColor(dry, wet, moisture)
 }

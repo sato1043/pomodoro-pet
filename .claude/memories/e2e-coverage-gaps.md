@@ -106,7 +106,7 @@ GPUで描画される視覚エフェクト。DOMに表れない。
 | 8 | 雲エフェクト | SphereGeometry群の6段階密度+ドリフト+opacityフェード（fadeIn/fadeOut）+密度変更時の退場バッチクロスフェード+天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色） |
 | 9 | 背景スクロール | 3チャンクリサイクル |
 | 10 | シーンプリセット3Dオブジェクト | meadow（木・草・岩・花）/seaside（ヤシの木・波打ち際・泡・貝殻）/park（歩道・街灯・植え込み・花壇・ベンチ・広葉樹）の描画結果 |
-| 11 | 動的ライティング | 4天気×4時間帯の20パターン（ambient/hemisphere/sun）+seasideプリセットの空色明化・輝度ブースト |
+| 11 | 動的ライティング | 4天気×4時間帯の20パターン（ambient/hemisphere/sun）+seasideプリセットの空色明化・輝度ブースト+降水量連動地面色（乾燥/湿潤ブレンド） |
 | 12 | キャラクターアニメーション描画 | AnimationMixer+crossFadeToによるメッシュ変形 |
 
 #### B-3. OS依存
@@ -143,10 +143,10 @@ GPUで描画される視覚エフェクト。DOMに表れない。
 | テスト不可能（DOM外で完結） | 13項目 |
 | WorldMapModal — SVG座標/アニメーション依存（E2E困難） | 5項目 |
 | WorldMapModal/環境 — E2E未実装（検証可能） | 8項目（12項目中4項目実装済み） |
-| 天文シミュレーション — WebGL依存（E2E困難） | 3項目 |
+| 天文シミュレーション — WebGL依存（E2E困難） | 4項目 |
 | 手動テスト手順 | 10項目（D-5-1〜D-5-10） |
 
-E2Eテストは **UIレイアウト・パネル制御・設定永続化・タイマーフロー（完走含む）・全フェーズ遷移・プリセット切替・シーンプリセット切替・感情パラメータ・感情パラメータ永続化（emotion-history.jsonファイル生成・再起動復元）・感情インジケーター（表示/非表示/opacity整合/ライセンス制限）・感情推移グラフ（表示・データなし/あり・期間切替）・プロンプト入力・インタラクションロック・統計値・affinity永続化・バックグラウンドタイマー・ライセンスAPI存在確認・RegistrationDialog UI操作・カスタムタイトルバー（ウィンドウ操作ボタン・frame: false確認）・バイオリズムON/OFF（ライセンスモード連動）・Autoテーマ選択+モード相互切替+永続化+再起動復元・autoWeather排他選択動作+disabled連動+永続化+再起動復元・LocationButton常時表示・WeatherPanelからLocationボタン削除確認・Time手動選択→autoWeather→再解除フロー** をカバーしている。未カバー項目はThree.jsキャンバス内操作（バイオリズムブースト含む）、サーバー通信依存、Web Audio API / WebGL / OS通知依存であり、E2Eテストの技術的限界に起因する。WorldMapModalはSVG+DOMで構成されプリセット選択・設定永続化等8項目がE2E検証可能だが未実装。SVG座標変換やrAFアニメーション等5項目は自動検証困難なため手動テスト手順（D-5-2〜D-5-7）で補完する。Phase 5.5の純粋関数ロジックはユニットテストでカバー済み（Terminator 8テスト、ClimateData 21テスト、normalizeLon 11テスト、coastline-path 16テスト、CelestialTheme 27テスト、WeatherDecision 22テスト、SolarPosition 11テスト、Kou 17テスト、ClimateGridAdapter 7テスト、useResolvedTheme 20テスト、AppSettingsService loadFromStorage 9テスト、EnvironmentSimulationService 21テスト）。ライセンス判定ロジック（LicenseState.ts）はユニットテスト（66テスト）で全パターンカバーされている。
+E2Eテストは **UIレイアウト・パネル制御・設定永続化・タイマーフロー（完走含む）・全フェーズ遷移・プリセット切替・シーンプリセット切替・感情パラメータ・感情パラメータ永続化（emotion-history.jsonファイル生成・再起動復元）・感情インジケーター（表示/非表示/opacity整合/ライセンス制限）・感情推移グラフ（表示・データなし/あり・期間切替）・プロンプト入力・インタラクションロック・統計値・affinity永続化・バックグラウンドタイマー・ライセンスAPI存在確認・RegistrationDialog UI操作・カスタムタイトルバー（ウィンドウ操作ボタン・frame: false確認）・バイオリズムON/OFF（ライセンスモード連動）・Autoテーマ選択+モード相互切替+永続化+再起動復元・autoWeather排他選択動作+disabled連動+永続化+再起動復元・LocationButton常時表示・WeatherPanelからLocationボタン削除確認・Time手動選択→autoWeather→再解除フロー** をカバーしている。未カバー項目はThree.jsキャンバス内操作（バイオリズムブースト含む）、サーバー通信依存、Web Audio API / WebGL / OS通知依存であり、E2Eテストの技術的限界に起因する。WorldMapModalはSVG+DOMで構成されプリセット選択・設定永続化等8項目がE2E検証可能だが未実装。SVG座標変換やrAFアニメーション等5項目は自動検証困難なため手動テスト手順（D-5-2〜D-5-7）で補完する。Phase 5.5の純粋関数ロジックはユニットテストでカバー済み（Terminator 8テスト、ClimateData 26テスト、normalizeLon 11テスト、coastline-path 16テスト、CelestialTheme 29テスト、WeatherDecision 22テスト、SolarPosition 11テスト、Kou 17テスト、ClimateGridAdapter 7テスト、useResolvedTheme 20テスト、AppSettingsService loadFromStorage 9テスト、EnvironmentSimulationService 30テスト）。ライセンス判定ロジック（LicenseState.ts）はユニットテスト（66テスト）で全パターンカバーされている。
 
 ### D. Phase 5.5 天文シミュレーション・世界地図UI
 
@@ -171,6 +171,7 @@ WorldMapModalはDOM（SVG+HTML）で描画されるが、以下の項目はPlayw
 | 6 | 天文計算ベースのライティング | CelestialThemeが生成するsunColor/skyColor/exposure等はWebGLシーンに適用。DOMに表れない |
 | 7 | 太陽/月方位に基づく光源方向 | computeLightDirectionの結果はDirectionalLightのpositionに反映。WebGL内で完結 |
 | 8 | 降水量連動パーティクル数 | computeParticleCountの結果はRainEffect/SnowEffectのパーティクル数に反映。WebGL内で完結 |
+| 9 | 降水量連動地面色 | temperatureToGroundColor（気温+降水量→乾燥/湿潤ブレンド）の結果はgroundColorとしてWebGLシーンに適用。DOMに表れない。ユニットテスト（ClimateData 26テスト、CelestialTheme 29テスト）でカバー済み |
 
 #### D-3. E2Eテスト未実装 — 統合後に検証可能な項目
 
@@ -198,10 +199,10 @@ Phase 5.5関連の純粋関数はユニットテストでカバー済み。
 | モジュール | テスト数 | カバー内容 |
 |-----------|---------|-----------|
 | Terminator.ts | 8 | 昼夜境界計算（atan修正・負の赤緯・ghaオフセット） |
-| ClimateData.ts | 21 | 72候按分・気温推定・地面色・CITY_PRESETS構造検証（8都市座標・climateZone） |
+| ClimateData.ts | 26 | 72候按分・気温推定・地面色（降水量連動乾燥/湿潤ブレンド・湿潤テーブル緑チャンネル一定性・25-35°C遷移・上限値）・CITY_PRESETS構造検証（8都市座標） |
 | WorldMapModal.tsx (normalizeLon) | 11 | 経度正規化（境界値・日付変更線超過・多重周回） |
 | generate-coastline-path.ts | 16 | SVGパス生成（ringToSubpath/lineToSubpath/landFeaturesToSvgPath/extractIdlPath） |
-| CelestialTheme.ts | 27 | 天体テーマ計算 |
+| CelestialTheme.ts | 29 | 天体テーマ計算（降水量連動地面色・avgPrecipMmデフォルト値） |
 | WeatherDecision.ts | 22 | 天気自動決定 |
 | SolarPosition.ts | 11 | 太陽位置計算 |
 | Kou.ts | 17 | 七十二候 |
