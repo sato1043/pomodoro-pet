@@ -35,7 +35,9 @@ describe('ClimateGridAdapter', () => {
     const climate = adapter.getMonthlyClimate(37.5, 137.5)
     expect(climate[0].avgTempC).toBeCloseTo(25, 1)
     expect(climate[0].avgHighTempC).toBeCloseTo(30, 1)
-    expect(climate[0].avgPrecipMm).toBeCloseTo(50, 1)
+    // グリッドデータの値はmm/day。アダプターが月日数を掛けてmm/monthに変換する。
+    // month=1(January)→ 50 mm/day * 31 = 1550 mm/month
+    expect(climate[0].avgPrecipMm).toBeCloseTo(50 * 31, 1)
   })
 
   it('双線形補間: 4隅の中間で平均値を返す', () => {

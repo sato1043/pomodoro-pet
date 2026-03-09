@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- ケッペン気候区分表示 — 世界地図モーダルの座標情報にケッペン気候区分（例: Cfa Humid subtropical）を表示。`classifyKoppen()` 純粋関数で12ヶ月の気温・降水量データからE→B→A→C→D優先順位で30分類を算出。`KoppenClassification`型（code/label）。`AppDeps`に`climateGridPort`を追加しWorldMapModalに気候データアクセスを提供
 - EnvironmentContext — 環境パラメータ（climate/currentKou/solarAltitude/isDaytime/timezone）をReact Contextで一元管理。EventBus購読→React状態変換のアダプター。updateClimate操作で永続化+イベント発行を内包
 - テーマ自動切替（auto） — ThemePreferenceに4番目の選択肢'auto'を追加。太陽高度角ベース（市民薄明-6°閾値）でlight/darkを自動切替。useResolvedThemeにisDayTimeパラメータ追加。OverlayFreeのテーマ選択UIにSunriseIconアイコン追加。AppSettingsServiceのthemeバリデーションにauto対応
 - 気候グリッドデータ生成スクリプト (`scripts/generate-climate-grid.ts`) — NASA POWER API (1991-2020 climatology) から5度格子の月別気候データを取得し `assets/data/climate-grid.json` に出力。中間キャッシュによる中断・再開対応。`npm run generate:climate` で実行
@@ -34,6 +35,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - generate-coastline-path.tsの出力を `{path, idlPath}` に拡張
 
 ### Fixed
+- ClimateGridAdapterの降水量単位修正 — NASA POWERのPRECTOTCORR（mm/day日平均）をmm/month（月間降水量）に変換せずそのまま出力していた問題を修正。各月の日数を掛けて正しいmm/month値を返すように変更。降水量連動の地面色計算・降水確率・ケッペン気候区分の精度が向上
 - Terminator昼夜境界の反転バグ修正 — `Math.atan2`を`Math.atan`に変更。負の赤緯（9月〜3月）でatan2が2/3象限の値を返しclampで誤った緯度になる問題を解消
 - Ushuaiaタイムゾーン表示を`-03`から`ART`に修正 — tz-lookupがUshuaia座標をAmerica/Punta_Arenas（チリ）に誤マッピングする境界精度問題を`TZ_BOUNDARY_OVERRIDES`テーブルで補正。generate-timezone-abbrにArgentina`-03`→`ART`ポストプロセス追加
 - 手動timeOfDay選択がシーンに反映されないバグ修正 — `EnvironmentSimulationService.setManualTimeOfDay()`を追加。autoWeather=false かつ autoTimeOfDay=false 時に擬似太陽/月位置でテーマを生成（morning=高度10°、day=50°、evening=5°、night=-20°）。候計算は実太陽位置を維持

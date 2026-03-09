@@ -4,9 +4,24 @@ import {
   estimateTemperature,
   temperatureToGroundColor,
   eclipticLonToDayOfYear,
+  classifyKoppen,
   CITY_PRESETS,
 } from '../../../src/domain/environment/value-objects/ClimateData'
 import type { MonthlyClimateData } from '../../../src/domain/environment/value-objects/ClimateData'
+
+/** ヘルパー: 月番号付き簡易月別データ生成 */
+function makeMonthly(
+  data: readonly { temp: number; precip: number }[]
+): MonthlyClimateData[] {
+  return data.map((d, i) => ({
+    month: i + 1,
+    avgTempC: d.temp,
+    avgHighTempC: d.temp + 5,
+    avgLowTempC: d.temp - 5,
+    avgHumidity: 60,
+    avgPrecipMm: d.precip,
+  }))
+}
 
 /** 東京風の月別テストデータ */
 const TOKYO_MONTHLY: MonthlyClimateData[] = [
@@ -234,5 +249,133 @@ describe('CITY_PRESETS', () => {
       expect(city.longitude).toBeGreaterThanOrEqual(exp.lonRange[0])
       expect(city.longitude).toBeLessThanOrEqual(exp.lonRange[1])
     }
+  })
+})
+
+describe('classifyKoppen', () => {
+  it('東京 → Cfa（温暖湿潤）', () => {
+    const result = classifyKoppen(TOKYO_MONTHLY)
+    expect(result.code).toBe('Cfa')
+    expect(result.label).toBe('Humid subtropical')
+  })
+
+  it('熱帯雨林（全月18℃以上・最少雨月≥60mm）→ Af', () => {
+    const data = makeMonthly(
+      Array.from({ length: 12 }, () => ({ temp: 27, precip: 200 }))
+    )
+    expect(classifyKoppen(data).code).toBe('Af')
+  })
+
+  it('熱帯モンスーン（全月18℃以上・最少雨月<60mm・Am条件）→ Am', () => {
+    // MAP=2340, 100-MAP/25=100-93.6=6.4, Pdry=40 >= 6.4 → Am
+    const data = makeMonthly(
+      Array.from({ length: 12 }, (_, i) => ({ temp: 26, precip: i === 0 ? 40 : 209 }))
+    )
+    expect(classifyKoppen(data).code).toBe('Am')
+  })
+
+  it('サバナ（全月18℃以上・乾季あり）→ Aw', () => {
+    // MAP=920, 100-MAP/25=100-36.8=63.2, Pdry=5 < 63.2 → Aw
+    const data = makeMonthly(
+      Array.from({ length: 12 }, (_, i) => ({ temp: 26, precip: i < 3 ? 5 : 150 }))
+    )
+    expect(classifyKoppen(data).code).toBe('Aw')
+  })
+
+  it('高温砂漠（極端に少ない降水量・高温）→ BWh', () => {
+    const data = makeMonthly(
+      Array.from({ length: 12 }, () => ({ temp: 30, precip: 3 }))
+    )
+    expect(classifyKoppen(data).code).toBe('BWh')
+  })
+
+  it('寒冷砂漠（極端に少ない降水量・低温）→ BWk', () => {
+    const data = makeMonthly(
+      Array.from({ length: 12 }, (_, i) => ({
+        temp: i >= 3 && i <= 8 ? 15 : -5,
+        precip: 2,
+      }))
+    )
+    expect(classifyKoppen(data).code).toBe('BWk')
+  })
+
+  it('高温ステップ（少ない降水量・高温）→ BSh', () => {
+    // Tavg=25, 均等型閾値=20*(25+7)=640, MAP=360 → 320<360<640 → BS
+    const data = makeMonthly(
+      Array.from({ length: 12 }, () => ({ temp: 25, precip: 30 }))
+    )
+    expect(classifyKoppen(data).code).toBe('BSh')
+  })
+
+  it('海洋性（最寒月≥-3℃・最暖月<22℃・4ヶ月以上10℃超）→ Cfb', () => {
+    // ロンドン風: 冬5℃、夏18℃、均等降水
+    const data = makeMonthly([
+      { temp: 5, precip: 55 }, { temp: 5, precip: 40 }, { temp: 7, precip: 40 },
+      { temp: 9, precip: 40 }, { temp: 13, precip: 50 }, { temp: 16, precip: 45 },
+      { temp: 18, precip: 45 }, { temp: 18, precip: 50 }, { temp: 15, precip: 50 },
+      { temp: 12, precip: 70 }, { temp: 8, precip: 60 }, { temp: 5, precip: 55 },
+    ])
+    expect(classifyKoppen(data).code).toBe('Cfb')
+  })
+
+  it('ツンドラ（最暖月0-10℃）→ ET', () => {
+    const data = makeMonthly(
+      Array.from({ length: 12 }, (_, i) => ({
+        temp: i >= 5 && i <= 7 ? 5 : -15,
+        precip: 20,
+      }))
+    )
+    expect(classifyKoppen(data).code).toBe('ET')
+  })
+
+  it('氷雪（最暖月<0℃）→ EF', () => {
+    const data = makeMonthly(
+      Array.from({ length: 12 }, () => ({ temp: -20, precip: 10 }))
+    )
+    expect(classifyKoppen(data).code).toBe('EF')
+  })
+
+  it('亜寒帯（最寒月<-3℃・最暖月≥10℃）→ Df系', () => {
+    // モスクワ風: 冬-10℃、夏20℃
+    const data = makeMonthly([
+      { temp: -10, precip: 40 }, { temp: -8, precip: 35 }, { temp: -2, precip: 35 },
+      { temp: 6, precip: 40 }, { temp: 13, precip: 55 }, { temp: 17, precip: 75 },
+      { temp: 20, precip: 85 }, { temp: 18, precip: 75 }, { temp: 12, precip: 60 },
+      { temp: 5, precip: 55 }, { temp: -2, precip: 50 }, { temp: -7, precip: 45 },
+    ])
+    const result = classifyKoppen(data)
+    expect(result.code).toMatch(/^Df/)
+  })
+
+  it('地中海性（夏の最少雨月が冬の最多雨月の1/3未満かつ<40mm）→ Cs系', () => {
+    // 夏は乾燥、冬は多雨
+    const data = makeMonthly([
+      { temp: 10, precip: 80 }, { temp: 11, precip: 70 }, { temp: 13, precip: 50 },
+      { temp: 15, precip: 30 }, { temp: 18, precip: 15 }, { temp: 22, precip: 5 },
+      { temp: 25, precip: 2 }, { temp: 25, precip: 5 }, { temp: 22, precip: 20 },
+      { temp: 17, precip: 60 }, { temp: 13, precip: 80 }, { temp: 10, precip: 90 },
+    ])
+    const result = classifyKoppen(data)
+    expect(result.code).toMatch(/^Cs/)
+  })
+
+  it('返り値にcodeとlabelが含まれる', () => {
+    const result = classifyKoppen(TOKYO_MONTHLY)
+    expect(result).toHaveProperty('code')
+    expect(result).toHaveProperty('label')
+    expect(result.code.length).toBeGreaterThanOrEqual(2)
+    expect(result.label.length).toBeGreaterThan(0)
+  })
+
+  it('南半球の都市でも正しく分類される', () => {
+    // シドニー風（南半球）: 冬=6-8月、夏=12-2月
+    const data = makeMonthly([
+      { temp: 23, precip: 100 }, { temp: 23, precip: 120 }, { temp: 21, precip: 130 },
+      { temp: 18, precip: 130 }, { temp: 15, precip: 120 }, { temp: 12, precip: 130 },
+      { temp: 12, precip: 100 }, { temp: 13, precip: 80 }, { temp: 15, precip: 70 },
+      { temp: 18, precip: 75 }, { temp: 20, precip: 80 }, { temp: 22, precip: 80 },
+    ])
+    const result = classifyKoppen(data)
+    expect(result.code).toMatch(/^Cf/) // Cfa or Cfb
   })
 })

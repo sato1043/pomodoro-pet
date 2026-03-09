@@ -14,6 +14,7 @@ import type { FureaiCoordinator } from '../../application/fureai/FureaiCoordinat
 import type { GalleryCoordinator } from '../../application/gallery/GalleryCoordinator'
 import type { EmotionHistoryService } from '../../application/character/EmotionHistoryService'
 import type { EnvironmentSimulationService } from '../../application/environment/EnvironmentSimulationService'
+import type { ClimateGridPort } from '../../domain/environment/value-objects/ClimateData'
 
 export interface AppDeps {
   readonly bus: EventBus
@@ -32,6 +33,7 @@ export interface AppDeps {
   readonly galleryCoordinator: GalleryCoordinator
   readonly emotionHistoryService: EmotionHistoryService
   readonly envSimService: EnvironmentSimulationService
+  readonly climateGridPort: ClimateGridPort
 }
 
 const AppContext = createContext<AppDeps | null>(null)

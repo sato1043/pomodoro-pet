@@ -435,7 +435,8 @@ async function main(): Promise<void> {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
       character, behaviorSM, charHandle, statisticsService, fureaiCoordinator,
-      galleryCoordinator, emotionHistoryService, envSimService
+      galleryCoordinator, emotionHistoryService, envSimService,
+      climateGridPort: climateGridAdapter
     }
     appRoot.render(createElement(App, { deps }))
   }

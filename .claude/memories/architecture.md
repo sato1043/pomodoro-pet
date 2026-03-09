@@ -132,7 +132,7 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/ThemeLerp.ts` — テーマ遷移の純粋関数群（lerpFloat/lerpHexColor/lerpVec3/smoothstep/lerpThemeParams/themeParamsEqual/startThemeTransition/tickThemeTransition）+ ThemeTransitionState/ThemeTransitionResult型 + 遷移時間定数
 - `environment/value-objects/SolarPosition.ts` — SolarPosition型（altitude/azimuth/eclipticLon）、LunarPosition型（altitude/azimuth/phase/illumination）、AstronomyPortインターフェース
 - `environment/value-objects/Kou.ts` — KouDefinition型、KOU_DEFINITIONS定数（本朝七十二候全72候、和名/読み/英名/説明）、resolveKou(eclipticLon)、kouProgress(eclipticLon)
-- `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()
+- `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()、classifyKoppen()（ケッペン気候区分算出、30分類）
 - `environment/value-objects/WeatherDecision.ts` — WeatherDecision型、mulberry32（決定論的PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
 - `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成）、computeLightDirection()（太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング

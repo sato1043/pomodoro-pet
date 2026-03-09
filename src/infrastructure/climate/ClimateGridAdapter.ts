@@ -32,6 +32,9 @@ const FIELD_TMIN = 2
 const FIELD_PREC = 3
 const FIELD_HUMIDITY = 4
 
+/** 各月の日数（NASA POWER mm/day → mm/month 変換用） */
+const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31] as const
+
 // --- アダプター ---
 
 export function createClimateGridAdapter(data: ClimateGridJson): ClimateGridPort {
@@ -105,12 +108,14 @@ export function createClimateGridAdapter(data: ClimateGridJson): ClimateGridPort
           return bottom + (top - bottom) * tLat
         }
 
+        // NASA POWER PRECTOTCORR は mm/day 日平均値。月間降水量(mm/month)に変換する。
+        const precipMmPerDay = bilinear(FIELD_PREC)
         return {
           month: monthIdx + 1,
           avgTempC: bilinear(FIELD_TAVG),
           avgHighTempC: bilinear(FIELD_TMAX),
           avgLowTempC: bilinear(FIELD_TMIN),
-          avgPrecipMm: bilinear(FIELD_PREC),
+          avgPrecipMm: precipMmPerDay * DAYS_IN_MONTH[monthIdx],
           avgHumidity: bilinear(FIELD_HUMIDITY),
         }
       })

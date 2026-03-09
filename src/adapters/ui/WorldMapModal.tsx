@@ -1,7 +1,7 @@
-import { useState, useCallback, useEffect, useRef } from 'react'
+import { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import { createPortal } from 'react-dom'
-import type { ClimateConfig } from '../../domain/environment/value-objects/ClimateData'
-import { CITY_PRESETS } from '../../domain/environment/value-objects/ClimateData'
+import type { ClimateConfig, MonthlyClimateData } from '../../domain/environment/value-objects/ClimateData'
+import { CITY_PRESETS, classifyKoppen } from '../../domain/environment/value-objects/ClimateData'
 import { resolveTimezone } from '../../domain/environment/value-objects/Timezone'
 import { computeTerminatorPolygon } from '../../domain/environment/value-objects/Terminator'
 import { getSolarDeclinationAndGHA } from '../../infrastructure/astronomy/AstronomyAdapter'
@@ -17,6 +17,7 @@ interface WorldMapModalProps {
   readonly onApply: (climate: ClimateConfig) => void
   readonly coastlinePath?: string
   readonly idlPath?: string
+  readonly getMonthlyClimate?: (lat: number, lon: number) => readonly MonthlyClimateData[]
 }
 
 /** 経度を[-180, 180)に正規化する */
@@ -34,7 +35,7 @@ const VB_WIDTH = 120
 const SCROLL_STEP = 60
 
 export function WorldMapModal({
-  isOpen, currentClimate, onClose, onApply, coastlinePath, idlPath,
+  isOpen, currentClimate, onClose, onApply, coastlinePath, idlPath, getMonthlyClimate,
 }: WorldMapModalProps): JSX.Element | null {
   const [selectedLat, setSelectedLat] = useState(currentClimate.latitude)
   const [selectedLon, setSelectedLon] = useState(currentClimate.longitude)
@@ -49,6 +50,13 @@ export function WorldMapModal({
   const dragStartX = useRef(0)
   const dragStartLon = useRef(0)
   const hasDragged = useRef(false)
+
+  // ケッペン気候区分の算出
+  const koppen = useMemo(() => {
+    if (!getMonthlyClimate) return null
+    const monthly = getMonthlyClimate(selectedLat, selectedLon)
+    return classifyKoppen(monthly)
+  }, [getMonthlyClimate, selectedLat, selectedLon])
 
   // アニメーションクリーンアップ
   useEffect(() => {
@@ -200,7 +208,7 @@ export function WorldMapModal({
     <div className={styles.overlay}>
       <div className={styles.modal}>
         {/* 戻るボタン: LocationButtonと同じ位置 */}
-        <button className={styles.backButton} onClick={onClose} title="Back">
+        <button data-testid="worldmap-back" className={styles.backButton} onClick={onClose} title="Back">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
             <line x1="19" y1="12" x2="5" y2="12" />
             <polyline points="12 19 5 12 12 5" />
@@ -291,10 +299,11 @@ export function WorldMapModal({
         </div>
 
         {/* プリセットボタン */}
-        <div className={styles.presetBar}>
+        <div className={styles.presetBar} data-testid="worldmap-presets">
           {CITY_PRESETS.map(city => (
             <button
               key={city.name}
+              data-testid={`worldmap-preset-${city.name.toLowerCase().replace(/\s+/g, '-')}`}
               className={`${styles.presetButton} ${selectedPreset === city.name ? styles.presetButtonActive : ''}`}
               onClick={() => handlePresetClick(city.name)}
             >
@@ -303,13 +312,14 @@ export function WorldMapModal({
           ))}
         </div>
 
-        {/* 座標情報 */}
-        <div className={styles.coordInfo}>
-          {selectedLat.toFixed(2)}°, {selectedLon.toFixed(2)}°
+        {/* 座標情報 + ケッペン気候区分 */}
+        <div className={styles.coordInfo} data-testid="worldmap-coord-info">
+          <div data-testid="worldmap-coords">{selectedLat.toFixed(2)}°, {selectedLon.toFixed(2)}°</div>
+          {koppen && <div data-testid="worldmap-koppen">{koppen.code} {koppen.label}</div>}
         </div>
 
         {/* 適用ボタン（SetButtonと同じスタイル） */}
-        <button className={`${panelStyles.btn} ${panelStyles.btnPrimary}`} onClick={handleApply} style={{ marginTop: 8 }}>
+        <button data-testid="worldmap-set-location" className={`${panelStyles.btn} ${panelStyles.btnPrimary}`} onClick={handleApply} style={{ marginTop: 8 }}>
           Set Location
         </button>
       </div>

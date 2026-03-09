@@ -22,7 +22,7 @@ import coastlineData from '../../../assets/data/coastline-path.json'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
-  const { fureaiCoordinator, galleryCoordinator } = useAppDeps()
+  const { fureaiCoordinator, galleryCoordinator, climateGridPort } = useAppDeps()
   const { climate, currentKou, timezone, updateClimate } = useEnvironment()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
@@ -85,6 +85,7 @@ export function SceneFree(): JSX.Element {
           idlPath={(coastlineData as { path: string; idlPath: string }).idlPath}
           onClose={() => setShowWorldMap(false)}
           onApply={updateClimate}
+          getMonthlyClimate={climateGridPort.isLoaded ? climateGridPort.getMonthlyClimate : undefined}
         />
       )}
       {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}

@@ -1,5 +1,132 @@
 import type { ScenePresetName } from './ScenePreset'
 
+// --- ケッペン気候区分 ---
+
+/** ケッペン気候区分の分類結果 */
+export interface KoppenClassification {
+  /** 分類コード（例: "Cfa", "BWh", "ET"） */
+  readonly code: string
+  /** 英語の短い説明（例: "Humid subtropical"） */
+  readonly label: string
+}
+
+/** ケッペン分類コード→英語ラベル */
+const KOPPEN_LABELS: Readonly<Record<string, string>> = {
+  Af: 'Tropical rainforest',
+  Am: 'Tropical monsoon',
+  Aw: 'Tropical savanna',
+  BWh: 'Hot desert',
+  BWk: 'Cold desert',
+  BSh: 'Hot semi-arid',
+  BSk: 'Cold semi-arid',
+  Csa: 'Hot Mediterranean',
+  Csb: 'Warm Mediterranean',
+  Csc: 'Cold Mediterranean',
+  Cwa: 'Humid subtropical (dry winter)',
+  Cwb: 'Subtropical highland',
+  Cwc: 'Cold subtropical highland',
+  Cfa: 'Humid subtropical',
+  Cfb: 'Oceanic',
+  Cfc: 'Subpolar oceanic',
+  Dsa: 'Continental (hot dry summer)',
+  Dsb: 'Continental (warm dry summer)',
+  Dsc: 'Subarctic (dry summer)',
+  Dsd: 'Subarctic (extreme dry summer)',
+  Dwa: 'Continental (hot dry winter)',
+  Dwb: 'Continental (warm dry winter)',
+  Dwc: 'Subarctic (dry winter)',
+  Dwd: 'Subarctic (extreme dry winter)',
+  Dfa: 'Hot continental',
+  Dfb: 'Warm continental',
+  Dfc: 'Subarctic',
+  Dfd: 'Extreme subarctic',
+  ET: 'Tundra',
+  EF: 'Ice cap',
+}
+
+/**
+ * 12ヶ月の気候データからケッペン気候区分を算出する純粋関数。
+ *
+ * 分類優先順位: E（寒帯）→ B（乾燥帯）→ A（熱帯）→ C（温帯）→ D（亜寒帯）
+ *
+ * 参照: Köppen-Geiger climate classification (Peel et al., 2007)
+ */
+export function classifyKoppen(
+  monthlyData: readonly MonthlyClimateData[]
+): KoppenClassification {
+  const temps = monthlyData.map(m => m.avgTempC)
+  const precips = monthlyData.map(m => m.avgPrecipMm)
+
+  const Thot = Math.max(...temps)
+  const Tcold = Math.min(...temps)
+  const Tavg = temps.reduce((a, b) => a + b, 0) / 12
+  const MAP = precips.reduce((a, b) => a + b, 0)
+  const Pdry = Math.min(...precips)
+  const Tmon10 = temps.filter(t => t >= 10).length
+
+  // 夏・冬の月を決定（最暖月が4-9月→北半球、それ以外→南半球）
+  const warmestMonth = temps.indexOf(Thot) // 0-indexed
+  const isNorthern = warmestMonth >= 3 && warmestMonth <= 8
+  const summerMonths = isNorthern ? [3, 4, 5, 6, 7, 8] : [0, 1, 2, 9, 10, 11] // 0-indexed
+  const winterMonths = isNorthern ? [0, 1, 2, 9, 10, 11] : [3, 4, 5, 6, 7, 8]
+
+  const Psdry = Math.min(...summerMonths.map(i => precips[i]))
+  const Pwdry = Math.min(...winterMonths.map(i => precips[i]))
+  const Pswet = Math.max(...summerMonths.map(i => precips[i]))
+  const Pwwet = Math.max(...winterMonths.map(i => precips[i]))
+
+  // 夏半球の降水量割合（乾燥帯の閾値計算用）
+  const summerPrecip = summerMonths.reduce((s, i) => s + precips[i], 0)
+
+  const result = (code: string): KoppenClassification => ({
+    code,
+    label: KOPPEN_LABELS[code] ?? code,
+  })
+
+  // --- E（寒帯）: 最暖月 < 10℃ ---
+  if (Thot < 10) {
+    return result(Thot < 0 ? 'EF' : 'ET')
+  }
+
+  // --- B（乾燥帯）: 年間降水量 < 乾燥閾値 ---
+  const summerFraction = MAP > 0 ? summerPrecip / MAP : 0.5
+  let aridThreshold: number
+  if (summerFraction >= 0.7) {
+    aridThreshold = 20 * (Tavg + 14) // 夏雨型
+  } else if (summerFraction <= 0.3) {
+    aridThreshold = 20 * Tavg         // 冬雨型
+  } else {
+    aridThreshold = 20 * (Tavg + 7)   // 均等型
+  }
+  if (MAP < aridThreshold) {
+    const hk = Tavg >= 18 ? 'h' : 'k'
+    return result(MAP < aridThreshold / 2 ? `BW${hk}` : `BS${hk}`)
+  }
+
+  // --- A（熱帯）: 最寒月 ≥ 18℃ ---
+  if (Tcold >= 18) {
+    if (Pdry >= 60) return result('Af')
+    if (Pdry >= 100 - MAP / 25) return result('Am')
+    return result('Aw')
+  }
+
+  // --- C/D の降水パターン判定 ---
+  const isCs = Psdry < 40 && Psdry < Pwwet / 3
+  const isCw = Pwdry < Pswet / 10
+
+  // --- C（温帯）: -3℃ ≤ 最寒月 < 18℃ ---
+  if (Tcold >= -3) {
+    const second = isCs ? 's' : isCw ? 'w' : 'f'
+    const third = Thot >= 22 ? 'a' : Tmon10 >= 4 ? 'b' : 'c'
+    return result(`C${second}${third}`)
+  }
+
+  // --- D（亜寒帯）: 最寒月 < -3℃ ---
+  const second = isCs ? 's' : isCw ? 'w' : 'f'
+  const third = Thot >= 22 ? 'a' : Tmon10 >= 4 ? 'b' : Tcold < -38 ? 'd' : 'c'
+  return result(`D${second}${third}`)
+}
+
 // --- 型定義 ---
 
 /** 月別気候データ（1グリッドポイント分） */

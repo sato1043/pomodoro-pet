@@ -75,7 +75,7 @@
 |---|---|
 | `src/domain/environment/value-objects/SolarPosition.ts` | SolarPosition型、LunarPosition型、AstronomyPortインターフェース |
 | `src/domain/environment/value-objects/Kou.ts` | KouDefinition型、KOU_DEFINITIONS定数（72候）、resolveKou()、kouProgress() |
-| `src/domain/environment/value-objects/ClimateData.ts` | ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、interpolateToKouClimate()、estimateTemperature() |
+| `src/domain/environment/value-objects/ClimateData.ts` | ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、interpolateToKouClimate()、estimateTemperature()、classifyKoppen()（ケッペン気候区分30分類算出） |
 | `src/domain/environment/value-objects/WeatherDecision.ts` | WeatherDecision型、decideWeather()、computeParticleCount() |
 | `src/domain/environment/value-objects/CelestialTheme.ts` | computeThemeFromCelestial()、computeLightDirection()、temperatureToGroundColor() |
 | `src/domain/environment/value-objects/Terminator.ts` | TerminatorResult型、getSubSolarPoint()、getTerminatorPoints()、buildTerminatorPolygon() |
@@ -92,7 +92,7 @@
 | ファイル | 役割 |
 |---|---|
 | `src/infrastructure/astronomy/AstronomyAdapter.ts` | astronomy-engineラッパー。AstronomyPort実装（太陽+月） |
-| `src/infrastructure/climate/ClimateGridAdapter.ts` | `createClimateGridAdapter(data: ClimateGridJson)` — ビルド時バンドルJSONデータ注入。双線形補間・海洋スナッピング。ClimateGridPort実装 |
+| `src/infrastructure/climate/ClimateGridAdapter.ts` | `createClimateGridAdapter(data: ClimateGridJson)` — ビルド時バンドルJSONデータ注入。双線形補間・海洋スナッピング。NASA POWER mm/day→mm/month変換。ClimateGridPort実装 |
 | `scripts/generate-climate-grid.ts` | NASA POWER APIから5度格子気候データを生成 → `assets/data/climate-grid.json` |
 | `scripts/generate-timezone-abbr.ts` | tz-lookup全座標スキャン+system tzdataでTZ略称マッピング生成 → `assets/data/timezone-abbr.json`（386エントリ）。Argentina `-03`→`ART`ポストプロセス |
 
