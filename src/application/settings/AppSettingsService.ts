@@ -260,6 +260,8 @@ export function createAppSettingsService(
             timeOfDay: w.timeOfDay as WeatherConfig['timeOfDay'],
             autoWeather: typeof w.autoWeather === 'boolean' ? w.autoWeather : false,
             autoTimeOfDay: typeof w.autoTimeOfDay === 'boolean' ? w.autoTimeOfDay : true,
+            autoKou: typeof w.autoKou === 'boolean' ? w.autoKou : true,
+            manualKouIndex: typeof w.manualKouIndex === 'number' ? w.manualKouIndex : 0,
             cloudDensityLevel: typeof w.cloudDensityLevel === 'number' ? w.cloudDensityLevel as WeatherConfig['cloudDensityLevel'] : DEFAULT_WEATHER.cloudDensityLevel,
             scenePreset: typeof w.scenePreset === 'string' && validPresets.includes(w.scenePreset)
               ? w.scenePreset as WeatherConfig['scenePreset']

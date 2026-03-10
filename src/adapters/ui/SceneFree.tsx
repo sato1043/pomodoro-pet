@@ -17,13 +17,13 @@ import { GalleryEntryButton } from './GalleryEntryButton'
 import { FeatureLockedOverlay } from './FeatureLockedOverlay'
 import { LocationButton } from './LocationButton'
 import { WorldMapModal } from './WorldMapModal'
-import { KouDisplay } from './KouDisplay'
+import { KouSelector } from './KouSelector'
 import coastlineData from '../../../assets/data/coastline-path.json'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
-  const { fureaiCoordinator, galleryCoordinator, climateGridPort } = useAppDeps()
-  const { climate, currentKou, timezone, updateClimate } = useEnvironment()
+  const { fureaiCoordinator, galleryCoordinator, climateGridPort, settingsService } = useAppDeps()
+  const { climate, currentKou, timezone, kouDateRanges, updateClimate } = useEnvironment()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [showWeather, setShowWeather] = useState(false)
@@ -60,6 +60,7 @@ export function SceneFree(): JSX.Element {
           onExpandedChange={setSettingsExpanded}
           onToggleRef={handleToggleRef}
           timezone={timezone}
+          currentKou={currentKou}
         />
       )}
       {showStats && <StatsDrawer onClose={() => setShowStats(false)} />}
@@ -89,7 +90,20 @@ export function SceneFree(): JSX.Element {
         />
       )}
       {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
-      <KouDisplay kou={currentKou} visible={currentKou !== null && !hideButtons} />
+      {!showWorldMap && (
+        <KouSelector
+          currentKou={currentKou}
+          autoKou={settingsService.weatherConfig.autoKou}
+          manualKouIndex={settingsService.weatherConfig.manualKouIndex}
+          kouDateRanges={kouDateRanges}
+          onKouChange={(index) => {
+            settingsService.updateWeatherConfig({ autoKou: false, manualKouIndex: index })
+          }}
+          onAutoToggle={(auto) => {
+            settingsService.updateWeatherConfig({ autoKou: auto })
+          }}
+        />
+      )}
     </>
   )
 }

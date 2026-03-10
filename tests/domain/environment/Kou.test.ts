@@ -10,7 +10,10 @@ describe('KOU_DEFINITIONS', () => {
     const kou = KOU_DEFINITIONS[0]
     expect(kou.index).toBe(0)
     expect(kou.solarTermName).toBe('小寒')
+    expect(kou.solarTermNameEn).toBe('Minor Cold')
     expect(kou.phase).toBe('initial')
+    expect(kou.phaseNameEn).toBe('1st')
+    expect(kou.phaseNameJa).toBe('初候')
     expect(kou.nameJa).toBe('芹乃栄')
     expect(kou.eclipticLonStart).toBe(285)
   })
@@ -19,7 +22,10 @@ describe('KOU_DEFINITIONS', () => {
     const kou = KOU_DEFINITIONS[6]
     expect(kou.index).toBe(6)
     expect(kou.solarTermName).toBe('立春')
+    expect(kou.solarTermNameEn).toBe('Start of Spring')
     expect(kou.phase).toBe('initial')
+    expect(kou.phaseNameEn).toBe('1st')
+    expect(kou.phaseNameJa).toBe('初候')
     expect(kou.nameJa).toBe('東風解凍')
     expect(kou.eclipticLonStart).toBe(315)
   })
@@ -27,7 +33,10 @@ describe('KOU_DEFINITIONS', () => {
   it('index 15 は春分初候で黄経0度始まり', () => {
     const kou = KOU_DEFINITIONS[15]
     expect(kou.solarTermName).toBe('春分')
+    expect(kou.solarTermNameEn).toBe('Vernal Equinox')
     expect(kou.phase).toBe('initial')
+    expect(kou.phaseNameEn).toBe('1st')
+    expect(kou.phaseNameJa).toBe('初候')
     expect(kou.nameJa).toBe('雀始巣')
     // (15 * 5 + 285) % 360 = (75 + 285) % 360 = 360 % 360 = 0
     expect(kou.eclipticLonStart).toBe(0)
@@ -37,7 +46,10 @@ describe('KOU_DEFINITIONS', () => {
     const kou = KOU_DEFINITIONS[71]
     expect(kou.index).toBe(71)
     expect(kou.solarTermName).toBe('冬至')
+    expect(kou.solarTermNameEn).toBe('Winter Solstice')
     expect(kou.phase).toBe('final')
+    expect(kou.phaseNameEn).toBe('3rd')
+    expect(kou.phaseNameJa).toBe('末候')
     expect(kou.nameJa).toBe('雪下出麦')
     // (71 * 5 + 285) % 360 = (355 + 285) % 360 = 640 % 360 = 280
     expect(kou.eclipticLonStart).toBe(280)
@@ -57,6 +69,38 @@ describe('KOU_DEFINITIONS', () => {
       expect(kou.readingJa.length).toBeGreaterThan(0)
       expect(kou.description.length).toBeGreaterThan(0)
       expect(kou.nameEn.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('全候にsolarTermNameEnが設定されている', () => {
+    for (const kou of KOU_DEFINITIONS) {
+      expect(kou.solarTermNameEn.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('全候にphaseNameEn/phaseNameJaが設定されている', () => {
+    const validEn = ['1st', '2nd', '3rd']
+    const validJa = ['初候', '次候', '末候']
+    for (const kou of KOU_DEFINITIONS) {
+      expect(validEn).toContain(kou.phaseNameEn)
+      expect(validJa).toContain(kou.phaseNameJa)
+    }
+  })
+
+  it('phaseとphaseNameの対応が正しい', () => {
+    const mapping = { initial: ['1st', '初候'], middle: ['2nd', '次候'], final: ['3rd', '末候'] }
+    for (const kou of KOU_DEFINITIONS) {
+      const [expectedEn, expectedJa] = mapping[kou.phase]
+      expect(kou.phaseNameEn).toBe(expectedEn)
+      expect(kou.phaseNameJa).toBe(expectedJa)
+    }
+  })
+
+  it('同一節気の3候が同じsolarTermNameEnを持つ', () => {
+    for (let i = 0; i < 72; i += 3) {
+      const termEn = KOU_DEFINITIONS[i].solarTermNameEn
+      expect(KOU_DEFINITIONS[i + 1].solarTermNameEn).toBe(termEn)
+      expect(KOU_DEFINITIONS[i + 2].solarTermNameEn).toBe(termEn)
     }
   })
 })

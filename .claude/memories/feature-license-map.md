@@ -170,7 +170,7 @@
 | 68 | オートタイムオブデイ | main.ts | 自動 | （制限不要） | 1分間隔の時間帯更新 |
 | 69 | 天気プレビューカメラ | main.ts | 自動 | weatherSettings | パネル表示中のカメラ後退 |
 | 100 | 天文計算シミュレーション | EnvironmentSimulationService.ts | 自動 | （制限不要） | astronomy-engineによる太陽/月位置→環境パラメータ連続生成 |
-| 101 | 七十二候UI表示 | KouDisplay.tsx | 自動 | （制限不要） | 候名オーバーレイ（フェードアニメーション付き） |
+| 101 | 七十二候セレクタ | KouSelector.tsx | 操作 | （制限不要） | ウィンドウ上端ドロップダウン+Autoボタン。Auto/手動切替で候を選択→気候データ・天気決定に反映 |
 | 102 | 世界地図UI | WorldMapModal.tsx, LocationButton.tsx | 操作 | （制限不要） | SVG世界地図+terminator+都市プリセット+座標選択。LocationButtonはフリーモードに常時配置（autoWeather非依存）。WeatherPanelからのLocationボタンは削除済み |
 | 103 | 気候プロファイル | ClimateData.ts, ClimateGridAdapter.ts | 自動 | （制限不要） | 緯度経度から72候分気候データ自動生成 |
 | 104 | 天気自動決定 | WeatherDecision.ts | 自動 | （制限不要） | 気候データ+気温→天気タイプ確率的決定 |

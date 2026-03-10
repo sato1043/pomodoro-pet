@@ -98,6 +98,6 @@ test('Set Locationでモーダルが閉じLocationButtonラベルが更新され
   // モーダルが閉じる
   await expect(page.locator('[data-testid="worldmap-presets"]')).not.toBeVisible()
 
-  // LocationButtonのラベルがTokyoに更新される
-  await expect(page.locator('[data-testid="location-button"]')).toContainText('Tokyo')
+  // LocationButtonのtitle属性がTokyoに更新される（アイコンのみのボタンのためテキストはtitleに格納）
+  await expect(page.locator('[data-testid="location-button"]')).toHaveAttribute('title', 'Location: Tokyo')
 })

@@ -45,7 +45,7 @@ EventBus（UI/インフラ通知）:
   PomodoroCompleted/PomodoroAborted/FeedingSuccess → EmotionHistoryBridge（感情履歴記録）
   FeedingSuccess → SceneFureai（ハートエフェクト発火）、main.ts（EmotionService fed + InteractionTracker recordFeeding）
   PomodoroCompleted/PomodoroAborted → main.ts（EmotionService pomodoro_completed/pomodoro_aborted）
-  KouChanged → KouDisplay（七十二候UI更新）
+  KouChanged → KouSelector（七十二候ドロップダウン更新）、EnvironmentContext
   WeatherDecisionChanged → main.ts（天気エフェクト更新）
   SettingsChanged → main.ts（session/Orchestrator/UI再作成）
   SoundSettingsLoaded → main.ts（AudioAdapter適用）
@@ -216,10 +216,10 @@ EventBus（UI/インフラ通知）:
 - `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
-- `ui/KouDisplay.tsx` — 七十二候UIオーバーレイ。createPortalでdocument.bodyに描画。候名（solarTermName+phase）、nameJa、readingJaを表示。候変更時にフェードアニメーション（opacity 0→0.8→0.4）。`data-testid="kou-display"`。currentKou !== null時に表示（autoWeather非依存）
+- `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。ウィンドウ上端中央（top:36px）に背景なし表示。英語ドロップダウン（`# Minor Cold 1st`形式）+詳細行（英語名/節気+候和名/読み/説明文/λ=+Autoアイコン）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）を選択可能。`data-testid="kou-selector"/"kou-select"/"kou-auto"`
 - `ui/WorldMapModal.tsx` — 世界地図SVGモーダル。等距円筒図法（viewBox "-180 -90 360 180"）。astronomy-engineによるterminator昼夜境界描画。8都市プリセットピン+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅表示・全画面化。Natural Earth IDLライン描画。ClimateConfig生成
 - `ui/LocationButton.tsx` — フリーモード右端の地球アイコンボタン。クリックでWorldMapModal起動
-- `ui/styles/kou-display.css.ts` — 七十二候UI用vanilla-extractスタイル
+- `ui/styles/kou-selector.css.ts` — 七十二候セレクタ用vanilla-extractスタイル
 - `ui/styles/world-map-modal.css.ts` — 世界地図モーダル用vanilla-extractスタイル
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
 - `ui/styles/theme.css.ts` — vanilla-extractテーマコントラクト定義（作業中）
@@ -291,7 +291,7 @@ EventBus（UI/インフラ通知）:
 - `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト
 - `application/character/InterpretPrompt.test.ts` — 英語/日本語キーワードマッチング・フォールバック
 - `application/environment/ThemeTransitionService.test.ts` — transitionTo/applyImmediate/tick/補間中割り込み/同一テーマスキップ（9テスト）
-- `application/environment/EnvironmentSimulationService.test.ts` — start/tick/onClimateChanged/stop・30秒更新間隔・イベント発行・即座テーマ適用・setAutoWeather/setManualWeather/setManualTimeOfDay切替（擬似太陽位置テーマオーバーライド・候計算非影響・stop時リセット）・手動操作時の遷移時間1.5秒/通常tick時30秒・autoWeather状態管理・天気ソース切替・currentWeather停止時null（30テスト）
+- `application/environment/EnvironmentSimulationService.test.ts` — start/tick/onClimateChanged/stop・30秒更新間隔・イベント発行・即座テーマ適用・setAutoWeather/setManualWeather/setManualTimeOfDay切替（擬似太陽位置テーマオーバーライド・候計算非影響・stop時リセット）・setManualKou（手動候設定・null復帰・天気再決定・遷移時間・stop時リセット）・手動操作時の遷移時間1.5秒/通常tick時30秒・autoWeather状態管理・天気ソース切替・currentWeather停止時null（35テスト）
 - `application/environment/ScrollUseCase.test.ts` — チャンク位置計算・リサイクル判定・reset
 - `application/settings/AppSettingsService.test.ts` — 分→ms変換・バリデーション・updateTimerConfig・resetToDefault・バックグラウンド設定・電源設定（powerConfig）・天気設定（weatherConfig初期値/部分更新/cloudDensityLevel/イベント発行/リセット）・テーマ設定（themePreference初期値/light/dark/auto変更/resetToDefault）・loadFromStorageテーマ復元（全4モード/ThemeLoadedイベント/無効値拒否/未設定/null）
 - `application/timer/PomodoroOrchestrator.test.ts` — start/exit/pause/resume/tick・phaseToPreset・イベント発行

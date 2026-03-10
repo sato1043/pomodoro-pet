@@ -14,6 +14,8 @@ describe('WeatherConfig', () => {
         timeOfDay: 'day',
         autoWeather: false,
         autoTimeOfDay: false,
+        autoKou: true,
+        manualKouIndex: 0,
         cloudDensityLevel: 1,
         scenePreset: 'meadow',
       })

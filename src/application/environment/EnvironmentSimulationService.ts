@@ -1,7 +1,7 @@
 import type { AstronomyPort, SolarPosition, LunarPosition } from '../../domain/environment/value-objects/SolarPosition'
 import type { TimeOfDay } from '../../domain/environment/value-objects/WeatherConfig'
 import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
-import { kouProgress } from '../../domain/environment/value-objects/Kou'
+import { kouProgress, KOU_DEFINITIONS } from '../../domain/environment/value-objects/Kou'
 import type { ClimateConfig, ClimateGridPort, KouClimate } from '../../domain/environment/value-objects/ClimateData'
 import { DEFAULT_CLIMATE, interpolateToKouClimate, estimateTemperature } from '../../domain/environment/value-objects/ClimateData'
 import type { WeatherDecision } from '../../domain/environment/value-objects/WeatherDecision'
@@ -25,6 +25,18 @@ export interface WeatherDecisionChangedEvent {
   readonly decision: WeatherDecision
 }
 
+/** 72候の日付範囲（年ごとに計算） */
+export interface KouDateRange {
+  readonly index: number
+  readonly startDate: Date
+  readonly endDate: Date
+}
+
+export interface KouDateRangesComputedEvent {
+  readonly type: 'KouDateRangesComputed'
+  readonly ranges: readonly KouDateRange[]
+}
+
 // --- 定数 ---
 
 const ASTRONOMY_UPDATE_INTERVAL_MS = 30_000
@@ -41,6 +53,8 @@ export interface EnvironmentSimulationService {
   setManualWeather(weather: WeatherDecision): void
   /** 手動時間帯を設定する。nullで実太陽位置に戻る。テーマ計算のみ影響し、候計算には影響しない */
   setManualTimeOfDay(timeOfDay: TimeOfDay | null): void
+  /** 手動候を設定する。nullで天文計算による自動候に戻る */
+  setManualKou(kouIndex: number | null): void
   tick(deltaMs: number): void
   stop(): void
   readonly currentSolar: SolarPosition | null
@@ -48,6 +62,7 @@ export interface EnvironmentSimulationService {
   readonly currentKou: KouDefinition | null
   readonly currentWeather: WeatherDecision | null
   readonly currentEstimatedTempC: number | null
+  readonly kouDateRanges: readonly KouDateRange[]
   readonly isRunning: boolean
   readonly autoWeather: boolean
 }
@@ -116,6 +131,9 @@ export function createEnvironmentSimulationService(
   let isRunning = false
   let isAutoWeather = false
   let timeOfDayOverride: TimeOfDay | null = null
+  let kouIndexOverride: number | null = null
+  let cachedKouDateRanges: readonly KouDateRange[] = []
+  let cachedKouDateRangesYear = -1
 
   let cachedSolar: SolarPosition | null = null
   let cachedLunar: LunarPosition | null = null
@@ -129,6 +147,49 @@ export function createEnvironmentSimulationService(
   let timeSinceLastAstronomyUpdate = 0
   let lastWeatherDecisionDayOfYear = -1
   let pendingTransitionDurationMs: number | null = null
+
+  function computeKouDateRanges(year: number): void {
+    if (year === cachedKouDateRangesYear) return
+    cachedKouDateRangesYear = year
+    // 前年12月1日から探索開始（小寒初候 λ=285° は1月初旬）
+    const searchStart = new Date(year - 1, 11, 1)
+
+    // Step 1: 72候の開始日を順次探索（前の候の日付から次を探す連鎖方式）
+    const startDates: (Date | null)[] = []
+    const kou0Lon = KOU_DEFINITIONS[0].eclipticLonStart
+    const kou0Date = astronomyPort.searchSunLongitude(kou0Lon, searchStart, 400)
+    startDates[0] = kou0Date
+    let prevDate = kou0Date
+    for (let i = 1; i < 72; i++) {
+      if (!prevDate) { startDates[i] = null; continue }
+      const lon = KOU_DEFINITIONS[i].eclipticLonStart
+      const found = astronomyPort.searchSunLongitude(lon, prevDate, 30)
+      startDates[i] = found
+      if (found) prevDate = found
+    }
+    // 最後の候の終了日 = 翌年のkou0の開始日
+    const nextYearKou0 = prevDate
+      ? astronomyPort.searchSunLongitude(kou0Lon, prevDate, 30)
+      : null
+
+    // Step 2: 開始日と次の候の開始日から日付範囲を生成
+    const ranges: KouDateRange[] = []
+    for (let i = 0; i < 72; i++) {
+      const startDate = startDates[i]
+      if (!startDate) continue
+      const nextStart = i < 71 ? startDates[i + 1] : nextYearKou0
+      if (!nextStart) continue
+      const endDay = new Date(nextStart)
+      endDay.setDate(endDay.getDate() - 1)
+      ranges.push({ index: i, startDate, endDate: endDay })
+    }
+
+    cachedKouDateRanges = ranges
+    eventBus.publish('KouDateRangesComputed', {
+      type: 'KouDateRangesComputed',
+      ranges: cachedKouDateRanges,
+    } satisfies KouDateRangesComputedEvent)
+  }
 
   function loadClimateAndCompute(clim: ClimateConfig): void {
     climate = clim
@@ -146,8 +207,10 @@ export function createEnvironmentSimulationService(
     cachedSolar = astronomyPort.getSolarPosition(now, latitude, longitude)
     cachedLunar = astronomyPort.getLunarPosition(now, latitude, longitude)
 
-    // Step 2: 候解決
-    const { kou } = kouProgress(cachedSolar.eclipticLon)
+    // Step 2: 候解決（手動候設定時はオーバーライド）
+    const kou = kouIndexOverride !== null
+      ? KOU_DEFINITIONS[kouIndexOverride]
+      : kouProgress(cachedSolar.eclipticLon).kou
     const previousKou = currentKou
     currentKou = kou
 
@@ -225,6 +288,8 @@ export function createEnvironmentSimulationService(
       loadClimateAndCompute(clim)
       isRunning = true
       lastWeatherDecisionDayOfYear = -1
+      // 候の日付範囲を計算
+      computeKouDateRanges(new Date().getFullYear())
       // 初回は即時計算
       runFullComputation()
       timeSinceLastAstronomyUpdate = 0
@@ -276,6 +341,16 @@ export function createEnvironmentSimulationService(
       }
     },
 
+    setManualKou(kouIndex: number | null): void {
+      const changed = kouIndexOverride !== kouIndex
+      kouIndexOverride = kouIndex
+      if (changed && isRunning) {
+        lastWeatherDecisionDayOfYear = -1 // 候変更で気候が変わるため天気再決定を強制
+        pendingTransitionDurationMs = THEME_TRANSITION_DURATION_MANUAL_MS
+        timeSinceLastAstronomyUpdate = ASTRONOMY_UPDATE_INTERVAL_MS // 即時再計算
+      }
+    },
+
     tick(deltaMs: number): void {
       if (!isRunning) return
 
@@ -294,6 +369,9 @@ export function createEnvironmentSimulationService(
       autoWeatherDecision = null
       currentKou = null
       timeOfDayOverride = null
+      kouIndexOverride = null
+      cachedKouDateRanges = []
+      cachedKouDateRangesYear = -1
       pendingTransitionDurationMs = null
       lastWeatherDecisionDayOfYear = -1
       timeSinceLastAstronomyUpdate = 0
@@ -307,6 +385,7 @@ export function createEnvironmentSimulationService(
       return isAutoWeather ? autoWeatherDecision : manualWeatherDecision
     },
     get currentEstimatedTempC(): number | null { return isRunning ? currentEstimatedTempC : null },
+    get kouDateRanges(): readonly KouDateRange[] { return cachedKouDateRanges },
     get isRunning(): boolean { return isRunning },
     get autoWeather(): boolean { return isAutoWeather },
   }

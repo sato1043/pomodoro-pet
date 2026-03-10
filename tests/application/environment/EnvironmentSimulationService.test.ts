@@ -338,6 +338,67 @@ describe('EnvironmentSimulationService', () => {
 
   // --- 手動操作時の遷移時間 ---
 
+  // --- setManualKou ---
+
+  it('setManualKou()で指定indexの候が使用される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    // MOCK_SOLAR.eclipticLon=90 → 自動ではindex 33（夏至初候）
+    expect(service.currentKou!.index).toBe(33)
+
+    service.setManualKou(0)
+    service.tick(0) // 即時再計算
+    expect(service.currentKou!.index).toBe(0) // 小寒初候
+  })
+
+  it('setManualKou(null)で天文計算による候に戻る', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    service.setManualKou(15) // 春分初候
+    service.tick(0)
+    expect(service.currentKou!.index).toBe(15)
+
+    service.setManualKou(null)
+    service.tick(0)
+    expect(service.currentKou!.index).toBe(33) // eclipticLon=90 → 夏至初候
+  })
+
+  it('setManualKou()で天気が再決定される（autoWeather時）', () => {
+    service.setAutoWeather(true)
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    const handler = vi.fn()
+    eventBus.subscribe('WeatherDecisionChanged', handler)
+
+    service.setManualKou(60)
+    service.tick(0)
+
+    expect(handler).toHaveBeenCalled()
+  })
+
+  it('setManualKou時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualKou(10)
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalledWith(
+      expect.any(Object),
+      THEME_TRANSITION_DURATION_MANUAL_MS
+    )
+  })
+
+  it('stop()でkouIndexOverrideがリセットされる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    service.setManualKou(15)
+    service.tick(0)
+    expect(service.currentKou!.index).toBe(15)
+
+    service.stop()
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    // リセット後は天文計算の値に戻る
+    expect(service.currentKou!.index).toBe(33)
+  })
+
   it('setManualTimeOfDay時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
     service.start(DEFAULT_CLIMATE, 'meadow')
     vi.mocked(themeTransition.transitionTo).mockClear()
@@ -374,5 +435,87 @@ describe('EnvironmentSimulationService', () => {
       expect.any(Object),
       30_000
     )
+  })
+
+  // --- kouDateRanges ---
+
+  it('start()でkouDateRangesが計算される（searchSunLongitude成功時）', () => {
+    // Mock: each kou starts 5 days after the previous one (simplified)
+    const baseDate = new Date(2026, 0, 5) // Jan 5
+    vi.mocked(astronomy.searchSunLongitude).mockImplementation((_lon: number, _from: Date, _limit: number) => {
+      // Return dates 5 days apart for each call
+      const callIndex = vi.mocked(astronomy.searchSunLongitude).mock.calls.length - 1
+      const d = new Date(baseDate)
+      d.setDate(d.getDate() + callIndex * 5)
+      return d
+    })
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    const ranges = service.kouDateRanges
+    expect(ranges.length).toBe(72)
+    expect(ranges[0].index).toBe(0)
+    expect(ranges[0].startDate).toEqual(baseDate)
+  })
+
+  it('kouDateRangesの各範囲のendDateは次の候のstartDate - 1日', () => {
+    const baseDate = new Date(2026, 0, 5)
+    vi.mocked(astronomy.searchSunLongitude).mockImplementation(() => {
+      const callIndex = vi.mocked(astronomy.searchSunLongitude).mock.calls.length - 1
+      const d = new Date(baseDate)
+      d.setDate(d.getDate() + callIndex * 5)
+      return d
+    })
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    const ranges = service.kouDateRanges
+    // endDate of range[0] should be startDate of range[1] - 1 day
+    if (ranges.length >= 2) {
+      const expected = new Date(ranges[1].startDate)
+      expected.setDate(expected.getDate() - 1)
+      expect(ranges[0].endDate.getDate()).toBe(expected.getDate())
+      expect(ranges[0].endDate.getMonth()).toBe(expected.getMonth())
+    }
+  })
+
+  it('start()でKouDateRangesComputedイベントが発行される', () => {
+    vi.mocked(astronomy.searchSunLongitude).mockImplementation(() => {
+      const callIndex = vi.mocked(astronomy.searchSunLongitude).mock.calls.length - 1
+      const d = new Date(2026, 0, 5)
+      d.setDate(d.getDate() + callIndex * 5)
+      return d
+    })
+
+    const handler = vi.fn()
+    eventBus.subscribe('KouDateRangesComputed', handler)
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+
+    expect(handler).toHaveBeenCalledTimes(1)
+    const event = handler.mock.calls[0][0]
+    expect(event.type).toBe('KouDateRangesComputed')
+    expect(event.ranges.length).toBe(72)
+  })
+
+  it('searchSunLongitudeが全てnullの場合はkouDateRangesが空', () => {
+    // Default mock returns null
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    expect(service.kouDateRanges).toEqual([])
+  })
+
+  it('stop()でkouDateRangesがリセットされる', () => {
+    vi.mocked(astronomy.searchSunLongitude).mockImplementation(() => {
+      const callIndex = vi.mocked(astronomy.searchSunLongitude).mock.calls.length - 1
+      const d = new Date(2026, 0, 5)
+      d.setDate(d.getDate() + callIndex * 5)
+      return d
+    })
+
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    expect(service.kouDateRanges.length).toBeGreaterThan(0)
+
+    service.stop()
+    expect(service.kouDateRanges).toEqual([])
   })
 })

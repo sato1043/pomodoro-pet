@@ -482,7 +482,14 @@ async function main(): Promise<void> {
     // オーバーライド設定をstart()より前に適用（start内のrunFullComputationが正しい値を使うため）
     envSimService.setAutoWeather(event.weather.autoWeather)
 
-    if (!event.weather.autoWeather && !event.weather.autoTimeOfDay) {
+    // 手動候設定
+    if (!event.weather.autoKou) {
+      envSimService.setManualKou(event.weather.manualKouIndex)
+    } else {
+      envSimService.setManualKou(null)
+    }
+
+    if (!event.weather.autoTimeOfDay) {
       envSimService.setManualTimeOfDay(event.weather.timeOfDay)
     } else {
       envSimService.setManualTimeOfDay(null)
@@ -604,6 +611,9 @@ async function main(): Promise<void> {
     const climate = wc.climate ?? DEFAULT_CLIMATE
     // envSimServiceは常に起動（天文計算ベースのライティング）
     envSimService.setAutoWeather(wc.autoWeather)
+    if (!wc.autoKou) {
+      envSimService.setManualKou(wc.manualKouIndex)
+    }
     if (!wc.autoWeather) {
       envSimService.setManualWeather({
         weather: wc.weather,

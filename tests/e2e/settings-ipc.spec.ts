@@ -423,7 +423,7 @@ test('Autoテーマ設定がsettings.jsonに永続化される', async () => {
   await page.locator('[data-testid="settings-toggle"]').click()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Auto' }).click()
+  await page.locator('[data-testid="overlay-free"]').getByRole('button', { name: 'Auto' }).click()
   await page.locator('[data-testid="set-button"]').click()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 
@@ -446,7 +446,7 @@ test('アプリ再起動後にAutoテーマ設定が復元される', async () =
   await page1.locator('[data-testid="settings-toggle"]').click()
   await expect(page1.getByRole('button', { name: 'Set' })).toBeVisible()
 
-  await page1.getByRole('button', { name: 'Auto' }).click()
+  await page1.locator('[data-testid="overlay-free"]').getByRole('button', { name: 'Auto' }).click()
   await page1.getByRole('button', { name: 'Set' }).click()
   await expect(page1.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
   await page1.waitForTimeout(500)
@@ -470,7 +470,7 @@ test('アプリ再起動後にAutoテーマ設定が復元される', async () =
   await page2.waitForTimeout(500)
 
   // Autoボタンがactive状態であることを確認
-  const autoButton = page2.getByRole('button', { name: 'Auto' })
+  const autoButton = page2.locator('[data-testid="overlay-free"]').getByRole('button', { name: 'Auto' })
   const classes = await autoButton.getAttribute('class')
   expect(classes).toContain('active')
 

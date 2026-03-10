@@ -46,10 +46,15 @@ function RainyIcon(): JSX.Element {
 function SnowyIcon(): JSX.Element {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z" />
-      <line x1="8" y1="20" x2="8.5" y2="22" />
-      <line x1="12" y1="20" x2="12" y2="22" />
-      <line x1="16" y1="20" x2="15.5" y2="22" />
+      <line x1="12" y1="2" x2="12" y2="22" />
+      <line x1="3.34" y1="7" x2="20.66" y2="17" />
+      <line x1="20.66" y1="7" x2="3.34" y2="17" />
+      <polyline points="14,3.5 12,5 10,3.5" />
+      <polyline points="14,20.5 12,19 10,20.5" />
+      <polyline points="4.5,5.5 5.5,7.8 3.5,8.5" />
+      <polyline points="19.5,18.5 18.5,16.2 20.5,15.5" />
+      <polyline points="20.5,8.5 18.5,7.8 19.5,5.5" />
+      <polyline points="3.5,15.5 5.5,16.2 4.5,18.5" />
     </svg>
   )
 }
@@ -277,6 +282,7 @@ export function WeatherPanel(): JSX.Element {
           <span
             key={level}
             className={`${styles.cloudSeg}${level <= draft.cloudDensityLevel ? ' on' : ''}${draft.autoWeather ? ' ' + styles.iconBtnDisabled : ''}`}
+            style={level <= draft.cloudDensityLevel ? { opacity: 0.15 + level * 0.17 } : undefined}
             onClick={() => { if (!draft.autoWeather) updateDraft({ cloudDensityLevel: level }) }}
             data-testid={`cloud-level-${level}`}
           />
@@ -290,8 +296,8 @@ export function WeatherPanel(): JSX.Element {
           return (
             <button
               key={opt.value}
-              className={btnClass(!draft.autoWeather && !draft.autoTimeOfDay && draft.timeOfDay === opt.value)}
-              onClick={() => updateDraft({ timeOfDay: opt.value, autoTimeOfDay: false, autoWeather: false })}
+              className={btnClass(!draft.autoTimeOfDay && draft.timeOfDay === opt.value)}
+              onClick={() => updateDraft({ timeOfDay: opt.value, autoTimeOfDay: false })}
               title={opt.title}
               data-testid={`time-${opt.value}`}
             >
@@ -300,8 +306,8 @@ export function WeatherPanel(): JSX.Element {
           )
         })}
         <button
-          className={btnClass(!draft.autoWeather && draft.autoTimeOfDay)}
-          onClick={() => updateDraft({ autoTimeOfDay: true, autoWeather: false })}
+          className={btnClass(draft.autoTimeOfDay)}
+          onClick={() => updateDraft({ autoTimeOfDay: true })}
           title={`Auto (${resolveTimeOfDay(new Date().getHours())})`}
           data-testid="time-auto"
         >

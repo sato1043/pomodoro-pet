@@ -3,7 +3,7 @@ import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
 import type { ClimateConfig } from '../../domain/environment/value-objects/ClimateData'
 import { DEFAULT_CLIMATE } from '../../domain/environment/value-objects/ClimateData'
 import { resolveTimezone } from '../../domain/environment/value-objects/Timezone'
-import type { KouChangedEvent } from '../../application/environment/EnvironmentSimulationService'
+import type { KouChangedEvent, KouDateRange, KouDateRangesComputedEvent } from '../../application/environment/EnvironmentSimulationService'
 import { useAppDeps } from './AppContext'
 import { useEventBusCallback } from './hooks/useEventBus'
 
@@ -20,6 +20,8 @@ export interface EnvironmentContextValue {
   readonly isDaytime: boolean
   /** IANAタイムゾーン文字列 */
   readonly timezone: string
+  /** 72候の日付範囲（年ごとに計算） */
+  readonly kouDateRanges: readonly KouDateRange[]
 
   /** 地点を変更する（永続化+イベント発行を含む） */
   updateClimate: (climate: ClimateConfig) => void
@@ -62,9 +64,19 @@ export function EnvironmentProvider({ children }: { children: React.ReactNode })
     () => envSimService.currentSolar?.altitude ?? null
   )
 
+  // kouDateRanges
+  const [kouDateRanges, setKouDateRanges] = useState<readonly KouDateRange[]>(
+    () => envSimService.kouDateRanges
+  )
+
   // KouChanged購読
   useEventBusCallback<KouChangedEvent>(bus, 'KouChanged', (event) => {
     setCurrentKou(event.kou)
+  })
+
+  // KouDateRangesComputed購読
+  useEventBusCallback<KouDateRangesComputedEvent>(bus, 'KouDateRangesComputed', (event) => {
+    setKouDateRanges(event.ranges)
   })
 
   // WeatherConfigChanged購読（外部変更のclimate同期）
@@ -114,6 +126,7 @@ export function EnvironmentProvider({ children }: { children: React.ReactNode })
       solarAltitude,
       isDaytime,
       timezone,
+      kouDateRanges,
       updateClimate,
     }}>
       {children}

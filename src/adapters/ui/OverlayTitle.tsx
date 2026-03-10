@@ -1,3 +1,4 @@
+import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
 import * as overlayStyles from './styles/overlay.css'
 
 function formatDate(date: Date): string {
@@ -7,11 +8,18 @@ function formatDate(date: Date): string {
   return `${m}/${d} ${days[date.getDay()]}`
 }
 
-export function OverlayTitle(): JSX.Element {
+interface OverlayTitleProps {
+  readonly currentKou?: KouDefinition | null
+}
+
+export function OverlayTitle({ currentKou }: OverlayTitleProps): JSX.Element {
   return (
     <div className={overlayStyles.title}>
       <span>Pomodoro Pet</span>
-      <span>{formatDate(new Date())}</span>
+      <span>
+        {currentKou && `${currentKou.solarTermName} ${currentKou.phaseNameJa}　`}
+        {formatDate(new Date())}
+      </span>
     </div>
   )
 }

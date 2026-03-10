@@ -11,6 +11,7 @@ import { useLicenseMode } from './LicenseContext'
 import type { FeatureName } from '../../application/license/LicenseState'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
+import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
 import { SetButton } from './SetButton'
@@ -548,9 +549,10 @@ interface OverlayFreeProps {
   readonly onExpandedChange?: (expanded: boolean) => void
   readonly onToggleRef?: (toggle: () => void) => void
   readonly timezone?: string
+  readonly currentKou?: KouDefinition | null
 }
 
-export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone }: OverlayFreeProps): JSX.Element {
+export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone, currentKou }: OverlayFreeProps): JSX.Element {
   const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const { canUse } = useLicenseMode()
@@ -664,7 +666,7 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone 
 
   return createPortal(
     <div data-testid="overlay-free" className={className}>
-      <OverlayTitle />
+      <OverlayTitle currentKou={currentKou} />
       <div className={styles.freeMode}>
         {renderContent()}
         {editor.expanded && !showDocPanel && <SetButton onClick={editor.confirm} />}

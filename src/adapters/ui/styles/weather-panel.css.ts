@@ -99,8 +99,8 @@ export const cloudSeg = style({
   width: 20,
   height: 20,
   borderRadius: '50%',
-  background: vars.color.surfaceSubtle,
-  border: `1px solid ${vars.color.surfaceSubtle}`,
+  background: 'transparent',
+  border: `1px solid ${vars.color.borderStrong}`,
   transition: 'background 0.15s',
   cursor: 'pointer',
   flexShrink: 0,
@@ -108,6 +108,5 @@ export const cloudSeg = style({
 
 globalStyle(`${cloudSeg}.on`, {
   background: vars.color.surfaceHover,
-  borderColor: vars.color.borderStrong,
 })
 

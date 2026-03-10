@@ -46,7 +46,7 @@ test('Autoテーマ選択でcolorSchemeが反映される', async () => {
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
   // Autoをクリック → colorSchemeがlight/darkのいずれかになる（isDaytimeに依存）
-  await page.getByRole('button', { name: 'Auto' }).click()
+  await page.locator('[data-testid="overlay-free"]').getByRole('button', { name: 'Auto' }).click()
   const autoScheme = await page.evaluate(() =>
     getComputedStyle(document.documentElement).colorScheme
   )
@@ -65,7 +65,7 @@ test('Autoテーマ選択でcolorSchemeが反映される', async () => {
   )
   expect(darkScheme).toBe('dark')
 
-  await page.getByRole('button', { name: 'Auto' }).click()
+  await page.locator('[data-testid="overlay-free"]').getByRole('button', { name: 'Auto' }).click()
   const autoScheme2 = await page.evaluate(() =>
     getComputedStyle(document.documentElement).colorScheme
   )

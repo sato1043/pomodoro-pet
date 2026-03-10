@@ -14,6 +14,8 @@ export interface WeatherConfig {
   readonly timeOfDay: TimeOfDay
   readonly autoWeather: boolean
   readonly autoTimeOfDay: boolean
+  readonly autoKou: boolean
+  readonly manualKouIndex: number
   readonly cloudDensityLevel: CloudDensityLevel
   readonly scenePreset: ScenePresetName
   readonly climate?: ClimateConfig
@@ -36,6 +38,8 @@ export function createDefaultWeatherConfig(): WeatherConfig {
     timeOfDay: 'day',
     autoWeather: false,
     autoTimeOfDay: false,
+    autoKou: true,
+    manualKouIndex: 0,
     cloudDensityLevel: CLOUD_PRESET['sunny'],
     scenePreset: 'meadow',
   }

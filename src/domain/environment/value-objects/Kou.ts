@@ -5,21 +5,34 @@ export type KouPhase = 'initial' | 'middle' | 'final'
 export interface KouDefinition {
   readonly index: number             // 0-71（小寒初候=0, ..., 冬至末候=71）
   readonly solarTermName: string     // 親の節気名（漢字）
+  readonly solarTermNameEn: string   // 親の節気名（英語）
   readonly phase: KouPhase
   readonly eclipticLonStart: number  // 開始黄経 (度)。(index*5 + 285) % 360
+  readonly phaseNameEn: string         // 候の位相名（英語: 1st/2nd/3rd）
+  readonly phaseNameJa: string         // 候の位相名（和名: 初候/次候/末候）
   readonly nameJa: string            // 候名（例: 「東風解凍」）
   readonly nameEn: string            // 英語名
   readonly readingJa: string         // 読み仮名
   readonly description: string       // 説明文
 }
 
-const PHASES: readonly KouPhase[] = ['initial', 'middle', 'final']
+// [phase, 英語ラベル, 和名ラベル]
+const PHASES: readonly [KouPhase, string, string][] = [
+  ['initial', '1st', '初候'],
+  ['middle', '2nd', '次候'],
+  ['final', '3rd', '末候'],
+]
 
-const SOLAR_TERMS: readonly string[] = [
-  '小寒', '大寒', '立春', '雨水', '啓蟄', '春分',
-  '清明', '穀雨', '立夏', '小満', '芒種', '夏至',
-  '小暑', '大暑', '立秋', '処暑', '白露', '秋分',
-  '寒露', '霜降', '立冬', '小雪', '大雪', '冬至',
+// [和名, 英語名]
+const SOLAR_TERMS: readonly [string, string][] = [
+  ['小寒', 'Minor Cold'], ['大寒', 'Major Cold'], ['立春', 'Start of Spring'],
+  ['雨水', 'Rain Water'], ['啓蟄', 'Awakening of Insects'], ['春分', 'Vernal Equinox'],
+  ['清明', 'Clear and Bright'], ['穀雨', 'Grain Rain'], ['立夏', 'Start of Summer'],
+  ['小満', 'Grain Buds'], ['芒種', 'Grain in Ear'], ['夏至', 'Summer Solstice'],
+  ['小暑', 'Minor Heat'], ['大暑', 'Major Heat'], ['立秋', 'Start of Autumn'],
+  ['処暑', 'End of Heat'], ['白露', 'White Dew'], ['秋分', 'Autumnal Equinox'],
+  ['寒露', 'Cold Dew'], ['霜降', "Frost's Descent"], ['立冬', 'Start of Winter'],
+  ['小雪', 'Minor Snow'], ['大雪', 'Major Snow'], ['冬至', 'Winter Solstice'],
 ]
 
 // 略本暦（明治7年/1874年改訂）準拠
@@ -103,9 +116,12 @@ const KOU_DATA: readonly [string, string, string, string][] = [
 export const KOU_DEFINITIONS: readonly KouDefinition[] = KOU_DATA.map(
   ([nameJa, readingJa, nameEn, description], index) => ({
     index,
-    solarTermName: SOLAR_TERMS[Math.floor(index / 3)],
-    phase: PHASES[index % 3],
+    solarTermName: SOLAR_TERMS[Math.floor(index / 3)][0],
+    solarTermNameEn: SOLAR_TERMS[Math.floor(index / 3)][1],
+    phase: PHASES[index % 3][0],
     eclipticLonStart: (index * 5 + 285) % 360,
+    phaseNameEn: PHASES[index % 3][1],
+    phaseNameJa: PHASES[index % 3][2],
     nameJa,
     nameEn,
     readingJa,

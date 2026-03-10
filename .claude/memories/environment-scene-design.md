@@ -56,7 +56,7 @@
 | `src/adapters/ui/WeatherPanel.tsx` | 天気設定UI（Weather/Cloud/Time/Scene選択） |
 | `src/adapters/ui/WeatherButton.tsx` | WeatherPanel表示トグルボタン |
 | `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合 |
-| `src/adapters/ui/EnvironmentContext.tsx` | 環境パラメータのReact Context一元管理（climate/currentKou/solarAltitude/isDaytime/timezone） |
+| `src/adapters/ui/EnvironmentContext.tsx` | 環境パラメータのReact Context一元管理（climate/currentKou/solarAltitude/isDaytime/timezone/kouDateRanges）。KouDateRangesComputedEvent購読でkouDateRangesを更新 |
 | `src/adapters/ui/hooks/useResolvedTheme.ts` | ThemePreference→ResolvedTheme解決（system/light/dark/auto） |
 
 ### テスト（実装済み）
@@ -74,7 +74,7 @@
 | ファイル | 役割 |
 |---|---|
 | `src/domain/environment/value-objects/SolarPosition.ts` | SolarPosition型、LunarPosition型、AstronomyPortインターフェース |
-| `src/domain/environment/value-objects/Kou.ts` | KouDefinition型、KOU_DEFINITIONS定数（72候）、resolveKou()、kouProgress() |
+| `src/domain/environment/value-objects/Kou.ts` | KouDefinition型（phaseNameEn/phaseNameJa含む）、KOU_DEFINITIONS定数（72候）、SOLAR_TERMS（`readonly [string, string][]`和英ペアタプル配列）、PHASES（`readonly [KouPhase, string, string][]`トリプルタプル配列）、resolveKou()、kouProgress() |
 | `src/domain/environment/value-objects/ClimateData.ts` | ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、interpolateToKouClimate()、estimateTemperature()、classifyKoppen()（ケッペン気候区分30分類算出） |
 | `src/domain/environment/value-objects/WeatherDecision.ts` | WeatherDecision型、decideWeather()、computeParticleCount() |
 | `src/domain/environment/value-objects/CelestialTheme.ts` | computeThemeFromCelestial()、computeLightDirection()、temperatureToGroundColor() |
@@ -85,7 +85,7 @@
 
 | ファイル | 役割 |
 |---|---|
-| `src/application/environment/EnvironmentSimulationService.ts` | 統合シミュレーション駆動。tick()で天体位置取得→パラメータ生成→遷移 |
+| `src/application/environment/EnvironmentSimulationService.ts` | 統合シミュレーション駆動。tick()で天体位置取得→パラメータ生成→遷移。KouDateRange型、computeKouDateRanges()で年間全72候の開始日を天文計算（searchSunLongitude連鎖探索）。kouDateRangesゲッター。KouDateRangesComputedEventをEventBusで発行 |
 
 **インフラ層**:
 
@@ -102,6 +102,8 @@
 |---|---|
 | `src/adapters/ui/WorldMapModal.tsx` | 世界地図SVGモーダル。terminator描画・都市ピン・クリック選択 |
 | `src/adapters/ui/WorldMapButton.tsx` | フリーモードの地球アイコンボタン |
+| `src/adapters/ui/KouSelector.tsx` | 七十二候セレクタ。カレンダー日付範囲形式ドロップダウン（`# 1 |  1/ 5 -  1/ 9`）+Autoボタン。kouDateRangesから日付範囲を表示 |
+| `src/adapters/ui/OverlayTitle.tsx` | フリーモード日付ヘッダ。currentKou propで節気名+候位相を日本語表示（例: `小寒 初候　3/10 Tue`） |
 
 **アセット・スクリプト**:
 
@@ -230,9 +232,9 @@ seasideプリセットには追加オーバーライドあり:
 
 4行構成:
 1. **Scene行**: meadow/seaside/park のSVGアイコンボタン3つ
-2. **Weather行**: sunny/cloudy/rainy/snowy のアイコンボタン4つ + Auto(disabled)
-3. **Cloud行**: 0-5段階のセグメントバー + Resetボタン
-4. **Time行**: morning/day/evening/night のアイコンボタン4つ + Autoトグル
+2. **Weather行**: sunny/cloudy/rainy/snowy のアイコンボタン4つ + Auto（天気アイコンと排他選択）
+3. **Cloud行**: 0-5段階のセグメントバー + Resetボタン（autoWeather時disabled）
+4. **Time行**: morning/day/evening/night のアイコンボタン4つ + Autoトグル（autoWeatherと独立動作）
 
 ドラフトstate + Setボタン方式（プレビュー → 確定/スナップショット復元）。
 
@@ -804,14 +806,17 @@ type KouPhase = 'initial' | 'middle' | 'final'
 
 /** 七十二候の定義 */
 interface KouDefinition {
-  readonly index: number          // 0-71（小寒初候=0, ..., 冬至末候=71）
-  readonly solarTermName: string  // 親の節気名（漢字）
+  readonly index: number             // 0-71（小寒初候=0, ..., 冬至末候=71）
+  readonly solarTermName: string     // 親の節気名（漢字）
+  readonly solarTermNameEn: string   // 親の節気名（英語）
   readonly phase: KouPhase
+  readonly phaseNameEn: string       // 候位相の英語表示名（'1st' | '2nd' | '3rd'）
+  readonly phaseNameJa: string       // 候位相の日本語表示名（'初候' | '次候' | '末候'）
   readonly eclipticLonStart: number  // 開始黄経 (度)。(index*5 + 285) % 360
-  readonly nameJa: string         // 候名（例: 「東風解凍」）
-  readonly nameEn: string         // 英語名
-  readonly readingJa: string      // 読み仮名
-  readonly description: string    // 説明文
+  readonly nameJa: string            // 候名（例: 「東風解凍」）
+  readonly nameEn: string            // 英語名
+  readonly readingJa: string         // 読み仮名
+  readonly description: string       // 説明文
 }
 
 /** 全72候の定義テーブル */
@@ -1510,93 +1515,70 @@ function cloudDensityToLevel(cloudDensity: number): CloudDensityLevel {
 
 ---
 
-### 5.5h: 七十二候UI表示
+### 5.5h: 七十二候セレクタ
 
-現在の候名と説明をUIに表示する。環境パラメータ計算とは独立した文化的演出機能。
+現在の候をUIから確認・手動選択する機能。候の選択が気候データ・天気決定に連動する。
 
-#### KouDisplayコンポーネント
+#### KouSelectorコンポーネント
 
 ```typescript
-interface KouDisplayProps {
-  readonly kou: KouDefinition | null
-  readonly visible: boolean  // currentKou !== null かつ hideButtons=false 時に表示（autoWeather非依存）
+interface KouSelectorProps {
+  readonly currentKou: KouDefinition | null  // Auto時の逐次更新値
+  readonly autoKou: boolean
+  readonly manualKouIndex: number
+  readonly onKouChange: (kouIndex: number) => void
+  readonly onAutoToggle: (auto: boolean) => void
 }
 
-function KouDisplay({ kou, visible }: KouDisplayProps): JSX.Element | null
+function KouSelector(props: KouSelectorProps): JSX.Element
 ```
 
 #### 表示位置とスタイル
 
-```css
-/* vanilla-extract */
-export const kouContainer = style({
-  position: 'fixed',
-  right: '12px',
-  bottom: '48px',        /* TrialBadgeの上方 */
-  textAlign: 'right',
-  pointerEvents: 'none',
-  transition: 'opacity 1.5s ease-in-out',
-  zIndex: 10,
-})
+- ウィンドウ上端中央（`position: fixed; top: 36px; left: 50%; transform: translateX(-50%)`）。ドラッグ領域（32px）の下
+- 背景なし（transparent）
+- createPortalでdocument.bodyに描画
+- `data-testid="kou-selector"/"kou-select"/"kou-auto"`
 
-export const kouSolarTerm = style({
-  fontSize: '11px',
-  color: 'rgba(255, 255, 255, 0.6)',
-  lineHeight: 1.4,
-})
+#### 表示構成（上から順に）
 
-export const kouName = style({
-  fontSize: '16px',
-  fontWeight: 'bold',
-  color: 'rgba(255, 255, 255, 0.7)',
-  lineHeight: 1.3,
-})
+1. `season`ラベル + `<select>`ドロップダウン（カレンダー日付範囲形式: `# 1 |  1/ 5 -  1/ 9`、1-based候番号+天文計算による日付範囲、モノスペースフォント）
+2. 候の英語名（nameEn）— 下に15pxマージン
+3. 節気名+フェーズ（和名: `小寒 初候`）— fontSize 22
+4. 候名（和名: `芹乃栄`）— fontSize 22
+5. 読み仮名（全角カッコ書き: `（せりすなわちさかう）`）
+6. 説明文（description）
+7. `λ=285°` + Autoアイコンボタン（時計SVG）
 
-export const kouReading = style({
-  fontSize: '10px',
-  color: 'rgba(255, 255, 255, 0.4)',
-  lineHeight: 1.4,
-})
-```
+#### 動作仕様
 
-表示内容:
-- 1行目: 節気名 + 候の位相（例: 「立春 初候」）— 11px
-- 2行目: 候名（漢字、例: 「東風解凍」）— 16px bold
-- 3行目: 読み仮名（小さく）— 10px
-- 通常時opacity 0.4。候変更時にopacity 0.8にフェードアップしてから0.4に戻す
+- **Auto時（`autoKou: true`）**: ドロップダウンのvalueが`currentKou.index`にバインドされ、KouChangedイベントで逐次更新
+- **手動時（`autoKou: false`）**: ドロップダウンで選んだindexを`manualKouIndex`としてWeatherConfigに保存。`EnvironmentSimulationService.setManualKou()`に伝搬
+- **ドロップダウン手動変更**: 自動的に`autoKou: false`に切り替わる
+- **表示制御**: WorldMapModal表示中のみ非表示。その他は常時表示
 
-#### 候変更アニメーション
+#### WeatherConfig拡張
 
 ```typescript
-// KouDisplay内部のstate
-const [displayKou, setDisplayKou] = useState<KouDefinition | null>(null)
-const [opacity, setOpacity] = useState(0.4)
-
-useEffect(() => {
-  if (!kou || (displayKou && kou.index === displayKou.index)) return
-
-  let fadeDownTimer: ReturnType<typeof setTimeout> | undefined
-
-  // Phase 1: フェードアウト (0.5s)
-  setOpacity(0)
-  const fadeOutTimer = setTimeout(() => {
-    // Phase 2: テキスト切替
-    setDisplayKou(kou)
-    // Phase 3: フェードイン to 0.8 (1s)
-    setOpacity(0.8)
-
-    // Phase 4: 3秒後に通常opacity 0.4に戻す
-    fadeDownTimer = setTimeout(() => setOpacity(0.4), 3000)
-  }, 500)
-
-  return () => {
-    clearTimeout(fadeOutTimer)
-    if (fadeDownTimer) clearTimeout(fadeDownTimer)
-  }
-}, [kou])
+export interface WeatherConfig {
+  // ...既存フィールド...
+  readonly autoKou: boolean            // true=天文計算から自動, false=手動
+  readonly manualKouIndex: number      // 0-71, autoKou=false時に使用
+}
 ```
 
-CSS transitionの`opacity 1.5s ease-in-out`でフェードを制御。JSから`setOpacity()`でCSS変数 or style.opacityを変更するだけ。requestAnimationFrameは不要。
+デフォルト値: `autoKou: true`, `manualKouIndex: 0`
+
+#### EnvironmentSimulationService拡張
+
+```typescript
+setManualKou(kouIndex: number | null): void
+```
+
+- `kouIndex !== null`: `KOU_DEFINITIONS[kouIndex]`を候解決結果として使用。気候データ・天気決定・気温推定がすべて手動候に基づく
+- `kouIndex === null`: 太陽黄経による自動候計算に復帰
+- 候変更時に`lastWeatherDecisionDayOfYear = -1`で天気再決定を強制
+- 天体位置計算（太陽高度・方位）は常に実時刻を使用
 
 #### 候変更イベント
 
@@ -1608,7 +1590,7 @@ interface KouChanged {
 }
 ```
 
-EnvironmentSimulationServiceのtick()内で候が変わった時にEventBusへ発行。KouDisplayはEventBusを購読して表示を更新する。
+EnvironmentSimulationServiceのtick()内で候が変わった時にEventBusへ発行。KouSelectorはEnvironmentContext経由でcurrentKouを購読。
 
 将来的にはキャラクターの特別行動トリガーにも使用可能（例: 桜始開で花見アニメーション）。
 
@@ -1962,8 +1944,28 @@ interface EnvironmentSimulationService {
   readonly currentKou: KouDefinition | null
   readonly currentWeather: WeatherDecision | null
   readonly currentEstimatedTempC: number | null
+  readonly kouDateRanges: readonly KouDateRange[]
   readonly isRunning: boolean
 }
+
+/** 候の日付範囲 */
+interface KouDateRange {
+  readonly index: number      // 0-71
+  readonly startDate: Date
+  readonly endDate: Date
+}
+
+/** 候日付範囲計算完了イベント */
+interface KouDateRangesComputedEvent {
+  readonly type: 'KouDateRangesComputed'
+  readonly ranges: readonly KouDateRange[]
+}
+
+/**
+ * computeKouDateRanges(year, astronomyPort) — 年間全72候の開始日を天文計算で一括算出。
+ * searchSunLongitude()の連鎖探索（前の候の開始日を次の探索の起点とする）で効率的に計算。
+ * start()時に呼び出され、結果をkouDateRangesゲッターで公開し、KouDateRangesComputedEventをEventBusで発行。
+ */
 ```
 
 #### 内部状態

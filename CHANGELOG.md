@@ -8,6 +8,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
+- 七十二候セレクタ — KouDisplayを削除し、ウィンドウ上端中央にドロップダウン+Autoボタンの`KouSelector`を配置。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）を選択可能。候選択が気候データ・天気決定に連動。`WeatherConfig`に`autoKou`/`manualKouIndex`フィールド追加（永続化対応）。`EnvironmentSimulationService.setManualKou()`で手動候をオーバーライド
+- 七十二候セレクタUI改善 — ドロップダウンを英語表示（`# Minor Cold 1st`形式）に変更。`KouDefinition`に`solarTermNameEn`フィールド追加（24節気の英語名）。詳細表示に候名和名（大フォント）・読み仮名（カッコ書き）・説明文を追加
+- KouSelectorカレンダー日付範囲ドロップダウン — ドロップダウン表示を`# 1 |  1/ 5 -  1/ 9`形式（1-based候番号+天文計算による日付範囲）に変更。astronomy-engineのsearchSunLongitude()で全72候の開始日を年初に一括計算（`computeKouDateRanges()`）
+- OverlayTitle節気・候表示 — フリーモードの日付ヘッダ横に現在の節気名+候位相を日本語で表示（例: `小寒 初候　3/10 Tue`）
+
+### Changed
+- KouDefinitionにphaseNameEn/phaseNameJaフィールド追加 — 候位相の表示名（`'1st'`/`'2nd'`/`'3rd'`、`'初候'`/`'次候'`/`'末候'`）をKouDefinitionに追加
+- SOLAR_TERMS/PHASESをタプル配列に統合 — `SOLAR_TERMS`を`readonly [string, string][]`（和名・英名ペア）に、`PHASES`を`readonly [KouPhase, string, string][]`（phase・英名・和名トリプル）に統合
+- EnvironmentContextにkouDateRanges追加 — `KouDateRange`型（index/startDate/endDate）と`KouDateRangesComputedEvent`を追加。EnvironmentSimulationServiceの`computeKouDateRanges()`で年間全72候の開始日を天文計算し、EnvironmentContext経由でReact側に提供
+- 雪アイコン — WeatherPanelの雪アイコンを雲+縦線から雪の結晶SVG（6軸+V字枝）に変更
+- 雲量セグメント — レベルに応じたopacity濃淡（0.15〜1.0）を追加。外枠を`borderStrong`で常時表示し低雲量でも選択状態を視認可能に
 - ケッペン気候区分表示 — 世界地図モーダルの座標情報にケッペン気候区分（例: Cfa Humid subtropical）を表示。`classifyKoppen()` 純粋関数で12ヶ月の気温・降水量データからE→B→A→C→D優先順位で30分類を算出。`KoppenClassification`型（code/label）。`AppDeps`に`climateGridPort`を追加しWorldMapModalに気候データアクセスを提供
 - EnvironmentContext — 環境パラメータ（climate/currentKou/solarAltitude/isDaytime/timezone）をReact Contextで一元管理。EventBus購読→React状態変換のアダプター。updateClimate操作で永続化+イベント発行を内包
 - テーマ自動切替（auto） — ThemePreferenceに4番目の選択肢'auto'を追加。太陽高度角ベース（市民薄明-6°閾値）でlight/darkを自動切替。useResolvedThemeにisDayTimeパラメータ追加。OverlayFreeのテーマ選択UIにSunriseIconアイコン追加。AppSettingsServiceのthemeバリデーションにauto対応
@@ -35,6 +46,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - generate-coastline-path.tsの出力を `{path, idlPath}` に拡張
 
 ### Fixed
+- autoWeatherとautoTimeOfDayの独立制御 — Weather Auto有効化時にtimeOfDayが強制的に自動（実太陽位置）に切り替わるバグを修正。main.tsのsetManualTimeOfDay条件からautoWeather依存を除去。WeatherPanel.tsxのTime行ボタンからautoWeather強制解除を除去。autoWeatherとautoTimeOfDayが完全に独立して動作するように変更
 - ClimateGridAdapterの降水量単位修正 — NASA POWERのPRECTOTCORR（mm/day日平均）をmm/month（月間降水量）に変換せずそのまま出力していた問題を修正。各月の日数を掛けて正しいmm/month値を返すように変更。降水量連動の地面色計算・降水確率・ケッペン気候区分の精度が向上
 - Terminator昼夜境界の反転バグ修正 — `Math.atan2`を`Math.atan`に変更。負の赤緯（9月〜3月）でatan2が2/3象限の値を返しclampで誤った緯度になる問題を解消
 - Ushuaiaタイムゾーン表示を`-03`から`ART`に修正 — tz-lookupがUshuaia座標をAmerica/Punta_Arenas（チリ）に誤マッピングする境界精度問題を`TZ_BOUNDARY_OVERRIDES`テーブルで補正。generate-timezone-abbrにArgentina`-03`→`ART`ポストプロセス追加
