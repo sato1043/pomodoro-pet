@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.8.1**（= package.json）
+**バージョン: 0.9.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -22,6 +22,7 @@
 | emotionAccumulation | o | o | x | x | 感情パラメータの蓄積・永続化 |
 | autoUpdate | o | o | x | x | 自動アップデートチェック・ダウンロード |
 | biorhythm | o | - | x | x | バイオリズム（activity/sociability/focus周期変動） |
+| dataExportImport | o | - | x | x | データエクスポート/インポート（settings+statistics+emotionHistory） |
 
 ## 全機能一覧と FeatureName マッピング
 
@@ -198,6 +199,8 @@
 | 74 | 設定自動保存 | desktop/main/index.ts | 自動 | （制限不要） | settings.json保存 |
 | 75 | 統計データ自動保存 | desktop/main/index.ts | 自動 | （制限不要） | statistics.json保存 |
 | 76 | 起動時設定復元 | AppSettingsService.ts | 自動 | （制限不要） | loadFromStorage() |
+| 106 | データエクスポート | export-import.ts, OverlayFree.tsx | 操作 | dataExportImport | settings+statistics+emotionHistoryをJSONファイルにエクスポート |
+| 107 | データインポート | export-import.ts, OverlayFree.tsx | 操作 | dataExportImport | JSONファイルからインポート+バリデーション+アプリ再起動 |
 
 ### O. ライセンスUI
 
@@ -257,6 +260,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.9.0 | 機能追加 | データエクスポート/インポート機能追加（#106,#107）。settings+statistics+emotionHistoryのJSONファイルエクスポート/インポート。バージョン互換性検証、確認ダイアログ、deviceId/license情報保持マージ、インポート後アプリ再起動。`dataExportImport` FeatureName追加（registered専用、trial/expired/restricted無効） |
 | 0.8.1 | バグ修正 | KouSelector autoKou/manualKouIndex変更時にWeatherConfigChangedイベント未発行によるReact再レンダリング不具合修正 |
 | 0.8.0 | 機能追加+UI改善 | 天文計算ベース環境シミュレーション追加（#100-105）。KouSelectorリスト化（ドロップダウン→フルスクリーンオーバーレイリスト、2クリック選択）。WeatherPanel Scene行にLocationボタン追加（WorldMapModal復帰フロー）。autoWeatherとロケーション設定を分離（envSimService常時稼働、autoWeather排他選択化、LocationButton常時表示） |
 | 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行（即座反映・Setボタン廃止）、環境音連動、settings.json永続化。seaside演出強化（ヤシの木・波打ち際・砂浜地面色・空色明化・輝度ブースト・mergeGeometries描画最適化）。天気別雲色（sunny=白emissive/それ以外=灰色）。park改善（歩道・街灯等間隔・植え込み歩道脇沿い・街路樹5本） |

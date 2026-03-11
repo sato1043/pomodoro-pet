@@ -46,6 +46,10 @@ interface ElectronAPI {
   downloadUpdate(): Promise<void>
   installUpdate(): Promise<void>
 
+  // データエクスポート/インポート
+  exportData(): Promise<{ success: boolean; error?: string }>
+  importData(): Promise<{ success: boolean; error?: string }>
+
   // ウィンドウ操作
   windowMinimize(): Promise<void>
   windowClose(): Promise<void>

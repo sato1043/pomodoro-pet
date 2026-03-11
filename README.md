@@ -1,4 +1,4 @@
-pomodoro-pet v0.8.1
+pomodoro-pet v0.9.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -39,6 +39,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **Emotion System** — Satisfaction, fatigue, and affinity parameters that respond to pomodoro completion, feeding, and petting. All parameters persist across sessions with daily snapshots, event history tracking, and cross-session time-based changes (boredom decay, rest recovery, streak bonuses). Visual indicators (♥ ⚡ ★) in the fureai panel show current emotion state via opacity. Emotion trend chart in the Statistics panel displays 3-line graphs (satisfaction/fatigue/affinity) with period switching (7d/30d/All) and pomodoro completion event bars
 - **Biorhythm** — Daily periodic state variation (activity 5-day / sociability 7-day / focus 11-day sine wave cycles) that affects character behavior duration, idle animations, and march speed. Feeding and petting provide temporary boosts. Neon-colored sine curve graph with animated dots in the Statistics panel (registered license only)
 - **Sleep Prevention** — Prevents OS sleep/suspend during pomodoro sessions using Electron's powerSaveBlocker API. Configurable ON/OFF toggle (default ON)
+- **Data Export / Import** (registered license only) — Export settings, statistics, and emotion history to a local JSON backup file for PC migration or backup. Import with version compatibility validation, confirmation dialog, and automatic app restart. License credentials (deviceId / downloadKey / JWT) are preserved during import
 - **Auto Update** — Check, download, and install updates via electron-updater with in-app notification banner
 
 ## Architecture

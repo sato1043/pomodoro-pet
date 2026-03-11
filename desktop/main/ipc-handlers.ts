@@ -4,6 +4,7 @@ import { readFile } from 'fs/promises'
 import { autoUpdater } from 'electron-updater'
 import { loadSettings, saveSettings, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, getOrCreateDeviceId } from './settings'
 import { getLicenseState, setLicenseState, resolveLicense } from './license'
+import { handleExportData, handleImportData } from './export-import'
 
 declare const __HEARTBEAT_URL__: string
 
@@ -193,6 +194,22 @@ export function registerIpcHandlers(): void {
 
   ipcMain.handle('window:close', (event) => {
     BrowserWindow.fromWebContents(event.sender)?.close()
+  })
+
+  // --- データエクスポート/インポート ---
+
+  ipcMain.handle('data:export', async () => {
+    return handleExportData()
+  })
+
+  ipcMain.handle('data:import', async () => {
+    const result = await handleImportData()
+    if (result.success) {
+      // インポート成功: アプリを再起動
+      app.relaunch()
+      app.exit(0)
+    }
+    return result
   })
 
   // --- ブラウザリンク ---

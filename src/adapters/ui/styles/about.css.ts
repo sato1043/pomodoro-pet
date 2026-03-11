@@ -106,7 +106,7 @@ export const aboutLink = style({
   alignItems: 'center',
   justifyContent: 'center',
   gap: 8,
-  marginTop: 16,
+  marginTop: 8,
 })
 
 export const aboutLinkButton = style({

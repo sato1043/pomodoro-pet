@@ -188,6 +188,7 @@ describe('isFeatureEnabled', () => {
     'emotionAccumulation',
     'autoUpdate',
     'biorhythm',
+    'dataExportImport',
   ]
 
   const ALWAYS_ENABLED: FeatureName[] = [
@@ -205,7 +206,7 @@ describe('isFeatureEnabled', () => {
     })
   })
 
-  const TRIAL_RESTRICTED: FeatureName[] = ['fureai', 'gallery', 'biorhythm']
+  const TRIAL_RESTRICTED: FeatureName[] = ['fureai', 'gallery', 'biorhythm', 'dataExportImport']
   const TRIAL_ENABLED: FeatureName[] = ALL_FEATURES.filter(
     f => !TRIAL_RESTRICTED.includes(f)
   )
