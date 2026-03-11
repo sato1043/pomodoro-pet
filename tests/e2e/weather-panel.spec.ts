@@ -482,9 +482,16 @@ test('KouSelectorが表示される', async () => {
 test('KouSelector Autoボタンのトグル動作', async () => {
   const { page } = app
 
+  // Weatherパネルを開く（KouSelectorの操作はWeather画面から行う）
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
   const autoBtn = page.locator('[data-testid="kou-auto"]')
 
-  // 初期状態: autoKouはtrue（active）
+  // autoKouがtrueであることを保証（前のテストで変わっている可能性がある）
+  if (!(await autoBtn.evaluate(el => el.classList.contains('active')))) {
+    await autoBtn.click()
+  }
   await expect(autoBtn).toHaveClass(/active/)
 
   // Autoをオフ
@@ -494,10 +501,16 @@ test('KouSelector Autoボタンのトグル動作', async () => {
   // Autoを再度オン
   await autoBtn.click()
   await expect(autoBtn).toHaveClass(/active/)
+
+  await page.locator('[data-testid="weather-close"]').click()
 })
 
 test('KouSelectorリストから手動選択でAutoが解除される', async () => {
   const { page } = app
+
+  // Weatherパネルを開く
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
 
   const autoBtn = page.locator('[data-testid="kou-auto"]')
   const listBtn = page.locator('[data-testid="kou-list-btn"]')
@@ -531,10 +544,16 @@ test('KouSelectorリストから手動選択でAutoが解除される', async ()
 
   // Autoに戻す（後続テスト用）
   await autoBtn.click()
+
+  await page.locator('[data-testid="weather-close"]').click()
 })
 
 test('KouSelectorリストに日付範囲が表示される', async () => {
   const { page } = app
+
+  // Weatherパネルを開く
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
 
   const listBtn = page.locator('[data-testid="kou-list-btn"]')
   await listBtn.click()
@@ -549,4 +568,6 @@ test('KouSelectorリストに日付範囲が表示される', async () => {
 
   // 閉じる
   await page.locator('[data-testid="kou-list-close"]').click()
+
+  await page.locator('[data-testid="weather-close"]').click()
 })
