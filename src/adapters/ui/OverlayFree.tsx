@@ -20,6 +20,7 @@ import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
 import { LegalDocContent } from './LegalDocContent'
 import { RegistrationContent } from './RegistrationContent'
+import { FeatureLockedOverlay } from './FeatureLockedOverlay'
 import { getLocationTime, formatTimezoneLabel } from '../../domain/environment/value-objects/Timezone'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
@@ -515,8 +516,10 @@ function ImportIcon(): JSX.Element {
 
 function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse }: FreeSettingsEditorProps): JSX.Element {
   const [exportImportStatus, setExportImportStatus] = useState<string | null>(null)
+  const [showLocked, setShowLocked] = useState(false)
 
   const handleExport = async (): Promise<void> => {
+    if (!canUse('dataExportImport')) { setShowLocked(true); return }
     setExportImportStatus(null)
     const result = await window.electronAPI.exportData()
     if (result.error === 'cancelled') return
@@ -528,6 +531,7 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
   }
 
   const handleImport = async (): Promise<void> => {
+    if (!canUse('dataExportImport')) { setShowLocked(true); return }
     setExportImportStatus(null)
     const result = await window.electronAPI.importData()
     if (result.error === 'cancelled') return
@@ -569,27 +573,23 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         >
           <SleepBlockIcon on={editor.preventSleep} />
         </button>
-        {canUse('dataExportImport') && (
-          <>
-            <label className={styles.bgLabel} style={{ marginLeft: 16 }}>Data:</label>
-            <button
-              className={styles.bgToggle}
-              data-testid="export-data-button"
-              onClick={handleExport}
-              title="Export Data"
-            >
-              <ExportIcon />
-            </button>
-            <button
-              className={styles.bgToggle}
-              data-testid="import-data-button"
-              onClick={handleImport}
-              title="Import Data"
-            >
-              <ImportIcon />
-            </button>
-          </>
-        )}
+        <label className={styles.bgLabel} style={{ marginLeft: 16 }}>Data:</label>
+        <button
+          className={styles.bgToggle}
+          data-testid="export-data-button"
+          onClick={handleExport}
+          title="Export Data"
+        >
+          <ExportIcon />
+        </button>
+        <button
+          className={styles.bgToggle}
+          data-testid="import-data-button"
+          onClick={handleImport}
+          title="Import Data"
+        >
+          <ImportIcon />
+        </button>
       </div>
       {exportImportStatus && (
         <div className={styles.bgRow} style={{ justifyContent: 'center' }}>
@@ -607,6 +607,7 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onLicensesClick} data-testid="licenses-link">Third-party</button>
       </div>
+      {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
     </>
   )
 }

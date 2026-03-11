@@ -53,7 +53,7 @@ test('Export/Importボタンがregisteredモードで設定パネル展開時に
   await electronApp.close()
 })
 
-test('Export/Importボタンがtrialモードでは非表示', async () => {
+test('Export/ImportボタンがtrialモードでもVisibleだがクリックでFeatureLockedOverlayが表示される', async () => {
   const { electronApp, page } = await launchFresh()
 
   // デフォルトはtrial
@@ -61,9 +61,17 @@ test('Export/Importボタンがtrialモードでは非表示', async () => {
   await page.locator('[data-testid="settings-toggle"]').click()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
-  // Export/Importボタンが表示されない
-  await expect(page.locator('[data-testid="export-data-button"]')).not.toBeVisible()
-  await expect(page.locator('[data-testid="import-data-button"]')).not.toBeVisible()
+  // Export/Importボタンが表示される
+  await expect(page.locator('[data-testid="export-data-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="import-data-button"]')).toBeVisible()
+
+  // trialモードでExportクリック→FeatureLockedOverlayが表示される
+  await page.locator('[data-testid="export-data-button"]').click()
+  await expect(page.locator('[data-testid="feature-locked-overlay"]')).toBeVisible()
+
+  // 閉じるボタンで閉じる
+  await page.locator('[data-testid="feature-locked-overlay"] button[aria-label="Close"]').click()
+  await expect(page.locator('[data-testid="feature-locked-overlay"]')).not.toBeVisible()
 
   await electronApp.close()
 })
