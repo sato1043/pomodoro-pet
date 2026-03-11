@@ -5,6 +5,11 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.8.1] - 2026-03-11
+
+### Fixed
+- KouSelector autoKou/manualKouIndex変更時のReact再レンダリング不具合修正 — SceneFreeのKouSelectorコールバックがWeatherConfigChangedイベントを発行していなかったため、autoKouトグルやリスト手動選択後にKouSelectorのpropsが更新されない問題を修正
+
 ## [0.8.0] - 2026-03-11
 
 ### Changed

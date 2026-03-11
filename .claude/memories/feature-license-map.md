@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.8.0**（= package.json）
+**バージョン: 0.8.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -257,6 +257,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.8.1 | バグ修正 | KouSelector autoKou/manualKouIndex変更時にWeatherConfigChangedイベント未発行によるReact再レンダリング不具合修正 |
 | 0.8.0 | 機能追加+UI改善 | 天文計算ベース環境シミュレーション追加（#100-105）。KouSelectorリスト化（ドロップダウン→フルスクリーンオーバーレイリスト、2クリック選択）。WeatherPanel Scene行にLocationボタン追加（WorldMapModal復帰フロー）。autoWeatherとロケーション設定を分離（envSimService常時稼働、autoWeather排他選択化、LocationButton常時表示） |
 | 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行（即座反映・Setボタン廃止）、環境音連動、settings.json永続化。seaside演出強化（ヤシの木・波打ち際・砂浜地面色・空色明化・輝度ブースト・mergeGeometries描画最適化）。天気別雲色（sunny=白emissive/それ以外=灰色）。park改善（歩道・街灯等間隔・植え込み歩道脇沿い・街路樹5本） |
 | 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
