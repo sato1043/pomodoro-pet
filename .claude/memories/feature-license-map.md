@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.9.0**（= package.json）
+**バージョン: 0.9.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -260,6 +260,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.9.1 | バグ修正 | KouSelector E2Eテスト修正（settingsSummary pointer-events重なり）+ 設定パネルレイアウト修正（Data:行統合） |
 | 0.9.0 | 機能追加 | データエクスポート/インポート機能追加（#106,#107）。settings+statistics+emotionHistoryのJSONファイルエクスポート/インポート。バージョン互換性検証、確認ダイアログ、deviceId/license情報保持マージ、インポート後アプリ再起動。`dataExportImport` FeatureName追加（registered専用、trial/expired/restricted無効） |
 | 0.8.1 | バグ修正 | KouSelector autoKou/manualKouIndex変更時にWeatherConfigChangedイベント未発行によるReact再レンダリング不具合修正 |
 | 0.8.0 | 機能追加+UI改善 | 天文計算ベース環境シミュレーション追加（#100-105）。KouSelectorリスト化（ドロップダウン→フルスクリーンオーバーレイリスト、2クリック選択）。WeatherPanel Scene行にLocationボタン追加（WorldMapModal復帰フロー）。autoWeatherとロケーション設定を分離（envSimService常時稼働、autoWeather排他選択化、LocationButton常時表示） |
