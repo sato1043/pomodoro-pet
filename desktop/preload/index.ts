@@ -47,6 +47,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
   windowClose: (): Promise<void> =>
     ipcRenderer.invoke('window:close'),
 
+  // データエクスポート/インポート
+  exportData: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('data:export'),
+  importData: (): Promise<{ success: boolean; error?: string }> =>
+    ipcRenderer.invoke('data:import'),
+
   // ブラウザリンク
   openExternal: (url: string): Promise<void> =>
     ipcRenderer.invoke('shell:openExternal', url),

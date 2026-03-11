@@ -100,11 +100,12 @@ EventBus（UI/インフラ通知）:
 ### desktop/ — Electronプロセス
 - `main/index.ts` — エントリポイント（BrowserWindow生成、dev/prod切替、SwiftShaderフォールバック、DevTools環境変数制御）。`__APP_ID__`（ビルド時define埋め込み）で`app.setAppUserModelId()`を設定（Windows通知に必須）。起動後10秒でライセンスチェック+アップデートチェック
 - `main/types.ts` — 型定義（JwtPayload、HeartbeatResponse、LicenseState、UpdateStatus）
-- `main/settings.ts` — 設定I/O（load/saveSettings、load/saveStatistics、getOrCreateDeviceId）。`app.getPath('userData')`配下のsettings.json/statistics.jsonを読み書き
+- `main/settings.ts` — 設定I/O（load/saveSettings、load/saveStatistics、load/saveEmotionHistory、getOrCreateDeviceId）。`app.getPath('userData')`配下のsettings.json/statistics.json/emotion-history.jsonを読み書き
+- `main/export-import.ts` — データエクスポート/インポート（handleExportData、handleImportData）。settings+statistics+emotionHistoryをJSONファイルとしてエクスポート/インポート。インポート時にバージョン互換性検証・確認ダイアログ表示・deviceId/downloadKey/jwt保持マージ
 - `main/license.ts` — ライセンス管理。RS256公開鍵によるJWT検証（decodeJwtPayload/verifyJwt）、2段階オンラインチェック（checkConnectivity→heartbeat）、ライセンス状態解決（resolveLicense）。getter/setterパターンで`currentLicenseState`を管理（getLicenseState/setLicenseState）。`__DEBUG_LICENSE__`でライセンスモード固定（ハートビートスキップ）
 - `main/updater.ts` — autoUpdaterイベントハンドラ（initAutoUpdater）。checking/available/downloading/downloaded/errorの各状態をレンダラーに通知
-- `main/ipc-handlers.ts` — 全IPCハンドラ登録（registerIpcHandlers）。設定永続化IPC、`notification:show`、`about:load`、`registration-guide:load`、`license:status`/`license:register`/`license:check`、`update:check`/`update:download`/`update:install`、`window:minimize`/`window:close`、`shell:openExternal`。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン
-- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, windowMinimize, windowClose, openExternal, onUpdateStatus, onLicenseChanged公開）
+- `main/ipc-handlers.ts` — 全IPCハンドラ登録（registerIpcHandlers）。設定永続化IPC、`notification:show`、`about:load`、`registration-guide:load`、`license:status`/`license:register`/`license:check`、`update:check`/`update:download`/`update:install`、`data:export`/`data:import`、`window:minimize`/`window:close`、`shell:openExternal`。`update:check`/`update:download`はexpired/restrictedモード時に早期リターン。`data:import`成功時はapp.relaunch()→app.exit(0)でアプリ再起動
+- `preload/index.ts` — contextBridge（platform, loadSettings, saveSettings, showNotification, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, exportData, importData, windowMinimize, windowClose, openExternal, onUpdateStatus, onLicenseChanged公開）
 
 ### src/domain/ — ドメインモデル
 - `timer/entities/PomodoroStateMachine.ts` — タイマー中核ロジック（CyclePlanインデックス走査方式、PomodoroState型、exitManually、PhaseTimeTrigger対応、phaseProgressゲッター）
@@ -138,6 +139,7 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
+- `shared/ExportData.ts` — エクスポートデータ型定義（ExportData, ValidationResult）とバリデーション関数（validateExportData）
 
 ### src/application/ — ユースケース
 - `app-scene/AppScene.ts` — AppScene型定義（free/pomodoro/settings/fureai/gallery）とAppSceneEvent型
@@ -286,6 +288,7 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/WeatherDecision.test.ts` — mulberry32決定論性・decideWeather確率分布・computeParticleCount範囲・cloudDensityToLevel（18テスト）
 - `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial・computeLightDirection（19テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
+- `domain/shared/ExportData.test.ts` — エクスポートデータバリデーション（正常系、不正形式、バージョン互換性、フィールド欠損、24テスト）
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
 - `application/fureai/FureaiCoordinator.test.ts` — enterFureai/exitFureaiの協調テスト（シーン遷移+プリセット切替+EventBus発行+FeedingAdapter活性化）、feedCharacterテスト
 - `application/gallery/GalleryCoordinator.test.ts` — enterGallery/exitGalleryの協調テスト（シーン遷移+EventBus発行+autonomousプリセット復帰）、playState/playAnimationSelectionテスト

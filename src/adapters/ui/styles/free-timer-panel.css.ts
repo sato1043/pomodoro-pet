@@ -72,6 +72,7 @@ export const editorCloseToggle = style({
 export const settingsSummary = style({
   marginTop: 16,
   marginBottom: 0,
+  pointerEvents: 'none',
 })
 
 // === Settings grid ===

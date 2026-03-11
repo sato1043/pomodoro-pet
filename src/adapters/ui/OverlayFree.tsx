@@ -20,6 +20,7 @@ import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
 import { LegalDocContent } from './LegalDocContent'
 import { RegistrationContent } from './RegistrationContent'
+import { FeatureLockedOverlay } from './FeatureLockedOverlay'
 import { getLocationTime, formatTimezoneLabel } from '../../domain/environment/value-objects/Timezone'
 import * as overlayStyles from './styles/overlay.css'
 import * as styles from './styles/free-timer-panel.css'
@@ -493,7 +494,53 @@ interface FreeSettingsEditorProps {
   readonly canUse: (feature: FeatureName) => boolean
 }
 
+function ExportIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="7 10 12 15 17 10" />
+      <line x1="12" y1="15" x2="12" y2="3" />
+    </svg>
+  )
+}
+
+function ImportIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+      <polyline points="17 8 12 3 7 8" />
+      <line x1="12" y1="3" x2="12" y2="15" />
+    </svg>
+  )
+}
+
 function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse }: FreeSettingsEditorProps): JSX.Element {
+  const [exportImportStatus, setExportImportStatus] = useState<string | null>(null)
+  const [showLocked, setShowLocked] = useState(false)
+
+  const handleExport = async (): Promise<void> => {
+    if (!canUse('dataExportImport')) { setShowLocked(true); return }
+    setExportImportStatus(null)
+    const result = await window.electronAPI.exportData()
+    if (result.error === 'cancelled') return
+    if (result.success) {
+      setExportImportStatus('Exported')
+    } else {
+      setExportImportStatus(result.error ?? 'Export failed')
+    }
+  }
+
+  const handleImport = async (): Promise<void> => {
+    if (!canUse('dataExportImport')) { setShowLocked(true); return }
+    setExportImportStatus(null)
+    const result = await window.electronAPI.importData()
+    if (result.error === 'cancelled') return
+    if (!result.success) {
+      setExportImportStatus(result.error ?? 'Import failed')
+    }
+    // success の場合はメインプロセスがアプリを再起動するためここには到達しない
+  }
+
   return (
     <>
       {canUse('timerSettings') && (
@@ -526,8 +573,30 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         >
           <SleepBlockIcon on={editor.preventSleep} />
         </button>
+        <label className={styles.bgLabel} style={{ marginLeft: 16 }}>Data:</label>
+        <button
+          className={styles.bgToggle}
+          data-testid="export-data-button"
+          onClick={handleExport}
+          title="Export Data"
+        >
+          <ExportIcon />
+        </button>
+        <button
+          className={styles.bgToggle}
+          data-testid="import-data-button"
+          onClick={handleImport}
+          title="Import Data"
+        >
+          <ImportIcon />
+        </button>
       </div>
-      <div className={aboutStyles.aboutLink}>
+      {exportImportStatus && (
+        <div className={styles.bgRow} style={{ justifyContent: 'center' }}>
+          <span style={{ fontSize: 12, opacity: 0.7 }}>{exportImportStatus}</span>
+        </div>
+      )}
+      <div className={aboutStyles.aboutLink} style={{ marginTop: 16 }}>
         <button className={aboutStyles.aboutLinkButton} onClick={onAboutClick} data-testid="about-link">About</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onRegisterClick} data-testid="register-link">
           {licenseKeyHint ? `Registered (${licenseKeyHint})` : 'Register'}
@@ -538,6 +607,7 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onLicensesClick} data-testid="licenses-link">Third-party</button>
       </div>
+      {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
     </>
   )
 }

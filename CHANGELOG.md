@@ -5,6 +5,17 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.9.1] - 2026-03-11
+
+### Fixed
+- KouSelector E2Eテスト修正 — settingsSummaryのpointer-eventsが時計表示領域でKouSelectorのクリックを横取りしていた問題を修正。KouSelectorテストをWeatherパネル経由で操作するよう修正
+- 設定パネルレイアウト修正 — Data:行追加によるEULA/Privacy/Third-partyのはみ出しをPomodoro:行とData:行の統合+aboutLinkマージン縮小で解消
+
+## [0.9.0] - 2026-03-11
+
+### Added
+- データエクスポート/インポート機能 — 設定・統計・感情履歴をローカルJSONファイルとしてエクスポート/インポート（registered専用）。PC買い替え・バックアップ用途。設定パネルにExport/Importアイコンボタン追加。バージョン互換性検証、確認ダイアログ、deviceId/license情報保持マージ、インポート後アプリ再起動。`dataExportImport` FeatureName追加
+
 ## [0.8.1] - 2026-03-11
 
 ### Fixed
