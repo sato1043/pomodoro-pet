@@ -29,6 +29,7 @@ export function SceneFree(): JSX.Element {
   const [showWeather, setShowWeather] = useState(false)
   const [showLocked, setShowLocked] = useState(false)
   const [showWorldMap, setShowWorldMap] = useState(false)
+  const [openedFromWeather, setOpenedFromWeather] = useState(false)
   const toggleSettingsRef = useRef<() => void>(() => {})
   const hideButtons = showStats || settingsExpanded || showWeather
 
@@ -65,7 +66,7 @@ export function SceneFree(): JSX.Element {
       )}
       {showStats && <StatsDrawer onClose={() => setShowStats(false)} />}
       {showStats && <StatsCloseButton onClick={() => setShowStats(false)} />}
-      {showWeather && <WeatherPanel />}
+      {showWeather && <WeatherPanel onLocationClick={() => { setShowWeather(false); setShowWorldMap(true); setOpenedFromWeather(true) }} />}
       {showWeather && <WeatherCloseButton onClick={() => setShowWeather(false)} />}
       {!hideButtons && <StartPomodoroButton />}
       {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
@@ -73,7 +74,7 @@ export function SceneFree(): JSX.Element {
       {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
       {!hideButtons && <FureaiEntryButton onClick={handleFureaiClick} />}
       {!hideButtons && <LocationButton
-        onClick={() => setShowWorldMap(true)}
+        onClick={() => { setShowWorldMap(true); setOpenedFromWeather(false) }}
         label={climate.label}
       />}
       {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
@@ -84,7 +85,7 @@ export function SceneFree(): JSX.Element {
           currentClimate={climate}
           coastlinePath={(coastlineData as { path: string; idlPath: string }).path}
           idlPath={(coastlineData as { path: string; idlPath: string }).idlPath}
-          onClose={() => setShowWorldMap(false)}
+          onClose={() => { setShowWorldMap(false); if (openedFromWeather) { setShowWeather(true); setOpenedFromWeather(false) } }}
           onApply={updateClimate}
           getMonthlyClimate={climateGridPort.isLoaded ? climateGridPort.getMonthlyClimate : undefined}
         />

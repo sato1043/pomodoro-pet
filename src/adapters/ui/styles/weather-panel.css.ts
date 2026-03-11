@@ -110,3 +110,24 @@ globalStyle(`${cloudSeg}.on`, {
   background: vars.color.surfaceHover,
 })
 
+export const locationBtn = style({
+  display: 'flex',
+  alignItems: 'center',
+  justifyContent: 'center',
+  width: 32,
+  height: 32,
+  background: 'transparent',
+  color: vars.color.textMuted,
+  border: 'none',
+  borderRadius: 6,
+  cursor: 'pointer',
+  padding: 0,
+  marginLeft: 'auto',
+  transition: 'color 0.2s',
+  selectors: {
+    '&:hover': {
+      color: vars.color.text,
+    },
+  },
+})
+

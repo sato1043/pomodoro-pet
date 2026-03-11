@@ -177,7 +177,7 @@ EventBus（UI/インフラ通知）:
 - `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い。trialではfureai/galleryが無効）
 - `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToast+TrialBadgeに渡す。WindowTitleBarをグローバル配置
 - `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlay+LocationButton+WorldMapModal+KouSelectorを束ねる。showStats/settingsExpanded/showWeather/showWorldMap/openedFromWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示。WeatherPanelのLocationボタンからWorldMapModalを開くと`openedFromWeather=true`になり、WorldMapModal閉じるとWeatherPanelに自動復帰
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
@@ -216,7 +216,7 @@ EventBus（UI/インフラ通知）:
 - `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
-- `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。ウィンドウ上端中央（top:36px）に背景なし表示。英語ドロップダウン（`# Minor Cold 1st`形式）+詳細行（英語名/節気+候和名/読み/説明文/λ=+Autoアイコン）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）を選択可能。`data-testid="kou-selector"/"kou-select"/"kou-auto"`
+- `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。ウィンドウ上端中央（top:36px）に背景なし表示。3段構成: Row1（seasonラベル+#日付範囲）、Row2（英語名）、Row3（Autoアイコン+リストアイコン）。リストアイコンでフルスクリーン72候オーバーレイリスト表示（テーブル+詳細パネル、2クリック選択）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）をリストから選択。`data-testid="kou-selector"/"kou-list-btn"/"kou-auto"/"kou-list-overlay"/"kou-list-close"`
 - `ui/WorldMapModal.tsx` — 世界地図SVGモーダル。等距円筒図法（viewBox "-180 -90 360 180"）。astronomy-engineによるterminator昼夜境界描画。8都市プリセットピン+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅表示・全画面化。Natural Earth IDLライン描画。ClimateConfig生成
 - `ui/LocationButton.tsx` — フリーモード右端の地球アイコンボタン。クリックでWorldMapModal起動
 - `ui/styles/kou-selector.css.ts` — 七十二候セレクタ用vanilla-extractスタイル
@@ -341,7 +341,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/free-mode.spec.ts` — 設定パネルトグル・ボタン選択・Set確定・BG Audio/Notifyトグル表示・操作・スナップショット復元
 - `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
 - `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元・showNotification API確認・BG設定永続化/復元・statistics API確認・天気設定永続化/再起動復元・autoWeather永続化/再起動復元（17テスト）
-- `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather排他選択動作・autoWeather有効時disabled確認・時間帯切替・スナップショット復元・Stats/Weather排他表示・WeatherPanelにLocationボタン非存在・LocationButton常時表示（16テスト）
+- `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather排他選択動作・autoWeather有効時disabled確認・時間帯切替・スナップショット復元・Stats/Weather排他表示・WeatherPanel Scene行Locationボタン表示・WeatherPanel→WorldMapModal→戻りでWeatherPanel復帰・LocationButton常時表示・KouSelector表示/Autoトグル/リスト手動選択Auto解除/日付範囲表示（24テスト）
 - `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
 - `e2e/emotion-indicator.spec.ts` — 感情インジケーター表示/非表示・3アイコン存在・opacity整合性・ライセンス制限（6テスト）

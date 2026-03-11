@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- KouSelector UIリファクタリング — ドロップダウンを廃止しフルスクリーンオーバーレイリスト（テーブル+詳細パネル）に変更。2クリック選択（プレビュー→確定）。3段レイアウト（seasonラベル+#日付範囲 / 英語名 / Autoアイコン+リストアイコン）。リスト閉じるボタンをWeather戻るボタンと同位置・同サイズに統一。Autoアイコン色: inactive=白系、active=グレー系
+- WeatherPanel Scene行にLocationボタン追加 — 右端に地球アイコンを配置。クリックでWeatherPanelを閉じてWorldMapModalを開き、WorldMapModal閉じると（Set Location/戻る両方）WeatherPanelに自動復帰。SceneFreeに`openedFromWeather`フラグ追加
+
 ### Added
 - 七十二候セレクタ — KouDisplayを削除し、ウィンドウ上端中央にドロップダウン+Autoボタンの`KouSelector`を配置。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）を選択可能。候選択が気候データ・天気決定に連動。`WeatherConfig`に`autoKou`/`manualKouIndex`フィールド追加（永続化対応）。`EnvironmentSimulationService.setManualKou()`で手動候をオーバーライド
 - 七十二候セレクタUI改善 — ドロップダウンを英語表示（`# Minor Cold 1st`形式）に変更。`KouDefinition`に`solarTermNameEn`フィールド追加（24節気の英語名）。詳細表示に候名和名（大フォント）・読み仮名（カッコ書き）・説明文を追加

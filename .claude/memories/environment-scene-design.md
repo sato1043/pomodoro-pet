@@ -1542,19 +1542,41 @@ function KouSelector(props: KouSelectorProps): JSX.Element
 
 #### 表示構成（上から順に）
 
-1. `season`ラベル + `<select>`ドロップダウン（カレンダー日付範囲形式: `# 1 |  1/ 5 -  1/ 9`、1-based候番号+天文計算による日付範囲、モノスペースフォント）
-2. 候の英語名（nameEn）— 下に15pxマージン
-3. 節気名+フェーズ（和名: `小寒 初候`）— fontSize 22
-4. 候名（和名: `芹乃栄`）— fontSize 22
-5. 読み仮名（全角カッコ書き: `（せりすなわちさかう）`）
-6. 説明文（description）
-7. `λ=285°` + Autoアイコンボタン（時計SVG）
+1. `season`ラベル + `#候番号 | 日付範囲`（カレンダー日付範囲形式: `# 1 |  1/ 5 -  1/ 9`）
+2. 候の英語名（nameEn）
+3. Autoアイコンボタン（時計SVG）+ リストアイコンボタン（リストSVG）— 下に15pxマージン
+4. 節気名+フェーズ（和名: `小寒 初候`）— fontSize 22
+5. 候名（和名: `芹乃栄`）— fontSize 22
+6. 読み仮名（全角カッコ書き: `（せりすなわちさかう）`）
+7. 説明文（description）
+8. `λ=285°`
+
+#### リストオーバーレイ
+
+リストアイコンクリックでフルスクリーン72候リストを表示（createPortalでdocument.bodyに描画）。
+
+- テーブル形式: #番号、日付範囲、節気、候名。候名列は右端まで伸長（`width: 100%`テーブル）
+- テーブルヘッダは固定（`listHeader`）、候リストはスクロール可能（`listContainer`、flex 3:1比率）
+- スクロールバー: 幅24px、白半透明サム
+- リスト下部に詳細パネル（`listDetailPanel`、`backgroundColor: rgba(0,0,0,0.7)`）:
+  - #候番号 | 日付範囲 → solarTermNameEn phaseNameEn → nameEn → 節気+フェーズ和名 → 候名和名 → 読み仮名 → 説明文 → λ=黄経°
+  - ホバー行の情報をリアルタイム表示（hoveredIndex優先、fallbackはpreviewIndex→selected）
+- 2クリック選択: 1クリック目=プレビュー（行ハイライト）、同じ行2クリック目=確定（autoKou=false、リスト閉じる）
+- 初期表示時にcurrentRowをscrollIntoView({ block: 'center' })
+- 閉じるボタン: Weather戻るボタンと同位置・同スタイル（bottom:168, left:10, 48x48, overlayBg, blur(8px)）
+- `data-testid="kou-list-overlay"/"kou-list-close"`
+
+#### Autoアイコンの色
+
+- inactive（autoKou=false）: `rgba(255, 255, 255, 0.7)` — やや控えめな白
+- active（autoKou=true）: `textMuted`（`#aaa`）— 落ち着いたグレー
+- hover: `textSecondary`
 
 #### 動作仕様
 
-- **Auto時（`autoKou: true`）**: ドロップダウンのvalueが`currentKou.index`にバインドされ、KouChangedイベントで逐次更新
-- **手動時（`autoKou: false`）**: ドロップダウンで選んだindexを`manualKouIndex`としてWeatherConfigに保存。`EnvironmentSimulationService.setManualKou()`に伝搬
-- **ドロップダウン手動変更**: 自動的に`autoKou: false`に切り替わる
+- **Auto時（`autoKou: true`）**: `currentKou.index`にバインドされ、KouChangedイベントで逐次更新
+- **手動時（`autoKou: false`）**: リストから選んだindexを`manualKouIndex`としてWeatherConfigに保存。`EnvironmentSimulationService.setManualKou()`に伝搬
+- **リスト手動選択**: 確定時に自動的に`autoKou: false`に切り替わる
 - **表示制御**: WorldMapModal表示中のみ非表示。その他は常時表示
 
 #### WeatherConfig拡張
@@ -1645,7 +1667,7 @@ interface WeatherConfig {
 既存の4行構成を維持。Climate行はWeatherPanelには追加しない（世界地図モーダルで設定するため）。
 
 ```
-1. Scene行:    [Meadow] [Seaside] [Park]         ← 既存
+1. Scene行:    [Meadow] [Seaside] [Park]   ...   [Location]  ← 右端にLocationボタン
 2. Weather行:  [Sunny] [Cloudy] [Rainy] [Snowy] [Auto]  ← Autoを有効化
 3. Cloud行:    [0][1][2][3][4][5] [Reset]         ← 既存（手動時のみ操作可能）
 4. Time行:     [Morning] [Day] [Evening] [Night] [Auto]  ← 既存
@@ -2473,7 +2495,7 @@ autoWeather=true時の表示挙動:
 - Autoボタンは天気アイコン（Sunny/Cloudy/Rainy/Snowy）と排他選択。Autoクリック→autoWeather=true、Weather/Time行のボタンクリック→autoWeather=false
 - autoWeather=true時はAutoのみがactive。Weather/Cloud/Time行のボタンはactive表示されない
 - Scene行は常に操作可能（autoモードでもscenePresetは手動選択、autoWeatherに影響しない）
-- Locationボタン（GlobeIcon）はフリーモードに常時配置（WeatherPanelから削除済み）
+- Locationボタン（GlobeIcon）はフリーモードに常時配置、かつWeatherPanel Scene行の右端にも配置（`marginLeft: 'auto'`で右寄せ）。WeatherPanel内のLocationボタンクリックでWeatherPanelを閉じてWorldMapModalを開き、WorldMapModal閉じるとWeatherPanelに自動復帰（`openedFromWeather`フラグで制御）
 
 ---
 
