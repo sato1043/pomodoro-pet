@@ -22,7 +22,7 @@ import coastlineData from '../../../assets/data/coastline-path.json'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
-  const { fureaiCoordinator, galleryCoordinator, climateGridPort, settingsService } = useAppDeps()
+  const { fureaiCoordinator, galleryCoordinator, climateGridPort, settingsService, bus } = useAppDeps()
   const { climate, currentKou, timezone, kouDateRanges, updateClimate } = useEnvironment()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
@@ -98,9 +98,13 @@ export function SceneFree(): JSX.Element {
           manualKouIndex={settingsService.weatherConfig.manualKouIndex}
           kouDateRanges={kouDateRanges}
           onKouChange={(index) => {
+            const next = { ...settingsService.weatherConfig, autoKou: false, manualKouIndex: index }
+            bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
             settingsService.updateWeatherConfig({ autoKou: false, manualKouIndex: index })
           }}
           onAutoToggle={(auto) => {
+            const next = { ...settingsService.weatherConfig, autoKou: auto }
+            bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
             settingsService.updateWeatherConfig({ autoKou: auto })
           }}
         />
