@@ -5,7 +5,7 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.8.0] - 2026-03-11
 
 ### Changed
 - KouSelector UIリファクタリング — ドロップダウンを廃止しフルスクリーンオーバーレイリスト（テーブル+詳細パネル）に変更。2クリック選択（プレビュー→確定）。3段レイアウト（seasonラベル+#日付範囲 / 英語名 / Autoアイコン+リストアイコン）。リスト閉じるボタンをWeather戻るボタンと同位置・同サイズに統一。Autoアイコン色: inactive=白系、active=グレー系

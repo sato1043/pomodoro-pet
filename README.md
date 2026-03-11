@@ -1,4 +1,4 @@
-pomodoro-pet v0.7.0
+pomodoro-pet v0.8.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.

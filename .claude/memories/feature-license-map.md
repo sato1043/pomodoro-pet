@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.7.0**（= package.json）
+**バージョン: 0.8.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -257,7 +257,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
-| (未リリース) | 機能追加 | 天文計算ベース環境シミュレーション追加（#100-105）。astronomy-engine太陽/月計算、七十二候UI、世界地図UI、気候プロファイル、天気自動決定、雨量連動パーティクル。autoWeatherとロケーション設定を分離（envSimService常時稼働、autoWeather排他選択化、LocationButton常時表示、WeatherPanelからLocationボタン削除）。#102のFeatureNameをweatherSettings→制限不要に変更 |
+| 0.8.0 | 機能追加+UI改善 | 天文計算ベース環境シミュレーション追加（#100-105）。KouSelectorリスト化（ドロップダウン→フルスクリーンオーバーレイリスト、2クリック選択）。WeatherPanel Scene行にLocationボタン追加（WorldMapModal復帰フロー）。autoWeatherとロケーション設定を分離（envSimService常時稼働、autoWeather排他選択化、LocationButton常時表示） |
 | 0.7.0 | 機能追加 | 環境シーンプリセットシステム追加（#99）。meadow/seaside/parkの3プリセット、WeatherPanel Scene行（即座反映・Setボタン廃止）、環境音連動、settings.json永続化。seaside演出強化（ヤシの木・波打ち際・砂浜地面色・空色明化・輝度ブースト・mergeGeometries描画最適化）。天気別雲色（sunny=白emissive/それ以外=灰色）。park改善（歩道・街灯等間隔・植え込み歩道脇沿い・街路樹5本） |
 | 0.6.0 | 機能追加 | 天気エフェクトopacityフェード追加。テーマ遷移と同期したfadeIn/fadeOut、雲密度変更時の退場バッチクロスフェード |
 | 0.5.1 | UI改善+バグ修正 | Emotion TrendsグラフをCumulative Timeと同スタイルに統一（直線折れ線・レイアウト統一・不要UI削除・日付補間追加）。EmotionIndicatorの値読み込み前非表示を修正 |
