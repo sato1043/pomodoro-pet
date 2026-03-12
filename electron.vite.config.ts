@@ -16,6 +16,7 @@ export default defineConfig({
       __APP_ID__: JSON.stringify(pkg.build?.appId ?? ''),
       __HEARTBEAT_URL__: JSON.stringify(process.env.HEARTBEAT_URL || env.VITE_HEARTBEAT_URL || ''),
       __STORE_URL__: JSON.stringify(process.env.STORE_URL || env.VITE_STORE_URL || 'https://www.updater.cc'),
+      __RELEASE_CHANNEL__: JSON.stringify(env.VITE_RELEASE_CHANNEL || 'stable'),
       __DEBUG_LICENSE__: JSON.stringify(env.VITE_DEBUG_LICENSE || ''),
       __DEV_TOOLS__: JSON.stringify(env.VITE_DEV_TOOLS || ''),
     },

@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.10.0] - 2026-03-12
+
+### Added
+- リリースチャネル機能 — stable/beta/alphaの3チャネルで機能セットを切り替える仕組み。`VITE_RELEASE_CHANNEL`環境変数でビルド時にチャネル決定（デフォルト: stable）。チャネル×ライセンスモードの2軸で機能有効化を判定。beta/alphaチャネル時にChannelBadge（左下）を表示。alpha機能はregistered限定。自動アップデートのチャネル分離は設計のみ文書化
+
 ## [0.9.1] - 2026-03-11
 
 ### Fixed

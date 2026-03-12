@@ -11,6 +11,7 @@ import { SceneTransition, type SceneTransitionRef } from './SceneTransition'
 import { UpdateNotification } from './UpdateNotification'
 import { LicenseToast } from './LicenseToast'
 import { TrialBadge } from './TrialBadge'
+import { ChannelBadge } from './ChannelBadge'
 import { WindowTitleBar } from './WindowTitleBar'
 
 type ActiveScene = 'free' | 'pomodoro' | 'fureai' | 'gallery'
@@ -24,7 +25,7 @@ function toActiveScene(scene: string): ActiveScene {
 
 export function SceneRouter(): JSX.Element {
   const { bus, orchestrator } = useAppDeps()
-  const { licenseMode, serverMessage } = useLicenseMode()
+  const { licenseMode, serverMessage, releaseChannel } = useLicenseMode()
 
   const [activeScene, setActiveScene] = useState<ActiveScene>(() => {
     return toActiveScene(orchestrator.sceneManager.currentScene)
@@ -61,6 +62,7 @@ export function SceneRouter(): JSX.Element {
       <UpdateNotification pomodoroActive={activeScene === 'pomodoro'} />
       <LicenseToast licenseMode={licenseMode} serverMessage={serverMessage} />
       <TrialBadge licenseMode={licenseMode} />
+      <ChannelBadge channel={releaseChannel} />
       <WindowTitleBar />
     </>
   )
