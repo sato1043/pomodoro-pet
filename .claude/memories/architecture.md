@@ -177,7 +177,7 @@ EventBus（UI/インフラ通知）:
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`EnvironmentProvider` → `ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い。trialではfureai/galleryが無効）
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態を取得しLicenseToast+TrialBadgeに渡す。WindowTitleBarをグローバル配置
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態+リリースチャネルを取得しLicenseToast+TrialBadge+ChannelBadgeに渡す。WindowTitleBarをグローバル配置
 - `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
 - `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlay+LocationButton+WorldMapModal+KouSelectorを束ねる。showStats/settingsExpanded/showWeather/showWorldMap/openedFromWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示。WeatherPanelのLocationボタンからWorldMapModalを開くと`openedFromWeather=true`になり、WorldMapModal閉じるとWeatherPanelに自動復帰
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
@@ -217,6 +217,7 @@ EventBus（UI/インフラ通知）:
 - `ui/UpdateNotification.tsx` — アップデート通知バナー
 - `ui/LicenseToast.tsx` — ライセンストースト
 - `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
+- `ui/ChannelBadge.tsx` — beta/alphaチャネル時に左下に「Beta」「Alpha」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）。stableチャネルでは非表示
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
 - `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。ウィンドウ上端中央（top:36px）に背景なし表示。3段構成: Row1（seasonラベル+#日付範囲）、Row2（英語名）、Row3（Autoアイコン+リストアイコン）。リストアイコンでフルスクリーン72候オーバーレイリスト表示（テーブル+詳細パネル、2クリック選択）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）をリストから選択。`data-testid="kou-selector"/"kou-list-btn"/"kou-auto"/"kou-list-overlay"/"kou-list-close"`
 - `ui/WorldMapModal.tsx` — 世界地図SVGモーダル。等距円筒図法（viewBox "-180 -90 360 180"）。astronomy-engineによるterminator昼夜境界描画。8都市プリセットピン+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅表示・全画面化。Natural Earth IDLライン描画。ClimateConfig生成
@@ -305,7 +306,7 @@ EventBus（UI/インフラ通知）:
 - `application/statistics/StatisticsService.test.ts` — CRUD操作・getRange・loadFromStorage・バリデーション
 - `application/statistics/StatisticsBridge.test.ts` — EventBus購読→StatisticsService更新・解除関数
 - `application/character/EmotionHistoryService.test.ts` — loadFromStorage・getLastSession・recordEvent・saveCurrentState・バリデーション
-- `application/license/LicenseState.test.ts` — ライセンス判定ロジック（62テスト）
+- `application/license/LicenseState.test.ts` — ライセンス判定ロジック+リリースチャネル判定（87テスト）
 - `adapters/ui/BiorhythmChart.test.ts` — buildBiorhythmCurves純粋関数テスト（座標範囲・サンプル数・周期検証）+pointsToPathテスト（SVGパス生成）
 - `adapters/ui/EmotionTrendChart.test.ts` — buildEmotionTrendData純粋関数テスト（座標範囲・均等配置・Y軸マッピング・日付ラベル・イベントバー）+computeDateRangeテスト（7d/30d/all期間計算）
 - `domain/character/EmotionTrendData.test.ts` — extractDailyTrendEntries純粋関数テスト（空配列・範囲抽出・ソート・マッピング・イミュータブル）
@@ -357,6 +358,7 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/prompt-input.spec.ts` — ふれあいモードプロンプト入力・キーワード→状態遷移・Sendボタン・空文字無視（setLicenseModeでregistered切替）
 - `e2e/pomodoro-detail.spec.ts` — サイクル進捗ドット・インタラクションロック・全フェーズ遷移順序・統計パネル値・affinity永続化・fatigue自然変化・バックグラウンドタイマー
 - `e2e/trial-restriction.spec.ts` — trial badge表示・fureai/galleryロックオーバーレイ表示/閉じる（4テスト）
+- `e2e/release-channel.spec.ts` — stableチャネルでchannel-badge非表示・stable機能の動作確認（2テスト）
 - `e2e/registration.spec.ts` — 登録UI・API存在確認（8テスト）
 - `e2e/window-controls.spec.ts` — カスタムタイトルバーのMinimize/Closeボタン存在確認・windowMinimize/windowClose API公開確認・Minimize後アプリ継続・frame: false確認（5テスト）
 

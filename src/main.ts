@@ -50,8 +50,8 @@ import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConf
 // resolveEnvironmentTheme は envSimService が天文計算ベースでテーマ生成するため不要
 // EnvironmentTheme型はapplyThemeToSceneの引数型として間接的に使用される
 import type { EnvironmentThemeParams } from './domain/environment/value-objects/EnvironmentTheme'
-import { isFeatureEnabled } from './application/license/LicenseState'
-import type { LicenseMode } from './application/license/LicenseState'
+import { isFeatureEnabled, resolveReleaseChannel } from './application/license/LicenseState'
+import type { LicenseMode, ReleaseChannel } from './application/license/LicenseState'
 import { createRainEffect } from './infrastructure/three/RainEffect'
 import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
@@ -289,6 +289,7 @@ async function main(): Promise<void> {
   const initialLicenseMode: LicenseMode = validModes.includes(debugLicense as LicenseMode)
     ? debugLicense as LicenseMode
     : 'trial'
+  const currentReleaseChannel: ReleaseChannel = resolveReleaseChannel(import.meta.env.VITE_RELEASE_CHANNEL)
   let currentLicenseMode: LicenseMode = initialLicenseMode
   if (window.electronAPI?.onLicenseChanged) {
     window.electronAPI.onLicenseChanged((state) => {
@@ -307,7 +308,7 @@ async function main(): Promise<void> {
 
   const behaviorSM = createBehaviorStateMachine({
     fixedWanderDirection: sceneConfig.direction,
-    getDurationModifier: () => isFeatureEnabled(currentLicenseMode, 'biorhythm')
+    getDurationModifier: () => isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel)
       ? biorhythmService.state.activity : 0,
   })
   behaviorSM.start()
@@ -368,21 +369,21 @@ async function main(): Promise<void> {
   // 感情イベント購読（ポモドーロ完了/中断、餌やり成功）
   // emotionAccumulation が無効なら感情パラメータの変化と永続化をスキップ
   bus.subscribe<PomodoroEvent>('PomodoroCompleted', () => {
-    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) return
     emotionService.applyEvent({ type: 'pomodoro_completed' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
     emotionHistoryService.saveCurrentState(emotionService.state)
     emitEmotionState(true)
   })
   bus.subscribe<PomodoroEvent>('PomodoroAborted', () => {
-    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) return
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) return
     emotionService.applyEvent({ type: 'pomodoro_aborted' })
     settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
     emotionHistoryService.saveCurrentState(emotionService.state)
     emitEmotionState(true)
   })
   bus.subscribe<{ type: 'FeedingSuccess' }>('FeedingSuccess', () => {
-    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+    if (!isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) {
       interactionTracker.recordFeeding()
     } else {
       emotionService.applyEvent({ type: 'fed' })
@@ -391,7 +392,7 @@ async function main(): Promise<void> {
       emotionHistoryService.saveCurrentState(emotionService.state)
       emitEmotionState(true)
     }
-    if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+    if (isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel)) {
       biorhythmService.applyFeedingBoost()
     }
   })
@@ -408,7 +409,7 @@ async function main(): Promise<void> {
       const today = new Date().toISOString().slice(0, 10)
       return statisticsService.getDailyStats(today).completedCycles
     },
-    getBiorhythm: () => isFeatureEnabled(currentLicenseMode, 'biorhythm')
+    getBiorhythm: () => isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel)
       ? biorhythmService.state : NEUTRAL_BIORHYTHM,
   }
 
@@ -641,7 +642,7 @@ async function main(): Promise<void> {
 
   // 感情状態の初期値をUIに通知
   // setTimeout(0)でReactのuseEffect購読開始後に発火させる
-  if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+  if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) {
     setTimeout(() => emitEmotionState(true), 0)
   }
 
@@ -649,14 +650,14 @@ async function main(): Promise<void> {
   createInteractionAdapter(renderer, camera, character, behaviorSM, charHandle, {
     onClickInteraction: () => interactionTracker.recordClick(),
     onPetCompleted: () => {
-      if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+      if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) {
         emotionService.applyEvent({ type: 'petted' })
         settingsService.updateEmotionConfig({ affinity: emotionService.state.affinity })
         emotionHistoryService.recordEvent('petted')
         emotionHistoryService.saveCurrentState(emotionService.state)
         emitEmotionState(true)
       }
-      if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+      if (isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel)) {
         biorhythmService.applyPettingBoost()
       }
     },
@@ -686,7 +687,7 @@ async function main(): Promise<void> {
   bridgeTimerToNotification(
     bus,
     notificationPort,
-    () => isFeatureEnabled(currentLicenseMode, 'backgroundNotify') && settingsService.backgroundConfig.backgroundNotify,
+    () => isFeatureEnabled(currentLicenseMode, 'backgroundNotify', currentReleaseChannel) && settingsService.backgroundConfig.backgroundNotify,
     () => windowFocused
   )
 
@@ -786,14 +787,14 @@ async function main(): Promise<void> {
     }
 
     // 感情パラメータの自然変化（emotionAccumulation無効時はスキップ）
-    if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation')) {
+    if (isFeatureEnabled(currentLicenseMode, 'emotionAccumulation', currentReleaseChannel)) {
       const isWorkPhase = orchestrator.isRunning && session.currentPhase.type === 'work'
       emotionService.tick(deltaMs, isWorkPhase)
       emitEmotionState()
     }
 
     // バイオリズムの更新（registeredのみ）
-    if (isFeatureEnabled(currentLicenseMode, 'biorhythm')) {
+    if (isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel)) {
       biorhythmService.tick(deltaMs)
     }
 
@@ -835,7 +836,7 @@ async function main(): Promise<void> {
       debugIndicator.dataset.recentClicks = String(interactionTracker.history.recentClicks)
       debugIndicator.dataset.totalFeedingsToday = String(interactionTracker.history.totalFeedingsToday)
       debugIndicator.dataset.biorhythm = JSON.stringify(
-        isFeatureEnabled(currentLicenseMode, 'biorhythm') ? biorhythmService.state : NEUTRAL_BIORHYTHM
+        isFeatureEnabled(currentLicenseMode, 'biorhythm', currentReleaseChannel) ? biorhythmService.state : NEUTRAL_BIORHYTHM
       )
       debugIndicator.dataset.biorhythmBoost = JSON.stringify(biorhythmService.boost)
     }

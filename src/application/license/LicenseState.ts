@@ -8,6 +8,8 @@
 
 // --- 型定義 ---
 
+export type ReleaseChannel = 'stable' | 'beta' | 'alpha'
+
 export type LicenseMode = 'registered' | 'trial' | 'expired' | 'restricted'
 
 export interface HeartbeatResponse {
@@ -83,6 +85,71 @@ export function resolveLicenseMode(ctx: LicenseContext): LicenseMode {
   return 'restricted'
 }
 
+// --- リリースチャネル ---
+
+/**
+ * チャネル包含レベル: alpha(2) ⊃ beta(1) ⊃ stable(0)
+ *
+ * alpha チャネルのビルドは beta/stable の全機能を含む。
+ * stable チャネルのビルドは stable の機能のみ含む。
+ */
+const CHANNEL_LEVEL: Readonly<Record<ReleaseChannel, number>> = {
+  stable: 0,
+  beta: 1,
+  alpha: 2,
+} as const
+
+/**
+ * 各機能が公開されるチャネル
+ *
+ * 新機能追加時にここに登録する。未登録の機能は stable 扱い。
+ * alpha/beta 機能が安定したら stable に昇格させる。
+ */
+const FEATURE_CHANNEL: Readonly<Record<FeatureName, ReleaseChannel>> = {
+  pomodoroTimer: 'stable',
+  timerSettings: 'stable',
+  character: 'stable',
+  stats: 'stable',
+  fureai: 'stable',
+  gallery: 'stable',
+  weatherSettings: 'stable',
+  soundSettings: 'stable',
+  backgroundNotify: 'stable',
+  emotionAccumulation: 'stable',
+  autoUpdate: 'stable',
+  biorhythm: 'stable',
+  dataExportImport: 'stable',
+} as const
+
+/**
+ * 機能の公開チャネルを取得する
+ *
+ * UIバッジ表示（Beta/Alpha）の判定に使用する。
+ */
+export function getFeatureChannel(feature: FeatureName): ReleaseChannel {
+  return FEATURE_CHANNEL[feature] ?? 'stable'
+}
+
+/**
+ * 指定チャネルで機能が利用可能かを判定する
+ *
+ * alpha(2) >= beta(1) >= stable(0) の包含関係で判定する。
+ */
+export function isFeatureInChannel(feature: FeatureName, channel: ReleaseChannel): boolean {
+  return CHANNEL_LEVEL[channel] >= CHANNEL_LEVEL[FEATURE_CHANNEL[feature] ?? 'stable']
+}
+
+/**
+ * 現在のチャネルを解決する
+ *
+ * 環境変数 VITE_RELEASE_CHANNEL（renderer）または __RELEASE_CHANNEL__（main）の値を
+ * ReleaseChannel に正規化する。不正値は stable にフォールバック。
+ */
+export function resolveReleaseChannel(raw: string | undefined): ReleaseChannel {
+  if (raw === 'alpha' || raw === 'beta' || raw === 'stable') return raw
+  return 'stable'
+}
+
 // --- 機能有効化マップ（デフォルト無効） ---
 
 const ALL_FEATURES: readonly FeatureName[] = [
@@ -101,10 +168,15 @@ const ENABLED_FEATURES: Readonly<Record<LicenseMode, ReadonlySet<FeatureName>>> 
 /**
  * 機能利用可否を判定する純粋関数
  *
- * デフォルト無効方式: ENABLED_FEATURESに明示的に列挙された機能のみ有効。
- * 新機能追加時にマップへの追加を忘れると全モードで無効になる（安全側に倒れる）。
+ * 2軸判定:
+ * 1. チャネルフィルタ — 機能が現在のチャネルで公開されているか
+ * 2. ライセンス判定 — ENABLED_FEATURESに明示的に列挙された機能のみ有効
+ *
+ * デフォルト無効方式: 新機能追加時にマップへの追加を忘れると全モードで無効になる（安全側に倒れる）。
+ * channel を省略すると stable として判定する（後方互換）。
  */
-export function isFeatureEnabled(mode: LicenseMode, feature: FeatureName): boolean {
+export function isFeatureEnabled(mode: LicenseMode, feature: FeatureName, channel: ReleaseChannel = 'stable'): boolean {
+  if (!isFeatureInChannel(feature, channel)) return false
   return ENABLED_FEATURES[mode]?.has(feature) ?? false
 }
 

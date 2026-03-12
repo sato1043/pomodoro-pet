@@ -13,5 +13,6 @@ coverage/
 test-results/
 tmp
 private.pem
+pomodoro-pet-backup-*.json
 gcp-update-server/node_modules/
 gcp-update-server/dist/

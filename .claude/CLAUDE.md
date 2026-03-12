@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
 - [environment-scene-design.md](./memories/environment-scene-design.md) — 環境シーンシステム全体設計。Phase 1-3実装済み仕様（型定義・プリセット・テーマ・エフェクト・補間・UI・永続化）+ Phase 5.5未実装設計（astronomy-engine天文計算・七十二候・気候プロファイル・天気自動決定・雨量連動）。環境シーン変更時に参照
+- [release-channel-design.md](./memories/release-channel-design.md) — リリースチャネル（stable/beta/alpha）による機能セット切替の設計。2軸判定モデル（チャネル×ライセンスモード）、alpha機能の追加手順、自動アップデートチャネル分離（将来）のGCPインフラ設計。機能追加・チャネル管理時に参照
 
 ### インフラ・技術
 

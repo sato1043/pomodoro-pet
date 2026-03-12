@@ -2,10 +2,14 @@ import { describe, it, expect } from 'vitest'
 import {
   resolveLicenseMode,
   isFeatureEnabled,
+  isFeatureInChannel,
+  getFeatureChannel,
+  resolveReleaseChannel,
   needsHeartbeat,
   type LicenseContext,
   type LicenseMode,
   type FeatureName,
+  type ReleaseChannel,
 } from '../../../src/application/license/LicenseState'
 
 // --- テストヘルパー ---
@@ -303,5 +307,81 @@ describe('needsHeartbeat', () => {
       jwtFresh: true,
       jwtExpired: false,
     })).toBe(false)
+  })
+})
+
+// --- resolveReleaseChannel ---
+
+describe('resolveReleaseChannel', () => {
+  it.each<[string | undefined, ReleaseChannel]>([
+    ['stable', 'stable'],
+    ['beta', 'beta'],
+    ['alpha', 'alpha'],
+  ])('"%s" → %s', (raw, expected) => {
+    expect(resolveReleaseChannel(raw)).toBe(expected)
+  })
+
+  it.each<string | undefined>([
+    undefined,
+    '',
+    'unknown',
+    'STABLE',
+    'Alpha',
+    'release',
+  ])('不正値 "%s" → stable にフォールバック', (raw) => {
+    expect(resolveReleaseChannel(raw)).toBe('stable')
+  })
+})
+
+// --- getFeatureChannel ---
+
+describe('getFeatureChannel', () => {
+  it('既存の全機能は stable チャネル', () => {
+    const ALL_FEATURES: FeatureName[] = [
+      'pomodoroTimer', 'timerSettings', 'character', 'stats', 'fureai',
+      'gallery', 'weatherSettings', 'soundSettings', 'backgroundNotify',
+      'emotionAccumulation', 'autoUpdate', 'biorhythm', 'dataExportImport',
+    ]
+    for (const feature of ALL_FEATURES) {
+      expect(getFeatureChannel(feature)).toBe('stable')
+    }
+  })
+})
+
+// --- isFeatureInChannel ---
+
+describe('isFeatureInChannel', () => {
+  it('stable機能はstableチャネルで利用可能', () => {
+    expect(isFeatureInChannel('pomodoroTimer', 'stable')).toBe(true)
+  })
+
+  it('stable機能はbetaチャネルで利用可能', () => {
+    expect(isFeatureInChannel('pomodoroTimer', 'beta')).toBe(true)
+  })
+
+  it('stable機能はalphaチャネルで利用可能', () => {
+    expect(isFeatureInChannel('pomodoroTimer', 'alpha')).toBe(true)
+  })
+})
+
+// --- isFeatureEnabled（チャネル統合テスト） ---
+
+describe('isFeatureEnabled（チャネル統合）', () => {
+  it('channel省略時はstableとして動作する（後方互換）', () => {
+    expect(isFeatureEnabled('registered', 'pomodoroTimer')).toBe(true)
+    expect(isFeatureEnabled('trial', 'fureai')).toBe(false)
+  })
+
+  it('stable機能 + stableチャネル + registered → true', () => {
+    expect(isFeatureEnabled('registered', 'pomodoroTimer', 'stable')).toBe(true)
+  })
+
+  it('stable機能 + alphaチャネル + registered → true', () => {
+    expect(isFeatureEnabled('registered', 'fureai', 'alpha')).toBe(true)
+  })
+
+  it('stable機能 + stableチャネル + expired → ライセンス判定に従う', () => {
+    expect(isFeatureEnabled('expired', 'pomodoroTimer', 'stable')).toBe(true)
+    expect(isFeatureEnabled('expired', 'stats', 'stable')).toBe(false)
   })
 })

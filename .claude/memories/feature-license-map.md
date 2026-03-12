@@ -4,6 +4,18 @@
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
+## リリースチャネル
+
+機能の利用可否は「チャネル」と「ライセンスモード」の2軸で判定される。詳細は[release-channel-design.md](release-channel-design.md)を参照。
+
+| チャネル | 用途 |
+|---|---|
+| stable | 正式リリース機能のみ（デフォルト） |
+| beta | 次期リリース候補機能を含む |
+| alpha | 実験的機能を含む（registered限定） |
+
+現在の全機能は **stable** チャネルに属する。
+
 ## FeatureName 一覧
 
 `ENABLED_FEATURES`（`LicenseState.ts`）で定義されるライセンスモード別の有効化マップ。
