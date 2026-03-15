@@ -5,6 +5,7 @@ export default defineConfig({
     __APP_ID__: JSON.stringify(''),
     __HEARTBEAT_URL__: JSON.stringify(''),
     __STORE_URL__: JSON.stringify(''),
+    __RELEASE_CHANNEL__: JSON.stringify('stable'),
     __DEBUG_LICENSE__: JSON.stringify(''),
   },
   test: {

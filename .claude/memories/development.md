@@ -5,12 +5,18 @@
 ```bash
 git submodule update --init  # assets/ サブモジュール初期化（初回clone後に必要）
 npm run dev          # Electron + Vite HMR 開発サーバー起動
+npm run dev:alpha    # alphaチャネルで開発サーバー起動（VITE_RELEASE_CHANNEL=alpha）
+npm run dev:beta     # betaチャネルで開発サーバー起動（VITE_RELEASE_CHANNEL=beta）
 npm run build        # electron-vite プロダクションビルド（out/ に出力）
+npm run build:alpha  # alphaチャネルでプロダクションビルド
+npm run build:beta   # betaチャネルでプロダクションビルド
 npm test             # Vitest テスト全実行
 npm run test:watch   # Vitest ウォッチモード
 npx vitest run tests/domain/timer/PomodoroStateMachine.test.ts  # 単一テスト実行
 npm run test:coverage  # カバレッジ付きテスト（コミット前必須）
 npm run package      # ビルド + Windows NSISインストーラー生成（release/ に出力、--publish never）
+npm run package:alpha  # alphaチャネルでパッケージ
+npm run package:beta   # betaチャネルでパッケージ
 npm run package:dir  # ビルド + 展開済みディレクトリ出力
 npm run test:e2e     # Playwright E2Eテスト（xvfb-run + デバッグタイマービルド）
 npm run test:e2e:headed  # E2Eテスト（GUI表示あり、Windows/GUI環境用）

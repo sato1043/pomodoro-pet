@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
 - [environment-scene-design.md](./memories/environment-scene-design.md) — 環境シーンシステム全体設計。Phase 1-3実装済み仕様（型定義・プリセット・テーマ・エフェクト・補間・UI・永続化）+ Phase 5.5未実装設計（astronomy-engine天文計算・七十二候・気候プロファイル・天気自動決定・雨量連動）。環境シーン変更時に参照
-- [release-channel-design.md](./memories/release-channel-design.md) — リリースチャネル（stable/beta/alpha）による機能セット切替の設計。2軸判定モデル（チャネル×ライセンスモード）、alpha機能の追加手順、自動アップデートチャネル分離（将来）のGCPインフラ設計。機能追加・チャネル管理時に参照
+- [release-channel-design.md](./memories/release-channel-design.md) — リリースチャネル（stable/beta/alpha）による機能セット切替の設計。2軸判定モデル（チャネル×ライセンスモード）、alpha機能の追加手順、自動アップデートチャネル分離のGCPインフラ設計。機能追加・チャネル管理時に参照
 
 ### インフラ・技術
 
@@ -101,6 +101,14 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
   - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新 + README.md冒頭バージョン更新
   - **バグ修正時**: package.json patch bump + feature-license-map.md冒頭バージョン更新+変更履歴1行追加 + CHANGELOG.md追記 + README.md冒頭バージョン更新
   - feature-license-map.mdのバージョン = package.jsonのバージョン（常に同期）
+  - **プレリリースバージョン**: semverプレリリース形式を使用する
+    - フォーマット: `X.Y.Z-alpha.N` → `X.Y.Z-beta.N` → `X.Y.Z`
+    - alpha内の変更: `-alpha.N` のNをインクリメント（例: `0.11.0-alpha.1` → `0.11.0-alpha.2`）
+    - beta昇格: `-beta.1` に変更（例: `0.11.0-alpha.3` → `0.11.0-beta.1`）
+    - stable昇格: サフィックスを除去（例: `0.11.0-beta.2` → `0.11.0`）
+    - gitタグ: `v` プレフィックス付き（例: `v0.11.0-alpha.1`）
+    - package.json, README.md, feature-license-map.md, CHANGELOG.md すべてにサフィックスを含めて記載する
+    - CHANGELOG.md: alpha/betaも個別エントリを作成する（例: `## [0.11.0-alpha.1] - 2026-03-15`）
 
 ## Known Issues & Tips
 

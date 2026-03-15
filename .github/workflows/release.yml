@@ -4,6 +4,8 @@ on:
   push:
     tags:
       - 'v*.*.*'
+      - 'v*.*.*-alpha.*'
+      - 'v*.*.*-beta.*'
 
 permissions:
   contents: write
@@ -13,6 +15,23 @@ jobs:
     runs-on: windows-latest
 
     steps:
+      - name: Determine release channel from tag
+        id: channel
+        shell: bash
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if [[ "$TAG" == *-alpha.* ]]; then
+            echo "channel=alpha" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          elif [[ "$TAG" == *-beta.* ]]; then
+            echo "channel=beta" >> "$GITHUB_OUTPUT"
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "channel=stable" >> "$GITHUB_OUTPUT"
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+          echo "Release channel: $(cat "$GITHUB_OUTPUT" | head -1)"
+
       - name: Checkout with submodules
         uses: actions/checkout@v4
         with:
@@ -36,6 +55,7 @@ jobs:
         run: |
           echo "VITE_HEARTBEAT_URL=${{ secrets.VITE_HEARTBEAT_URL }}" > .env.production
           echo "VITE_STORE_URL=${{ secrets.VITE_STORE_URL }}" >> .env.production
+          echo "VITE_RELEASE_CHANNEL=${{ steps.channel.outputs.channel }}" >> .env.production
 
       - name: Build and package
         run: npm run package
@@ -48,3 +68,19 @@ jobs:
             release/latest.yml
             release/*.blockmap
           generate_release_notes: true
+          prerelease: ${{ steps.channel.outputs.prerelease == 'true' }}
+
+      - name: Install butler
+        shell: bash
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default
+          unzip butler.zip -d butler
+          echo "$PWD/butler" >> "$GITHUB_PATH"
+
+      - name: Upload to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          butler push "release/Pomodoro Pet Setup ${VERSION}.exe" updaterllc/pomodoropet:windows --userversion "$VERSION"

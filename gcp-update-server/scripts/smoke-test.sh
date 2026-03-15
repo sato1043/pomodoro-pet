@@ -163,6 +163,33 @@ echo "  Response: $RES"
 check "error存在" '"error"' "$RES"
 echo ""
 
+# --- Test 11: heartbeat（channel=alpha） ---
+echo "[11] heartbeat - channel=alpha"
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\",\"channel\":\"alpha\"}")
+echo "  Response: $RES"
+check "latestVersion存在" '"latestVersion"' "$RES"
+echo ""
+
+# --- Test 12: heartbeat（channel=beta） ---
+echo "[12] heartbeat - channel=beta"
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\",\"channel\":\"beta\"}")
+echo "  Response: $RES"
+check "latestVersion存在" '"latestVersion"' "$RES"
+echo ""
+
+# --- Test 13: heartbeat（不正なchannel → stableフォールバック） ---
+echo "[13] heartbeat - 不正なchannel（stableフォールバック）"
+RES=$(curl -s -X POST "$HEARTBEAT_URL" \
+  -H "Content-Type: application/json" \
+  -d "{\"deviceId\":\"$DEVICE_ID\",\"appVersion\":\"0.1.0\",\"channel\":\"invalid\"}")
+echo "  Response: $RES"
+check "latestVersion存在" '"latestVersion"' "$RES"
+echo ""
+
 # --- クリーンアップ: テストで作成した Firestore ドキュメントを削除 ---
 echo "[cleanup] Firestore テストデータを削除中..."
 KEY_HASH=$(echo -n "$DOWNLOAD_KEY" | sha256sum | cut -d' ' -f1)

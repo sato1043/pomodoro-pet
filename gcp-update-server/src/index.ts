@@ -43,8 +43,13 @@ function signJwt(payload: Record<string, unknown>): string {
 
 // --- Firestore ヘルパー ---
 
+type ReleaseChannel = 'stable' | 'beta' | 'alpha'
+
+function isValidChannel(value: string | undefined): value is ReleaseChannel {
+  return value === 'stable' || value === 'beta' || value === 'alpha'
+}
+
 async function getConfig(): Promise<{
-  latestVersion: string
   trialDays: number
   jwtExpiryDays: number
   serverMessage: string | null
@@ -53,7 +58,6 @@ async function getConfig(): Promise<{
   const doc = await db.collection('config').doc('current').get()
   if (!doc.exists) {
     return {
-      latestVersion: '0.1.0',
       trialDays: 30,
       jwtExpiryDays: 30,
       serverMessage: null,
@@ -62,7 +66,6 @@ async function getConfig(): Promise<{
   }
   const data = doc.data()!
   return {
-    latestVersion: data.latestVersion ?? '0.1.0',
     trialDays: data.trialDays ?? 30,
     jwtExpiryDays: data.jwtExpiryDays ?? 30,
     serverMessage: data.serverMessage ?? null,
@@ -70,13 +73,71 @@ async function getConfig(): Promise<{
   }
 }
 
-function compareVersions(a: string, b: string): number {
-  const pa = a.split('.').map(Number)
-  const pb = b.split('.').map(Number)
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const na = pa[i] ?? 0
-    const nb = pb[i] ?? 0
+/**
+ * チャネル別の最新バージョンを取得する
+ *
+ * releases/{channel} ドキュメントから version を読む。
+ * ドキュメントが存在しない場合は null を返す。
+ */
+async function getReleaseVersion(channel: ReleaseChannel): Promise<string | null> {
+  const doc = await db.collection('releases').doc(channel).get()
+  if (!doc.exists) return null
+  return (doc.data()?.version as string) ?? null
+}
+
+/**
+ * semver準拠のバージョン比較（プレリリース対応）
+ *
+ * 比較ルール:
+ * 1. ベースバージョン（X.Y.Z）を数値比較
+ * 2. ベースが同一の場合: リリース版 > プレリリース版
+ * 3. 両方プレリリースの場合: alpha < beta < rc、同種ならナンバー比較
+ *
+ * 例: 1.0.0-alpha.1 < 1.0.0-alpha.2 < 1.0.0-beta.1 < 1.0.0
+ */
+export function compareVersions(a: string, b: string): number {
+  const parseVersion = (v: string): { base: number[], pre: string[] | null } => {
+    const [baseStr, ...preRest] = v.split('-')
+    const base = baseStr.split('.').map(Number)
+    const pre = preRest.length > 0 ? preRest.join('-').split('.') : null
+    return { base, pre }
+  }
+
+  const va = parseVersion(a)
+  const vb = parseVersion(b)
+
+  // ベースバージョン比較
+  for (let i = 0; i < Math.max(va.base.length, vb.base.length); i++) {
+    const na = va.base[i] ?? 0
+    const nb = vb.base[i] ?? 0
     if (na !== nb) return na - nb
+  }
+
+  // ベースが同一: リリース版 > プレリリース版
+  if (!va.pre && !vb.pre) return 0
+  if (!va.pre) return 1   // a はリリース版、b はプレリリース → a > b
+  if (!vb.pre) return -1  // a はプレリリース、b はリリース版 → a < b
+
+  // 両方プレリリース: 識別子を左から比較
+  for (let i = 0; i < Math.max(va.pre.length, vb.pre.length); i++) {
+    const ia = va.pre[i]
+    const ib = vb.pre[i]
+    if (ia === undefined) return -1  // a の識別子が少ない → a < b
+    if (ib === undefined) return 1   // b の識別子が少ない → a > b
+    const na = Number(ia)
+    const nb = Number(ib)
+    const aIsNum = !isNaN(na)
+    const bIsNum = !isNaN(nb)
+    if (aIsNum && bIsNum) {
+      if (na !== nb) return na - nb
+    } else if (aIsNum) {
+      return -1  // 数値 < 文字列
+    } else if (bIsNum) {
+      return 1   // 文字列 > 数値
+    } else {
+      const cmp = ia.localeCompare(ib)
+      if (cmp !== 0) return cmp
+    }
   }
   return 0
 }
@@ -108,13 +169,14 @@ ff.http('api', async (req: ff.Request, res: ff.Response) => {
 // --- heartbeat ---
 
 async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void> {
-  const { deviceId, appVersion } = req.body as { deviceId?: string; appVersion?: string }
+  const { deviceId, appVersion, channel: rawChannel } = req.body as { deviceId?: string; appVersion?: string; channel?: string }
   if (!deviceId || !appVersion) {
     res.status(400).json({ error: 'deviceId and appVersion are required' })
     return
   }
 
-  const config = await getConfig()
+  const channel: ReleaseChannel = isValidChannel(rawChannel) ? rawChannel : 'stable'
+  const [config, latestVersion] = await Promise.all([getConfig(), getReleaseVersion(channel)])
   const now = Timestamp.now()
   const todayStr = new Date().toISOString().slice(0, 10)
 
@@ -138,8 +200,8 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
       registered: false,
       trialValid: true,
       trialDaysRemaining: config.trialDays,
-      latestVersion: config.latestVersion,
-      updateAvailable: compareVersions(config.latestVersion, appVersion) > 0,
+      latestVersion: latestVersion ?? appVersion,
+      updateAvailable: latestVersion != null && compareVersions(latestVersion, appVersion) > 0,
       serverMessage: config.serverMessage,
     })
     return
@@ -189,8 +251,8 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
       trialValid: false,
       trialDaysRemaining: 0,
       jwt,
-      latestVersion: config.latestVersion,
-      updateAvailable: compareVersions(config.latestVersion, appVersion) > 0,
+      latestVersion: latestVersion ?? appVersion,
+      updateAvailable: latestVersion != null && compareVersions(latestVersion, appVersion) > 0,
       serverMessage: config.serverMessage,
     })
     return
@@ -208,8 +270,8 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
       registered: false,
       trialValid: true,
       trialDaysRemaining: remaining,
-      latestVersion: config.latestVersion,
-      updateAvailable: compareVersions(config.latestVersion, appVersion) > 0,
+      latestVersion: latestVersion ?? appVersion,
+      updateAvailable: latestVersion != null && compareVersions(latestVersion, appVersion) > 0,
       serverMessage: config.serverMessage,
     })
     return
@@ -220,8 +282,8 @@ async function handleHeartbeat(req: ff.Request, res: ff.Response): Promise<void>
     registered: false,
     trialValid: false,
     trialDaysRemaining: 0,
-    latestVersion: config.latestVersion,
-    updateAvailable: compareVersions(config.latestVersion, appVersion) > 0,
+    latestVersion: latestVersion ?? appVersion,
+    updateAvailable: latestVersion != null && compareVersions(latestVersion, appVersion) > 0,
     serverMessage: config.serverMessage,
   })
 }
