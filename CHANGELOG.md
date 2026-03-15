@@ -7,11 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-03-15
+
 ### Added
+- itch.io自動アップロード — GitHub Actionsリリースワークフローにbutler CLIを統合。タグpush時にGitHub Releasesとitch.ioの両方にバイナリを自動アップロード
 - alphaリリースチャネル開発インフラ — チャネル別npm scripts（dev:alpha/beta, build:alpha/beta, package:alpha/beta）、CI/CDプレリリースタグ対応（v*-alpha.*/v*-beta.*でGitHub Releases prerelease自動設定）、GCPバックエンドのチャネル別バージョン応答（releases/{channel}コレクション、heartbeat APIのchannelフィールド）、compareVersionsのsemverプレリリース対応、管理ツールにrelease:list/get/setコマンド追加、プレリリースバージョン番号ルールの策定
 
 ### Changed
 - GCPバックエンド: config/currentからlatestVersionを廃止しreleases/{channel}に移行。admin config:set latestVersionをブロック
+- REGISTRATION_GUIDE.txt: 購入URLをダミーから本番URL（itch.io）に差し替え
+- REGISTRATION_GUIDE.txt / PRIVACY_POLICY.txt: 問い合わせ先メールアドレスを support@updater.cc に変更
 
 ## [0.10.0] - 2026-03-12
 

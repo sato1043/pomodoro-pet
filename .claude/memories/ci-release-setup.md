@@ -64,16 +64,22 @@ ssh-keygen -t ed25519 -C "github-actions-deploy-key" -f ~/.ssh/pomodoro-pet-asse
 ### VITE_STORE_URL
 
 - **Name**: `VITE_STORE_URL`
-- **Secret**: ストア URL（例: `https://sato1043.itch.io/pomodoro-pet`）
+- **Secret**: ストア URL（例: `https://updaterllc.itch.io/pomodoropet`）
 - 用途: プロダクションビルドで `.env.production` に書き出され、メインプロセスの `__STORE_URL__` に埋め込まれる
 - 未設定の場合のデフォルト: `https://www.updater.cc`
+
+### BUTLER_CREDENTIALS
+
+- **Name**: `BUTLER_CREDENTIALS`
+- **Secret**: itch.io API キー（`https://itch.io/user/settings/api-keys` で取得）
+- 用途: リリースワークフローで butler CLI が itch.io にバイナリをアップロードする際の認証に使用
 
 ## 5. リリースの実行
 
 ### ブランチ運用
 
 ```
-develop（開発）→ main（リリース）→ タグ push → GitHub Actions → GitHub Releases
+develop（開発）→ main（リリース）→ タグ push → GitHub Actions → GitHub Releases + itch.io
 ```
 
 - 日常の開発は `develop` ブランチで行う
@@ -101,9 +107,9 @@ git push origin main --follow-tags
 # 5. develop に戻る
 git checkout develop
 
-# 6. Firestore の latestVersion を更新（gcp-update-server ディレクトリで実行）
+# 6. Firestore のリリースバージョンを更新（gcp-update-server ディレクトリで実行）
 cd gcp-update-server
-GOOGLE_CLOUD_PROJECT=pomodoro-pet-prod npm run admin config:set latestVersion X.X.X
+npm run admin release:set stable X.X.X
 ```
 
 `npm version` は以下を自動実行する:
@@ -124,6 +130,9 @@ GOOGLE_CLOUD_PROJECT=pomodoro-pet-prod npm run admin config:set latestVersion X.
    - `latest.yml` — electron-updater 用メタデータ
    - `Pomodoro Pet Setup X.X.X.exe.blockmap` — 差分アップデート用
 3. Releases ページ: `https://github.com/sato1043/pomodoro-pet/releases`
+4. itch.io にも同時にアップロードされる（butler CLI経由）:
+   - itch.io ページ: `https://updaterllc.itch.io/pomodoropet`
+   - チャネル: `windows`（butler push の `:windows` タグ）
 
 ### タグの打ち直し（リリース失敗時）
 

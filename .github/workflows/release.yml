@@ -69,3 +69,18 @@ jobs:
             release/*.blockmap
           generate_release_notes: true
           prerelease: ${{ steps.channel.outputs.prerelease == 'true' }}
+
+      - name: Install butler
+        shell: bash
+        run: |
+          curl -L -o butler.zip https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default
+          unzip butler.zip -d butler
+          echo "$PWD/butler" >> "$GITHUB_PATH"
+
+      - name: Upload to itch.io
+        env:
+          BUTLER_API_KEY: ${{ secrets.BUTLER_CREDENTIALS }}
+        shell: bash
+        run: |
+          VERSION="${GITHUB_REF#refs/tags/v}"
+          butler push "release/Pomodoro Pet Setup ${VERSION}.exe" updaterllc/pomodoropet:windows --userversion "$VERSION"
