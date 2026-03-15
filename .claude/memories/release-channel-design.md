@@ -57,6 +57,8 @@ const FEATURE_CHANNEL: Record<FeatureName, ReleaseChannel> = {
 }
 ```
 
+**Firestoreスキーマ変更**: `latestVersion` は `config/current` ドキュメントから削除し、`releases/{channel}` コレクションに移行した。チャネル別にバージョンを管理する。
+
 ### 判定関数
 
 | 関数 | 用途 |
@@ -65,6 +67,7 @@ const FEATURE_CHANNEL: Record<FeatureName, ReleaseChannel> = {
 | `isFeatureInChannel(feature, channel)` | チャネルフィルタのみの判定 |
 | `getFeatureChannel(feature)` | 機能の公開チャネルを取得（UIバッジ用） |
 | `resolveReleaseChannel(raw)` | 環境変数文字列をReleaseChannel型に正規化 |
+| `getReleaseVersion(channel)` | チャネル別の最新バージョンをFirestoreから取得 |
 
 ### ビルド設定
 
@@ -120,9 +123,9 @@ VITE_RELEASE_CHANNEL=alpha npm run dev
 2. 必要に応じて `ENABLED_FEATURES` のtrial/expired/restrictedへの追加を検討
 3. ドキュメントを更新
 
-## 自動アップデートのチャネル分離（将来）
+## 自動アップデートのチャネル分離
 
-現時点では自動アップデートのチャネル分離は未実装。将来的に以下の構成を想定する。
+自動アップデートのチャネル分離は実装済み。以下の構成で動作する。
 
 ### GitHub Releases ベース
 
@@ -152,20 +155,44 @@ Body: { deviceId, version, channel: "alpha" }
 Response: { latestVersion: "1.1.0-alpha.2", updateAvailable: true }
 ```
 
-**Firestore スキーマ拡張**:
+- リクエストボディに `channel` フィールドを追加（デフォルト: `'stable'`）
+- `releases/{channel}` からバージョンを取得
+- `releases/{channel}` が未存在なら `updateAvailable: false` を返す
+
+**Firestore スキーマ変更**:
+
+`config/current` から `latestVersion` フィールドを削除。チャネル別バージョンは `releases/{channel}` で管理する。
+
 ```
+config/current → { latestVersion は削除済み。その他のフィールドは維持 }
+
 releases/
-  stable/   → { version: "1.0.0", url: "..." }
-  beta/     → { version: "1.1.0-beta.1", url: "..." }
-  alpha/    → { version: "1.1.0-alpha.1", url: "..." }
+  stable/   → { version: string, updatedAt: Timestamp }
+  beta/     → { version: string, updatedAt: Timestamp }
+  alpha/    → { version: string, updatedAt: Timestamp }
 ```
 
 **Cloud Function変更**:
 - `heartbeat` 関数がリクエストの `channel` フィールドを参照
 - チャネルに対応する `releases/{channel}` から最新バージョンを取得
 - チャネル未指定時は `stable` にフォールバック
+- `releases/{channel}` ドキュメントが存在しない場合は `updateAvailable: false`
 
-### GCPインフラ構築手順（将来実装時）
+### 管理ツール変更
+
+**ファイル**: `gcp-update-server/functions/src/admin.ts`
+
+以下のコマンドを追加。
+
+| コマンド | 用途 |
+|---|---|
+| `release:list` | 全チャネルのリリースバージョンを一覧表示 |
+| `release:get <channel>` | 指定チャネルの現在のバージョンを取得 |
+| `release:set <channel> <version>` | 指定チャネルのバージョンを設定 |
+
+`config:set latestVersion` はブロックされる（`releases/{channel}` への移行済みのため）。`release:set` を使用すること。
+
+### GCPインフラ構築手順
 
 1. **Firestoreコレクション追加**
    ```bash
@@ -187,7 +214,7 @@ releases/
 
 4. **リリースドキュメント更新**
    - リリース時に対応チャネルの `releases/{channel}` ドキュメントを更新
-   - CI/CDワークフローにFirestore更新ステップを追加（将来）
+   - CI/CDワークフローにFirestore更新ステップを追加（将来検討）
 
 ### 保守手順
 
@@ -208,6 +235,23 @@ releases/
 | getFeatureChannel | 1 | 既存全機能がstable |
 | isFeatureInChannel | 3 | stable/beta/alphaチャネルでのstable機能の可視性 |
 | isFeatureEnabled（チャネル統合） | 4 | 後方互換 + チャネル×ライセンスの交差判定 |
+
+### GCPバックエンドテスト
+
+**ファイル**: `gcp-update-server/functions/src/__tests__/`
+
+| テストグループ | テスト数 | 内容 |
+|---|---|---|
+| compareVersions | 8 | semverバージョン比較（等価・大小・プレリリース含む） |
+| heartbeat チャネル対応 | 6 | チャネル別バージョン取得・未存在チャネルのフォールバック・デフォルトstable |
+
+**ファイル**: `gcp-update-server/functions/smoke-test.sh`
+
+| テスト | 内容 |
+|---|---|
+| Test 11 | チャネル指定なしのheartbeat（stableフォールバック） |
+| Test 12 | channel=beta 指定のheartbeat |
+| Test 13 | channel=alpha 指定のheartbeat |
 
 ### E2Eテスト
 
@@ -231,3 +275,7 @@ releases/
 | `src/adapters/ui/SceneRouter.tsx` | ChannelBadge描画追加 |
 | `src/main.ts` | isFeatureEnabled全呼び出しにチャネル引数追加 |
 | `electron.vite.config.ts` | __RELEASE_CHANNEL__ define追加 |
+| `gcp-update-server/functions/src/heartbeat.ts` | チャネル別バージョン取得、releases/{channel}参照 |
+| `gcp-update-server/functions/src/admin.ts` | release:list/get/set コマンド追加、config:set latestVersionブロック |
+| `gcp-update-server/functions/src/__tests__/` | compareVersionsテスト8件、heartbeatチャネル対応テスト6件 |
+| `gcp-update-server/functions/smoke-test.sh` | チャネル対応スモークテスト3件（Test 11-13）追加 |

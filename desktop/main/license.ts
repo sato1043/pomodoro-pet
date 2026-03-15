@@ -4,6 +4,7 @@ import type { JwtPayload, HeartbeatResponse, LicenseState } from './types'
 import { getOrCreateDeviceId, loadSettings, saveSettings } from './settings'
 
 declare const __HEARTBEAT_URL__: string
+declare const __RELEASE_CHANNEL__: string
 declare const __DEBUG_LICENSE__: string
 
 // --- RS256 公開鍵（鍵ペア生成後に差し替え） ---
@@ -72,6 +73,7 @@ async function heartbeat(deviceId: string, appVersion: string, downloadKey?: str
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), 15000)
     const body: Record<string, string> = { deviceId, appVersion }
+    if (__RELEASE_CHANNEL__ && __RELEASE_CHANNEL__ !== 'stable') body.channel = __RELEASE_CHANNEL__
     if (downloadKey) body.downloadKey = downloadKey
     const response = await fetch(`${__HEARTBEAT_URL__}/api/heartbeat`, {
       method: 'POST',

@@ -51,7 +51,6 @@ async function main(): Promise<void> {
   }
 
   const configData = {
-    latestVersion: '0.1.0',
     trialDays: 30,
     jwtExpiryDays: 30,
     serverMessage: null,
@@ -62,6 +61,23 @@ async function main(): Promise<void> {
   await configRef.set(configData)
   console.log('Created config/current:')
   console.log(JSON.stringify(configData, null, 2))
+
+  // releases/{channel} ドキュメント
+  const channels = ['stable', 'beta', 'alpha'] as const
+  for (const channel of channels) {
+    const releaseRef = db.collection('releases').doc(channel)
+    const releaseDoc = await releaseRef.get()
+    if (releaseDoc.exists) {
+      console.log(`releases/${channel} already exists: version=${releaseDoc.data()?.version}`)
+    } else {
+      const releaseData = {
+        version: '0.1.0',
+        updatedAt: Timestamp.now(),
+      }
+      await releaseRef.set(releaseData)
+      console.log(`Created releases/${channel}: version=${releaseData.version}`)
+    }
+  }
 
   process.exit(0)
 }

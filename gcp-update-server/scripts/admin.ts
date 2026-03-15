@@ -17,6 +17,9 @@
  *   key:set-max <downloadKey> <maxDevices>   台数上限を変更
  *   config:get                               config/current を表示
  *   config:set <field> <value>               config/current のフィールドを更新
+ *   release:list                             全チャネルのバージョン一覧
+ *   release:get <channel>                    チャネルのバージョン表示
+ *   release:set <channel> <version>          チャネルのバージョンを設定
  *
  * 前提:
  *   gcloud auth application-default login 済み
@@ -192,6 +195,12 @@ async function configGet(): Promise<void> {
 }
 
 async function configSet(field: string, value: string): Promise<void> {
+  if (field === 'latestVersion') {
+    console.error('Error: latestVersion は config/current から廃止された')
+    console.error('代わりに release:set <channel> <version> を使用すること')
+    process.exit(1)
+  }
+
   const ref = db.collection('config').doc('current')
   // 型推定: 数値っぽければ数値、null なら null、それ以外は文字列
   let parsed: unknown = value
@@ -200,6 +209,49 @@ async function configSet(field: string, value: string): Promise<void> {
 
   await ref.update({ [field]: parsed, updatedAt: Timestamp.now() })
   console.log(`  Set config/current.${field} = ${JSON.stringify(parsed)}`)
+}
+
+// --- release ---
+
+const VALID_CHANNELS = ['stable', 'beta', 'alpha'] as const
+
+async function releaseList(): Promise<void> {
+  console.log('Releases:')
+  for (const channel of VALID_CHANNELS) {
+    const doc = await db.collection('releases').doc(channel).get()
+    if (!doc.exists) {
+      console.log(`  ${channel}: (not set)`)
+    } else {
+      const data = doc.data()!
+      console.log(`  ${channel}: ${data.version}  updated=${fmtTimestamp(data.updatedAt)}`)
+    }
+  }
+}
+
+async function releaseGet(channel: string): Promise<void> {
+  if (!VALID_CHANNELS.includes(channel as typeof VALID_CHANNELS[number])) {
+    console.error(`Invalid channel: ${channel}. Valid: ${VALID_CHANNELS.join(', ')}`)
+    process.exit(1)
+  }
+  const doc = await db.collection('releases').doc(channel).get()
+  if (!doc.exists) {
+    console.log(`releases/${channel}: (not set)`)
+    return
+  }
+  const data = doc.data()!
+  console.log(`releases/${channel}:`)
+  console.log(`  version:   ${data.version}`)
+  console.log(`  updatedAt: ${fmtTimestamp(data.updatedAt)}`)
+}
+
+async function releaseSet(channel: string, version: string): Promise<void> {
+  if (!VALID_CHANNELS.includes(channel as typeof VALID_CHANNELS[number])) {
+    console.error(`Invalid channel: ${channel}. Valid: ${VALID_CHANNELS.join(', ')}`)
+    process.exit(1)
+  }
+  const ref = db.collection('releases').doc(channel)
+  await ref.set({ version, updatedAt: Timestamp.now() })
+  console.log(`  Set releases/${channel}.version = ${version}`)
 }
 
 // --- main ---
@@ -222,6 +274,9 @@ async function main(): Promise<void> {
     console.log('  key:set-max <downloadKey> <maxDevices>')
     console.log('  config:get')
     console.log('  config:set <field> <value>')
+    console.log('  release:list')
+    console.log('  release:get <channel>')
+    console.log('  release:set <channel> <version>')
     process.exit(0)
   }
 
@@ -266,6 +321,17 @@ async function main(): Promise<void> {
     case 'config:set':
       if (!args[0] || args[1] === undefined) { console.error('field and value required'); process.exit(1) }
       await configSet(args[0], args[1])
+      break
+    case 'release:list':
+      await releaseList()
+      break
+    case 'release:get':
+      if (!args[0]) { console.error('channel required (stable/beta/alpha)'); process.exit(1) }
+      await releaseGet(args[0])
+      break
+    case 'release:set':
+      if (!args[0] || !args[1]) { console.error('channel and version required'); process.exit(1) }
+      await releaseSet(args[0], args[1])
       break
     default:
       console.error(`Unknown command: ${command}`)

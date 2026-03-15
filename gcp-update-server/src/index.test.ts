@@ -91,12 +91,19 @@ function setConfig() {
   mockDocStore['config/current'] = {
     exists: true,
     data: () => ({
-      latestVersion: '0.1.0',
       trialDays: 30,
       jwtExpiryDays: 30,
       serverMessage: null,
       forceUpdateBelowVersion: null,
     }),
+  }
+}
+
+// releases/{channel} を設定するヘルパー
+function setRelease(channel: string, version: string) {
+  mockDocStore[`releases/${channel}`] = {
+    exists: true,
+    data: () => ({ version }),
   }
 }
 
@@ -347,5 +354,164 @@ describe('handleRegister', () => {
     const keyUpdates = mockUpdateCalls.filter(c => c.path === `keys/${TEST_KEY_HASH}`)
     const removeCall = keyUpdates.find(c => c.data.devices?.__type === 'arrayRemove')
     expect(removeCall).toBeUndefined()
+  })
+})
+
+// --- compareVersions ---
+
+describe('compareVersions', () => {
+  it('同一バージョン → 0', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('1.0.0', '1.0.0')).toBe(0)
+  })
+
+  it('メジャーバージョン比較', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('2.0.0', '1.0.0')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.0', '2.0.0')).toBeLessThan(0)
+  })
+
+  it('マイナー・パッチバージョン比較', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('1.1.0', '1.0.0')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.1', '1.0.0')).toBeGreaterThan(0)
+  })
+
+  it('リリース版 > プレリリース版', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('1.0.0', '1.0.0-alpha.1')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.0', '1.0.0-beta.1')).toBeGreaterThan(0)
+  })
+
+  it('alpha < beta', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('1.0.0-alpha.1', '1.0.0-beta.1')).toBeLessThan(0)
+    expect(compareVersions('1.0.0-beta.1', '1.0.0-alpha.1')).toBeGreaterThan(0)
+  })
+
+  it('同種プレリリースのナンバー比較', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('1.0.0-alpha.1', '1.0.0-alpha.2')).toBeLessThan(0)
+    expect(compareVersions('1.0.0-alpha.2', '1.0.0-alpha.1')).toBeGreaterThan(0)
+    expect(compareVersions('1.0.0-alpha.1', '1.0.0-alpha.1')).toBe(0)
+  })
+
+  it('プレリリース版同士でベースが異なる → ベースで比較', async () => {
+    const { compareVersions } = await import('./index')
+    expect(compareVersions('2.0.0-alpha.1', '1.0.0-beta.1')).toBeGreaterThan(0)
+  })
+
+  it('全順序: alpha.1 < alpha.2 < beta.1 < release', async () => {
+    const { compareVersions } = await import('./index')
+    const versions = ['1.0.0', '1.0.0-alpha.1', '1.0.0-beta.1', '1.0.0-alpha.2']
+    const sorted = [...versions].sort(compareVersions)
+    expect(sorted).toEqual(['1.0.0-alpha.1', '1.0.0-alpha.2', '1.0.0-beta.1', '1.0.0'])
+  })
+})
+
+// --- heartbeat チャネル対応 ---
+
+describe('handleHeartbeat (channel)', () => {
+  // heartbeat は export されていないので http ハンドラ経由でテストする
+  // ただし ff.http はモックされているので、直接 import して呼ぶ
+  let httpHandler: (req: any, res: any) => Promise<void>
+
+  beforeEach(async () => {
+    process.env.JWT_PRIVATE_KEY = privateKey
+    for (const key of Object.keys(mockDocStore)) delete mockDocStore[key]
+    mockSetCalls.length = 0
+    mockUpdateCalls.length = 0
+    setConfig()
+
+    // ff.http に渡されたハンドラを取得
+    const ff = await import('@google-cloud/functions-framework')
+    const httpMock = ff.http as ReturnType<typeof vi.fn>
+    httpHandler = httpMock.mock.calls[0]?.[1]
+  })
+
+  function createHeartbeatReq(body: Record<string, unknown>) {
+    return { body, method: 'POST', path: '/api/heartbeat' } as any
+  }
+
+  function createHeartbeatRes() {
+    const res: any = {
+      statusCode: 200,
+      body: null as any,
+      headers: {} as Record<string, string>,
+      status(code: number) { res.statusCode = code; return res },
+      json(data: any) { res.body = data },
+      set(key: string, value: string) { res.headers[key] = value },
+      send(_data: any) {},
+    }
+    return res
+  }
+
+  it('channel未指定 → stableのreleases参照', async () => {
+    setRelease('stable', '1.0.0')
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '0.9.0' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.latestVersion).toBe('1.0.0')
+    expect(res.body.updateAvailable).toBe(true)
+  })
+
+  it('channel=alpha → alphaのreleases参照', async () => {
+    setRelease('alpha', '1.1.0-alpha.1')
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '1.0.0', channel: 'alpha' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.latestVersion).toBe('1.1.0-alpha.1')
+  })
+
+  it('channel=beta → betaのreleases参照', async () => {
+    setRelease('beta', '1.1.0-beta.1')
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '1.0.0', channel: 'beta' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.latestVersion).toBe('1.1.0-beta.1')
+  })
+
+  it('releases/{channel}未存在 → updateAvailable=false、latestVersion=appVersion', async () => {
+    // releases/alpha を設定しない
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '1.0.0', channel: 'alpha' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.updateAvailable).toBe(false)
+    expect(res.body.latestVersion).toBe('1.0.0')
+  })
+
+  it('不正なchannel値 → stableにフォールバック', async () => {
+    setRelease('stable', '2.0.0')
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '1.0.0', channel: 'invalid' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.latestVersion).toBe('2.0.0')
+    expect(res.body.updateAvailable).toBe(true)
+  })
+
+  it('同バージョン → updateAvailable=false', async () => {
+    setRelease('stable', '1.0.0')
+    const res = createHeartbeatRes()
+    await httpHandler(
+      createHeartbeatReq({ deviceId: TEST_DEVICE_ID, appVersion: '1.0.0' }),
+      res,
+    )
+    expect(res.statusCode).toBe(200)
+    expect(res.body.updateAvailable).toBe(false)
   })
 })
