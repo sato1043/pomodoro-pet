@@ -18,6 +18,40 @@ function getPrivateKey(): string {
   return key
 }
 
+// --- itch.io API 検証 ---
+
+/**
+ * itch.io API で download key の有効性を検証する。
+ *
+ * 環境変数 ITCHIO_API_KEY / ITCHIO_GAME_ID が未設定の場合は
+ * 検証をスキップして true を返す（開発環境フォールバック）。
+ */
+async function validateItchioDownloadKey(downloadKey: string): Promise<{ valid: boolean; error?: string }> {
+  const apiKey = process.env.ITCHIO_API_KEY
+  const gameId = process.env.ITCHIO_GAME_ID
+  if (!apiKey || !gameId) {
+    console.warn('ITCHIO_API_KEY or ITCHIO_GAME_ID not set — skipping download key validation')
+    return { valid: true }
+  }
+
+  const url = `https://itch.io/api/1/${apiKey}/game/${gameId}/download_keys?download_key=${encodeURIComponent(downloadKey)}`
+  try {
+    const resp = await fetch(url)
+    if (!resp.ok) {
+      console.error(`itch.io API returned HTTP ${resp.status}`)
+      return { valid: false, error: 'Failed to validate download key with itch.io' }
+    }
+    const data = await resp.json() as { download_key?: unknown }
+    if (!data.download_key) {
+      return { valid: false, error: 'Invalid download key' }
+    }
+    return { valid: true }
+  } catch (err) {
+    console.error('itch.io API request failed:', err)
+    return { valid: false, error: 'Failed to validate download key with itch.io' }
+  }
+}
+
 // --- JWT 署名（RS256、Node.js crypto） ---
 
 function base64url(data: Buffer | string): string {
@@ -409,7 +443,16 @@ export async function handleRegister(req: ff.Request, res: ff.Response): Promise
     })
   } else {
     // 新規キー登録（初回なのでレート制限・累計チェック不要）
-    // TODO: itch.io API で download key を検証する（初期テスト段階ではスキップ）
+    // itch.io API で download key を検証する
+    const validation = await validateItchioDownloadKey(downloadKey)
+    if (!validation.valid) {
+      res.status(403).json({
+        success: false,
+        error: validation.error ?? 'Invalid download key',
+      })
+      return
+    }
+
     await keyRef.set({
       devices: [deviceId],
       validatedAt: Timestamp.now(),

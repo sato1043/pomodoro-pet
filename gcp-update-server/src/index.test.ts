@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { generateKeyPairSync, createHash } from 'crypto'
 
 // --- テスト用RSA鍵ペア生成 ---
@@ -354,6 +354,99 @@ describe('handleRegister', () => {
     const keyUpdates = mockUpdateCalls.filter(c => c.path === `keys/${TEST_KEY_HASH}`)
     const removeCall = keyUpdates.find(c => c.data.devices?.__type === 'arrayRemove')
     expect(removeCall).toBeUndefined()
+  })
+})
+
+// --- itch.io download key 検証 ---
+
+describe('handleRegister (itch.io validation)', () => {
+  beforeEach(() => {
+    process.env.JWT_PRIVATE_KEY = privateKey
+    for (const key of Object.keys(mockDocStore)) delete mockDocStore[key]
+    mockSetCalls.length = 0
+    mockUpdateCalls.length = 0
+    setConfig()
+  })
+
+  afterEach(() => {
+    delete process.env.ITCHIO_API_KEY
+    delete process.env.ITCHIO_GAME_ID
+    vi.unstubAllGlobals()
+  })
+
+  it('環境変数未設定 → 検証スキップ → 成功', async () => {
+    delete process.env.ITCHIO_API_KEY
+    delete process.env.ITCHIO_GAME_ID
+    const { handleRegister } = await import('./index')
+    const res = createRes()
+    await handleRegister(createReq({ deviceId: TEST_DEVICE_ID, downloadKey: TEST_DOWNLOAD_KEY }), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.success).toBe(true)
+  })
+
+  it('有効なdownload key → 成功', async () => {
+    process.env.ITCHIO_API_KEY = 'test-api-key'
+    process.env.ITCHIO_GAME_ID = '12345'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ download_key: { id: 1 } }),
+    }))
+
+    const { handleRegister } = await import('./index')
+    const res = createRes()
+    await handleRegister(createReq({ deviceId: TEST_DEVICE_ID, downloadKey: TEST_DOWNLOAD_KEY }), res)
+
+    expect(res.statusCode).toBe(200)
+    expect(res.body.success).toBe(true)
+    expect(fetch).toHaveBeenCalledWith(
+      expect.stringContaining('download_keys?download_key=test-key-12345'),
+    )
+  })
+
+  it('無効なdownload key（download_key未存在） → 403', async () => {
+    process.env.ITCHIO_API_KEY = 'test-api-key'
+    process.env.ITCHIO_GAME_ID = '12345'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({}),
+    }))
+
+    const { handleRegister } = await import('./index')
+    const res = createRes()
+    await handleRegister(createReq({ deviceId: TEST_DEVICE_ID, downloadKey: 'invalid-key' }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(res.body.error).toBe('Invalid download key')
+  })
+
+  it('itch.io API HTTPエラー → 403', async () => {
+    process.env.ITCHIO_API_KEY = 'test-api-key'
+    process.env.ITCHIO_GAME_ID = '12345'
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
+      ok: false,
+      status: 500,
+    }))
+
+    const { handleRegister } = await import('./index')
+    const res = createRes()
+    await handleRegister(createReq({ deviceId: TEST_DEVICE_ID, downloadKey: TEST_DOWNLOAD_KEY }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(res.body.error).toContain('Failed to validate')
+  })
+
+  it('itch.io API通信エラー → 403', async () => {
+    process.env.ITCHIO_API_KEY = 'test-api-key'
+    process.env.ITCHIO_GAME_ID = '12345'
+    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('Network error')))
+
+    const { handleRegister } = await import('./index')
+    const res = createRes()
+    await handleRegister(createReq({ deviceId: TEST_DEVICE_ID, downloadKey: TEST_DOWNLOAD_KEY }), res)
+
+    expect(res.statusCode).toBe(403)
+    expect(res.body.error).toContain('Failed to validate')
   })
 })
 

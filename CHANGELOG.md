@@ -12,6 +12,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - butler CLIインストール方法をsetup-butler GitHub Actionに変更（broth.itch.ovh DNS解決失敗によるitch.ioアップロード失敗を修正）
 
+### Added
+- itch.io販売ページコンテンツ準備（説明文英語/日本語、EULA同意文言、SmartScreen注記、特定商取引法表示、スクリーンショット8枚）
+- GCPバックエンド: register API に itch.io download key 検証を実装（itch.io API連携）
+
 ## [0.11.0] - 2026-03-15
 
 ### Added

@@ -21,7 +21,8 @@ gcloud functions deploy api \
   --allow-unauthenticated \
   --entry-point=api \
   --source=. \
-  --set-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest" \
+  --set-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest,ITCHIO_API_KEY=itchio-api-key:latest" \
+  --set-env-vars="ITCHIO_GAME_ID=4370345" \
   --memory=256MB \
   --timeout=30s
 

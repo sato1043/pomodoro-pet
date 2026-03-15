@@ -18,7 +18,7 @@ Cloud Functions (2nd gen, Node.js 22)
   │
   └─ Secret Manager
       ├─ jwt-private-key (RS256秘密鍵、--set-secretsで環境変数にマウント)
-      ├─ itchio-api-key
+      ├─ itchio-api-key (itch.io APIキー、--set-secretsで環境変数にマウント)
       └─ rate-limit-config
 ```
 
@@ -77,7 +77,7 @@ Cloud Functions (2nd gen, Node.js 22)
 4. keys/{hash}確認
    - 登録済み + 同デバイス → JWT再発行のみ（レート制限カウント消費しない、return）
    - 登録済み + 別デバイス → 日次レート制限チェック（keys/{hash}.registerCount/registerDate、1日3回超→429）→ 累計登録数チェック（totalRegistrations >= 50 → 403）→ staleデバイス自動除外（30日）→ デバイス追加 + カウント更新
-   - 未登録 → itch.io APIで検証（初期段階ではスキップ）→ 新規作成（registerCount=1, totalRegistrations=1）
+   - 未登録 → itch.io APIで検証（無効なら403）→ 新規作成（registerCount=1, totalRegistrations=1）
 5. devices/{deviceId}.registeredKey = hash, keyHint更新
 6. JWT発行（RS256署名）
 7. レスポンス返却
@@ -249,25 +249,46 @@ cd gcp-update-server
 bash scripts/smoke-test.sh
 ```
 
-13テストを自動実行し、テスト後に Firestore のテストデータを自動削除する。
+テスト後に Firestore のテストデータを自動削除する。
 
-| # | テスト内容 | 期待結果 |
-|---|-----------|---------|
-| 1 | heartbeat 新規デバイス | trialValid=true, trialDaysRemaining=30 |
-| 2 | heartbeat 同デバイス再送 | trialValid=true（継続） |
-| 3 | register download key（1台目） | success=true, jwt存在, keyHint存在 |
-| 4 | register 同キー別デバイス（2台目） | success=true |
-| 5 | register 同キー別デバイス（3台目） | success=true |
-| 6 | register 同キー別デバイス（4台目、日次レート超過） | HTTP 429, Daily registration limit |
-| 7 | heartbeat 登録済みデバイス | registered=true, jwt存在 |
-| 8 | register 同キー再登録（カウント消費しない） | success=true |
-| 9 | register deviceId未指定 | error存在 |
-| 10 | heartbeat appVersion未指定 | error存在 |
-| 11 | heartbeat channel=alpha | latestVersion存在 |
-| 12 | heartbeat channel=beta | latestVersion存在 |
-| 13 | heartbeat 不正なchannel（stableフォールバック） | latestVersion存在 |
+register 成功系テスト（3〜8）は有効な itch.io download key が必要。環境変数 `SMOKE_TEST_DOWNLOAD_KEY` で指定する。未指定時はスキップされる。
+
+```bash
+# register 成功系テストを含む完全実行
+SMOKE_TEST_DOWNLOAD_KEY=<key> bash scripts/smoke-test.sh
+```
+
+| # | テスト内容 | 期待結果 | 備考 |
+|---|-----------|---------|------|
+| 1 | heartbeat 新規デバイス | trialValid=true, trialDaysRemaining=30 | |
+| 2 | heartbeat 同デバイス再送 | trialValid=true（継続） | |
+| 2b | register 無効キー（itch.io API検証） | HTTP 403, Invalid download key | |
+| 3 | register download key（1台目） | success=true, jwt存在, keyHint存在 | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 4 | register 同キー別デバイス（2台目） | success=true | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 5 | register 同キー別デバイス（3台目） | success=true | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 6 | register 同キー別デバイス（4台目、日次レート超過） | HTTP 429, Daily registration limit | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 7 | heartbeat 登録済みデバイス | registered=true, jwt存在 | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 8 | register 同キー再登録（カウント消費しない） | success=true | 要 SMOKE_TEST_DOWNLOAD_KEY |
+| 9 | register deviceId未指定 | error存在 | |
+| 10 | heartbeat appVersion未指定 | error存在 | |
+| 11 | heartbeat channel=alpha | latestVersion存在 | |
+| 12 | heartbeat channel=beta | latestVersion存在 | |
+| 13 | heartbeat 不正なchannel（stableフォールバック） | latestVersion存在 | |
 
 前提: `gcloud auth application-default login` 済み（クリーンアップに必要）
+
+### download key の手動発行手順
+
+スモークテストや手動テストで使用する download key は itch.io ダッシュボードから発行する。API による発行は不可。
+
+1. https://itch.io/dashboard/game/4370345/download-keys を開く
+2. 「Create download key」をクリック
+3. Label に識別名（例: `smoke-test`）を入力
+4. 「Download key can be claimed」にチェック（任意）
+5. 生成された URL の末尾がキー値
+   - 例: `https://updaterllc.itch.io/pomodoropet/download/Xi0hATiCeYvowEIjVZajFZgWdKxd5ew814VkT7ks`
+   - キー値: `Xi0hATiCeYvowEIjVZajFZgWdKxd5ew814VkT7ks`
+6. 不要になったキーはダッシュボードから revoke できる
 
 個別の curl による手動テスト:
 
@@ -284,10 +305,15 @@ curl -X POST $API_URL/api/heartbeat \
   -H "Content-Type: application/json" \
   -d '{"deviceId":"test-device-001","appVersion":"0.1.0","channel":"alpha"}'
 
-# register テスト（download key 登録）
+# register テスト（無効キー → 403）
 curl -X POST $API_URL/api/register \
   -H "Content-Type: application/json" \
-  -d '{"deviceId":"test-device-001","downloadKey":"test-key-12345"}'
+  -d '{"deviceId":"test-device-001","downloadKey":"fake-invalid-key"}'
+
+# register テスト（有効な download key で登録）
+curl -X POST $API_URL/api/register \
+  -H "Content-Type: application/json" \
+  -d '{"deviceId":"test-device-001","downloadKey":"<有効なキー>"}'
 
 # heartbeat テスト（登録済みデバイス → JWT返却）
 curl -X POST $API_URL/api/heartbeat \
@@ -297,8 +323,9 @@ curl -X POST $API_URL/api/heartbeat \
 
 ### 注意事項
 
-- itch.io API による download key 検証は初期段階ではスキップ（TODO コメント付き）
-- `--set-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest"` でSecret Managerの秘密鍵が `process.env.JWT_PRIVATE_KEY` に直接マウントされる。Secret Manager API呼び出しは不要（`@google-cloud/secret-manager` 依存なし）
+- itch.io API による download key 検証は実装済み。新規キー登録時に `GET https://itch.io/api/1/{api_key}/game/{game_id}/download_keys?download_key={key}` を呼び出し、レスポンスに `download_key` オブジェクトが存在しなければ 403 を返す。環境変数 `ITCHIO_API_KEY` / `ITCHIO_GAME_ID` が未設定の場合は検証をスキップする（開発環境フォールバック）
+- `--set-secrets="JWT_PRIVATE_KEY=jwt-private-key:latest,ITCHIO_API_KEY=itchio-api-key:latest"` でSecret Managerの秘密鍵とitch.io APIキーが環境変数に直接マウントされる。Secret Manager API呼び出しは不要（`@google-cloud/secret-manager` 依存なし）
+- `--set-env-vars="ITCHIO_GAME_ID=4370345"` で itch.io ゲームIDが環境変数に設定される
 - Cloud Functions 2nd gen は Cloud Run ベース。コールドスタートは5-15秒程度
 - Cloud Run サービスアカウントに Secret Accessor ロール付与が必要（GCPセットアップ手順 ステップ7）
 - Cloud Functions 2nd gen では `GCLOUD_PROJECT`/`GCP_PROJECT` 環境変数は未設定。`GOOGLE_CLOUD_PROJECT` を使用する
@@ -367,7 +394,14 @@ npm run dev
 GET https://itch.io/api/1/{api_key}/game/{game_id}/download_keys?download_key={key}
 ```
 
-download_keys配列が空でなければ有効なキー。
+レスポンス例（有効なキー）:
+```json
+{"download_key":{"id":152180777,"created_at":"2026-03-16 00:40:28","downloads":0,"game_id":4370345,"key":"Xi0h..."}}
+```
+
+`download_key` オブジェクトが存在すれば有効なキー。無効なキーの場合はレスポンスに `download_key` が含まれない。
+
+download key は itch.io ダッシュボードから手動発行する（API による発行は不可）。発行手順は「download key の手動発行手順」セクションを参照。
 
 ## コスト見積もり（月100ユーザー想定）
 
@@ -439,7 +473,7 @@ jobs:
 
 | ケース | 動作 |
 |--------|------|
-| 新キー + 新デバイス | キー検証 → 新規作成（registerCount=1, totalRegistrations=1） → JWT発行 |
+| 新キー + 新デバイス | itch.io API検証（無効→403） → 新規作成（registerCount=1, totalRegistrations=1） → JWT発行 |
 | 既存キー + 新デバイス | 日次レート制限 → 累計チェック → staleデバイス除外 → devices[]追加 → JWT発行 |
 | 既存キー + 同デバイス | JWT再発行のみ（レート制限カウント消費しない） |
 | 別キー + 既存デバイス | 旧キーからデバイス除外 → 新キーの日次/累計チェック → 新キーに追加 → JWT発行 |
