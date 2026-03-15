@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.11.0**（= package.json）
+**バージョン: 0.11.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -272,6 +272,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.11.1 | バグ修正 | butler CLIインストール方法をsetup-butler Actionに変更（broth.itch.ovh DNS解決失敗対策） |
 | 0.11.0 | インフラ | itch.io butler CLI自動アップロード統合、alpha/betaリリースチャネル開発インフラ整備、REGISTRATION_GUIDE.txt購入URL本番差し替え |
 | 0.10.0 | 機能追加 | リリースチャネル機能追加（stable/beta/alpha 3チャネル切替、チャネル×ライセンスモード2軸判定、ChannelBadge表示） |
 | 0.9.1 | バグ修正 | KouSelector E2Eテスト修正（settingsSummary pointer-events重なり）+ 設定パネルレイアウト修正（Data:行統合） |
