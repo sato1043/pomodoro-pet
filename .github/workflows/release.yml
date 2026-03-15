@@ -71,11 +71,7 @@ jobs:
           prerelease: ${{ steps.channel.outputs.prerelease == 'true' }}
 
       - name: Install butler
-        shell: bash
-        run: |
-          curl -L -o butler.zip https://broth.itch.ovh/butler/windows-amd64/LATEST/archive/default
-          unzip butler.zip -d butler
-          echo "$PWD/butler" >> "$GITHUB_PATH"
+        uses: jdno/setup-butler@v1
 
       - name: Upload to itch.io
         env:
