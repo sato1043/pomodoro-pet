@@ -3,7 +3,7 @@ import { generateMoonPhasePixels } from '../../domain/environment/value-objects/
 
 const MOON_TEXTURE_SIZE = 128
 const MOON_SPHERE_SEGMENTS = 32
-const MOON_SCALE = 3.0
+const MOON_SCALE = 18.0
 const GLOW_SCALE = 1.3
 const GLOW_COLOR = 0xaabbdd
 const GLOW_BASE_OPACITY = 0.15

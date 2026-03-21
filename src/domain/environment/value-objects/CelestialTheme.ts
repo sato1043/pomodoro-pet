@@ -196,8 +196,19 @@ export function computeThemeFromCelestial(
   const sunPosition = { x: 0, y: 10, z: 0 }
 
   // 15-19. 月データ5フィールド
-  const moonDir = celestialToDirection(lunar.azimuth, lunar.altitude)
-  const moonDistance = 50
+  // azimuthをカメラ視野（北方向=350°中心）にリマップ（3Dオブジェクト表示用。ライティングは実azimuth）
+  // 符号反転: 東(90°)→画面左、西(270°)→画面右（太陽の動きと一致）
+  const MOON_AZ_CENTER = 0
+  const MOON_AZ_RANGE = 50
+  const normalizedAz = (((lunar.azimuth % 360) + 360) % 360) / 360 // 0〜1
+  const displayAzimuth = MOON_AZ_CENTER - (normalizedAz - 0.5) * MOON_AZ_RANGE
+  // 表示高度: 実高度を画面上半分（18°〜33°）にリマップ
+  const MOON_ALT_MIN = 22
+  const MOON_ALT_MAX = 36
+  const clampedAlt = Math.max(0, Math.min(90, lunar.altitude))
+  const displayAltitude = MOON_ALT_MIN + (MOON_ALT_MAX - MOON_ALT_MIN) * (clampedAlt / 90)
+  const moonDir = celestialToDirection(displayAzimuth, displayAltitude)
+  const moonDistance = 300
   const moonPosition = {
     x: moonDir.x * moonDistance,
     y: moonDir.y * moonDistance,

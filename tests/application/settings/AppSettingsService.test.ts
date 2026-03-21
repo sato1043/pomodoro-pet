@@ -205,6 +205,8 @@ describe('AppSettingsService', () => {
         manualKouIndex: 0,
         cloudDensityLevel: 1,
         scenePreset: 'meadow',
+        moonAltitude: 'mid',
+        autoMoon: true,
       })
     })
 
@@ -273,6 +275,8 @@ describe('AppSettingsService', () => {
         manualKouIndex: 0,
         cloudDensityLevel: 1,
         scenePreset: 'meadow',
+        moonAltitude: 'mid',
+        autoMoon: true,
       })
     })
 

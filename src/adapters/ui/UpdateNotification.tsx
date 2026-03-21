@@ -22,7 +22,7 @@ export function UpdateNotification({ pomodoroActive }: UpdateNotificationProps):
   if (!status) return null
   if (dismissed) return null
   if (pomodoroActive) return null
-  if (status.state !== 'available' && status.state !== 'downloaded') return null
+  if (status.state !== 'available' && status.state !== 'downloading' && status.state !== 'downloaded') return null
 
   const handleDownload = (): void => {
     window.electronAPI?.downloadUpdate?.()
@@ -58,6 +58,9 @@ export function UpdateNotification({ pomodoroActive }: UpdateNotificationProps):
             Later
           </button>
         </>
+      )}
+      {status.state === 'downloading' && (
+        <span>Downloading... {Math.round(status.percent ?? 0)}%</span>
       )}
       {status.state === 'downloaded' && (
         <>

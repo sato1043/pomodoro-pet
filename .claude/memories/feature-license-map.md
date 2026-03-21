@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.12.0**（= package.json）
+**バージョン: 0.13.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -272,6 +272,8 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.13.0 | 機能追加 | 月高度UI（Moon行: Horizon/Low/Mid/High/Auto）、月齢・左右位置の高度連動、地球照効果、月表示位置の画面内リマップ、月配置距離300拡大 |
+| 0.12.1 | バグ修正+UI改善 | アップデートダウンロード進捗表示追加、設定パネル下部にバージョン+コピーライト表示 |
 | 0.12.0 | 機能追加 | 3D月オブジェクト（満ち欠けCanvasテクスチャ+グロー+水平線フェード+天気減衰）+ 月光照明ブースト（exposure/ambient/DirectionalLight/地面月光ブレンド強化）。EnvironmentThemeParamsに月データ5フィールド追加 |
 | 0.11.2 | リファクタリング | 環境設定（天気・地域・候）を独立AppScene `environment` に分離（SceneEnvironment + EnvironmentCoordinator） |
 | 0.11.1 | バグ修正 | butler CLIインストール方法をsetup-butler Actionに変更（broth.itch.ovh DNS解決失敗対策） |

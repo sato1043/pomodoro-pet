@@ -229,15 +229,45 @@ seasideプリセットには追加オーバーライドあり:
 
 | パラメータ | 値 |
 |---|---|
-| ジオメトリ | SphereGeometry(1.0, 32, 32), scale 3.0 |
-| 配置距離 | celestialToDirection(azimuth, altitude) × 50（fog無効） |
-| テクスチャ | Canvas 128×128、generateMoonPhasePixels()で動的更新 |
+| ジオメトリ | SphereGeometry(1.0, 32, 32), scale 18.0 |
+| 配置距離 | 300（fog無効） |
+| テクスチャ | Canvas 128×128、generateMoonPhasePixels()で動的更新（地球照効果付き） |
 | グロー | BackSide半透明球（scale 1.3×月球体）、色0xaabbdd、opacity=0.15×moonOpacity×moonIllumination |
 | 水平線フェード | altitude -2°〜+5°で0→1 |
 | 天気減衰 | MOON_WEATHER_DIMMING: sunny=1.0, cloudy=0.4, rainy=0.1, snowy=0.1 |
 | テクスチャ更新閾値 | phaseDeg差<1° かつ illumination差<0.01 のときスキップ |
 
 月データはEnvironmentThemeParamsの5フィールド（moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity）として30秒間隔のlerp補間パイプラインを通過する。applyThemeToScene()内でmoonEffect.update(params)が呼ばれる。
+
+#### 月表示位置リマップ
+
+実際のazimuth/altitudeをカメラ視野内にリマップする（3Dオブジェクト表示用。ライティングは実値）。
+
+**azimuthリマップ**: 中心=0°（真北）、範囲±25°。符号反転で東→画面左、西→画面右（太陽と同じ左→右の動き）。
+```
+displayAzimuth = 0 - (normalizedAz - 0.5) * 50
+```
+
+**altitudeリマップ**: 実高度0°〜90°を表示高度22°〜36°にリマップし画面上半分に配置。
+```
+displayAltitude = 22 + (36 - 22) * clamp(altitude / 90, 0, 1)
+```
+
+#### 月高度UI（Moon行）
+
+環境パネルのTime行の下に配置。4段階プリセット+Auto。
+
+| プリセット | altitude | azimuth | phaseDeg | illumination |
+|---|---|---|---|---|
+| Horizon | 10° | 150°(東寄り) | 90(半月) | 0.50 |
+| Low | 15° | 163° | 104 | 0.59 |
+| Mid | 25° | 189° | 139 | 0.82 |
+| High | 33° | 210°(西寄り) | 180(満月) | 1.00 |
+| Auto | 実天文計算 | 実天文計算 | 実天文計算 | 実天文計算 |
+
+高度→方位角連動: `azimuth = 150 + 60 * altFraction`（東寄り→西寄り、太陽と同じ左→右）
+高度→月齢連動: `phaseDeg = 90 + 90 * altFraction`（半月→満月）
+WeatherConfigのmoonAltitude/autoMoonフィールドで永続化。
 
 #### 月光照明ブースト
 

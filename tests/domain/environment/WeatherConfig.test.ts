@@ -18,6 +18,8 @@ describe('WeatherConfig', () => {
         manualKouIndex: 0,
         cloudDensityLevel: 1,
         scenePreset: 'meadow',
+        moonAltitude: 'mid',
+        autoMoon: true,
       })
     })
   })

@@ -422,6 +422,43 @@ describe('EnvironmentSimulationService', () => {
     )
   })
 
+  // --- setManualMoonAltitude ---
+
+  it('setManualMoonAltitude()でテーマが再計算される', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualMoonAltitude(20)
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+  })
+
+  it('setManualMoonAltitude(null)で天文計算の月位置に戻る', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    service.setManualMoonAltitude(20)
+    service.tick(0)
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualMoonAltitude(null)
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalled()
+  })
+
+  it('setManualMoonAltitude時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    vi.mocked(themeTransition.transitionTo).mockClear()
+
+    service.setManualMoonAltitude(25)
+    service.tick(0)
+
+    expect(themeTransition.transitionTo).toHaveBeenCalledWith(
+      expect.any(Object),
+      THEME_TRANSITION_DURATION_MANUAL_MS
+    )
+  })
+
   it('setManualWeather時の遷移時間がMANUAL_MS（1.5秒）になる', () => {
     service.start(DEFAULT_CLIMATE, 'meadow')
     vi.mocked(themeTransition.transitionTo).mockClear()

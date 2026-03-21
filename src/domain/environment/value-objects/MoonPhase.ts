@@ -93,12 +93,20 @@ export function generateMoonPhasePixels(
       // 月面のノイズ風バリエーション（簡易的なマリア模様）
       const mariaFactor = Math.sin(nx * 5.0 + ny * 3.0) * 0.3 + 0.7
 
-      const r = (MOON_BASE_R * mariaFactor + MOON_DARK_R * (1 - mariaFactor)) * brightness * rimDarkening * lit
-      const g = (MOON_BASE_G * mariaFactor + MOON_DARK_G * (1 - mariaFactor)) * brightness * rimDarkening * lit
-      const b = (MOON_BASE_B * mariaFactor + MOON_DARK_B * (1 - mariaFactor)) * brightness * rimDarkening * lit
+      // 地球照（earthshine）: 三日月ほど暗部が明るく見える
+      const earthshine = (1 - lit) * 0.12 * (1 - illumination + 0.3) * rimDarkening
+      const litValue = lit * brightness * rimDarkening + earthshine
 
-      // 暗部は完全な黒ではなく微かに可視
-      const darkSide = 0.03 * brightness * 255
+      const baseR = MOON_BASE_R * mariaFactor + MOON_DARK_R * (1 - mariaFactor)
+      const baseG = MOON_BASE_G * mariaFactor + MOON_DARK_G * (1 - mariaFactor)
+      const baseB = MOON_BASE_B * mariaFactor + MOON_DARK_B * (1 - mariaFactor)
+
+      const r = baseR * litValue
+      const g = baseG * litValue
+      const b = baseB * litValue
+
+      // 暗部の最低輝度
+      const darkSide = 0.05 * 255
       data[idx] = Math.min(255, Math.round(Math.max(r, darkSide)))
       data[idx + 1] = Math.min(255, Math.round(Math.max(g, darkSide)))
       data[idx + 2] = Math.min(255, Math.round(Math.max(b, darkSide)))
