@@ -213,6 +213,69 @@ describe('computeThemeFromCelestial', () => {
     expect(park.ambientIntensity).toBe(meadow.ambientIntensity)
   })
 
+  it('深夜・満月: moonPositionが天球上に計算される', () => {
+    const solar = makeSolar(-20)
+    const lunar = makeLunar(45, 1.0, true, 90)
+    const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
+
+    // moonPositionは距離50の球面上
+    const dist = Math.sqrt(result.moonPosition.x ** 2 + result.moonPosition.y ** 2 + result.moonPosition.z ** 2)
+    expect(dist).toBeCloseTo(50, 0)
+    expect(result.moonIsVisible).toBe(true)
+    expect(result.moonPhaseDeg).toBe(180) // illuminationFraction=1.0 → phaseDeg=180
+    expect(result.moonIllumination).toBe(1.0)
+  })
+
+  it('月が地平線下: moonIsVisible=false, moonOpacity=0', () => {
+    const solar = makeSolar(-20)
+    const lunar = makeLunar(-10, 0.5, false)
+    const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
+
+    expect(result.moonIsVisible).toBe(false)
+    expect(result.moonOpacity).toBe(0)
+  })
+
+  it('雨天で月のopacityが大幅に減衰する', () => {
+    const solar = makeSolar(-20)
+    const lunar = makeLunar(45, 1.0, true, 90)
+
+    const sunny = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
+    const rainy = computeThemeFromCelestial(solar, lunar, rainyWeather, 10, 'meadow')
+
+    expect(rainy.moonOpacity).toBeLessThan(sunny.moonOpacity)
+  })
+
+  it('満月の夜間は月光が地面色をMOONLIGHT_COLOR方向にブレンドする', () => {
+    const solar = makeSolar(-20)
+    const lunarNoMoon = makeLunar(-10, 0.0, false)
+    const lunarFullMoon = makeLunar(45, 1.0, true)
+
+    const noMoon = computeThemeFromCelestial(solar, lunarNoMoon, sunnyWeather, 20, 'meadow')
+    const fullMoon = computeThemeFromCelestial(solar, lunarFullMoon, sunnyWeather, 20, 'meadow')
+
+    // 満月時は地面色が変わる（moonBrightness>0のため）
+    expect(fullMoon.groundColor).not.toBe(noMoon.groundColor)
+  })
+
+  it('月光ブースト: 満月nightのexposureが0.08〜0.45の範囲内', () => {
+    const solar = makeSolar(-20)
+    const lunar = makeLunar(45, 1.0, true)
+    const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
+
+    // nightExposure = lerpFloat(0.08, 0.45, moonBrightness=0.8)
+    expect(result.exposure).toBeGreaterThanOrEqual(0.08)
+    expect(result.exposure).toBeLessThanOrEqual(0.45)
+  })
+
+  it('月光ブースト: 満月nightのambientIntensityが0.08〜0.40の範囲内', () => {
+    const solar = makeSolar(-20)
+    const lunar = makeLunar(45, 1.0, true)
+    const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
+
+    expect(result.ambientIntensity).toBeGreaterThanOrEqual(0.08)
+    expect(result.ambientIntensity).toBeLessThanOrEqual(0.40)
+  })
+
   it('snowy天気: ambientIntensityがsunnyより低い', () => {
     const solar = makeSolar(45)
     const lunar = makeLunar(-10, 0.0, false)

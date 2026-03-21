@@ -122,12 +122,14 @@ GPUで描画される視覚エフェクト。DOMに表れない。
 | 10 | シーンプリセット3Dオブジェクト | meadow（木・草・岩・花）/seaside（ヤシの木・波打ち際・泡・貝殻）/park（歩道・街灯・植え込み・花壇・ベンチ・広葉樹）の描画結果 |
 | 11 | 動的ライティング | 4天気×4時間帯の20パターン（ambient/hemisphere/sun）+seasideプリセットの空色明化・輝度ブースト+降水量連動地面色（乾燥/湿潤ブレンド） |
 | 12 | キャラクターアニメーション描画 | AnimationMixer+crossFadeToによるメッシュ変形 |
+| 13a | 3D月オブジェクト描画 | SphereGeometry月球体+BackSideグロー+Canvasテクスチャ（満ち欠けterminator曲線）。moonIsVisible/moonOpacity/moonPositionに基づく表示・位置・不透明度変化がWebGL内で完結 |
+| 13b | 月光照明ブースト | nightExposure(0.08-0.45)/nightAmbientIntensity(0.08-0.40)の月光brightness連動値、DirectionalLight月光intensity係数0.8、地面色の月光ブレンドがWebGLに適用。ユニットテスト（CelestialTheme.test.ts）でカバー済み |
 
 #### B-3. OS依存
 
 | # | 項目 | 内容 |
 |---|------|------|
-| 13 | システム通知の実表示 | Electron Notification APIがOS通知を発行。表示確認はOS依存 |
+| 14 | システム通知の実表示 | Electron Notification APIがOS通知を発行。表示確認はOS依存 |
 
 ## 補足: デバッグインジケーターで検証可能な範囲
 

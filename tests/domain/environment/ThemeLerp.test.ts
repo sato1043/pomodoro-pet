@@ -26,6 +26,11 @@ const THEME_A: EnvironmentThemeParams = {
   sunPosition: { x: 0, y: 0, z: 0 },
   groundColor: 0x000000,
   exposure: 1.0,
+  moonPosition: { x: 0, y: -1, z: 0 },
+  moonPhaseDeg: 0,
+  moonIllumination: 0,
+  moonIsVisible: false,
+  moonOpacity: 0,
 }
 
 const THEME_B: EnvironmentThemeParams = {
@@ -43,6 +48,11 @@ const THEME_B: EnvironmentThemeParams = {
   sunPosition: { x: 10, y: 20, z: 30 },
   groundColor: 0xffffff,
   exposure: 2.0,
+  moonPosition: { x: 50, y: 30, z: -20 },
+  moonPhaseDeg: 180,
+  moonIllumination: 1.0,
+  moonIsVisible: true,
+  moonOpacity: 1.0,
 }
 
 describe('ThemeLerp', () => {
@@ -134,6 +144,21 @@ describe('ThemeLerp', () => {
       expect(result.fogFar).toBe(35)
       expect(result.ambientIntensity).toBe(0.75)
       expect(result.sunPosition.x).toBe(5)
+    })
+
+    it('月フィールドが補間される', () => {
+      const result = lerpThemeParams(THEME_A, THEME_B, 0.5)
+      expect(result.moonPosition.x).toBe(25)
+      expect(result.moonPhaseDeg).toBe(90)
+      expect(result.moonIllumination).toBe(0.5)
+      expect(result.moonOpacity).toBe(0.5)
+    })
+
+    it('moonIsVisibleはt<0.5でfrom、t>=0.5でtoの値になる', () => {
+      const r1 = lerpThemeParams(THEME_A, THEME_B, 0.3)
+      expect(r1.moonIsVisible).toBe(false)
+      const r2 = lerpThemeParams(THEME_A, THEME_B, 0.7)
+      expect(r2.moonIsVisible).toBe(true)
     })
   })
 

@@ -56,6 +56,7 @@ import type { LicenseMode, ReleaseChannel } from './application/license/LicenseS
 import { createRainEffect } from './infrastructure/three/RainEffect'
 import { createSnowEffect } from './infrastructure/three/SnowEffect'
 import { createCloudEffect } from './infrastructure/three/CloudEffect'
+import { createMoonEffect } from './infrastructure/three/MoonEffect'
 import { createThemeTransitionService } from './application/environment/ThemeTransitionService'
 import { THEME_TRANSITION_DURATION_AUTO_MS, THEME_TRANSITION_DURATION_MANUAL_MS } from './domain/environment/value-objects/ThemeLerp'
 import { createEnvironmentSimulationService, type EnvironmentSimulationService, type WeatherDecisionChangedEvent } from './application/environment/EnvironmentSimulationService'
@@ -112,6 +113,7 @@ interface SceneLights {
   ambient: THREE.AmbientLight
   hemisphere: THREE.HemisphereLight
   sun: THREE.DirectionalLight
+  fill: THREE.DirectionalLight
 }
 
 function addLights(scene: THREE.Scene): SceneLights {
@@ -134,7 +136,15 @@ function addLights(scene: THREE.Scene): SceneLights {
   sun.shadow.camera.bottom = -15
   scene.add(sun)
 
-  return { ambient, hemisphere, sun }
+  // フィルライト: キャラクターの顔を最低限照らす補助光源
+  // 主照明が弱い夜間でもキャラクターが真っ黒にならないよう、カメラ方向から常時弱く照射
+  // intensityはapplyThemeToSceneでexposureの逆数で動的調整（実効照度を一定に保つ）
+  const fill = new THREE.DirectionalLight(0xb0c4de, 0.15)
+  fill.position.set(0, 2, 5)
+  fill.castShadow = false
+  scene.add(fill)
+
+  return { ambient, hemisphere, sun, fill }
 }
 
 function setupResizeHandler(
@@ -176,10 +186,11 @@ async function main(): Promise<void> {
     audio.switchPreset(soundPreset)
   }
 
-  // 雨エフェクト
+  // 天気・天体エフェクト
   const rainEffect = createRainEffect(scene)
   const snowEffect = createSnowEffect(scene)
   const cloudEffect = createCloudEffect(scene)
+  const moonEffect = createMoonEffect(scene)
 
   // テーマパラメータをシーンに反映する関数
   function applyThemeToScene(params: EnvironmentThemeParams): void {
@@ -192,7 +203,13 @@ async function main(): Promise<void> {
     lights.sun.intensity = params.sunIntensity
     lights.sun.position.set(params.sunPosition.x, params.sunPosition.y, params.sunPosition.z)
     renderer.toneMappingExposure = params.exposure
+    // フィルライト: exposureが低いほどfillTargetを引き上げる非線形補正
+    // 日中(exposure≈1.2)は控えめ、夜間(exposure≈0.08)は強め
+    const dayNightT = Math.max(0, Math.min(1, 1 - params.exposure / 1.2))
+    const fillTarget = 0.01 + (0.60 - 0.01) * dayNightT
+    lights.fill.intensity = Math.min(fillTarget / Math.max(params.exposure, 0.05), 5.0)
     scrollRenderer.applyTheme(params)
+    moonEffect.update(params)
   }
 
   // テーマ遷移サービス

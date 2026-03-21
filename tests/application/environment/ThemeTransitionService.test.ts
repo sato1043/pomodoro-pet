@@ -3,6 +3,14 @@ import { createThemeTransitionService } from '../../../src/application/environme
 import type { EnvironmentThemeParams } from '../../../src/domain/environment/value-objects/EnvironmentTheme'
 import { themeParamsEqual } from '../../../src/domain/environment/value-objects/ThemeLerp'
 
+const MOON_DEFAULTS = {
+  moonPosition: { x: 0, y: -1, z: 0 },
+  moonPhaseDeg: 0,
+  moonIllumination: 0,
+  moonIsVisible: false,
+  moonOpacity: 0,
+} as const
+
 const THEME_A: EnvironmentThemeParams = {
   skyColor: 0x000000,
   fogColor: 0x000000,
@@ -18,6 +26,7 @@ const THEME_A: EnvironmentThemeParams = {
   sunPosition: { x: 0, y: 0, z: 0 },
   groundColor: 0x000000,
   exposure: 1.0,
+  ...MOON_DEFAULTS,
 }
 
 const THEME_B: EnvironmentThemeParams = {
@@ -35,6 +44,7 @@ const THEME_B: EnvironmentThemeParams = {
   sunPosition: { x: 10, y: 20, z: 30 },
   groundColor: 0xffffff,
   exposure: 2.0,
+  ...MOON_DEFAULTS,
 }
 
 const THEME_C: EnvironmentThemeParams = {
@@ -52,6 +62,7 @@ const THEME_C: EnvironmentThemeParams = {
   sunPosition: { x: 5, y: 5, z: 5 },
   groundColor: 0x880000,
   exposure: 1.5,
+  ...MOON_DEFAULTS,
 }
 
 describe('ThemeTransitionService', () => {

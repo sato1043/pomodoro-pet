@@ -135,7 +135,8 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/Kou.ts` — KouDefinition型、KOU_DEFINITIONS定数（本朝七十二候全72候、和名/読み/英名/説明）、resolveKou(eclipticLon)、kouProgress(eclipticLon)
 - `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()、classifyKoppen()（ケッペン気候区分算出、30分類）
 - `environment/value-objects/WeatherDecision.ts` — WeatherDecision型、mulberry32（決定論的PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
-- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成）、computeLightDirection()（太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成、月データ5フィールド計算含む）、computeLightDirection()（太陽/月クロスフェード、月光intensity係数0.8）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/MoonPhase.ts` — generateMoonPhasePixels(phaseDeg, size, illumination) → Uint8ClampedArray。Three.js非依存の月位相テクスチャ生成純粋関数。terminator曲線算出、リムライト、マリア模様、ソフトエッジ
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
@@ -247,6 +248,7 @@ EventBus（UI/インフラ通知）:
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（最大1200本、デフォルト650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。setDrawRange()で動的粒子数制御。WeatherEffectインターフェース定義（setParticleCount含む）
 - `three/SnowEffect.ts` — 雪エフェクト。Points（最大900個、デフォルト750個）sin/cosゆらゆら揺れ。setDrawRange()で動的粒子数制御
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
+- `three/MoonEffect.ts` — 3D月オブジェクト。SphereGeometry(1.0, 32, 32)スケール3.0 + BackSide半透明グローメッシュ。MoonPhase.tsのgenerateMoonPhasePixelsでCanvasテクスチャを動的更新（位相・illumination変化時のみ）。fog無効、距離50配置。applyThemeToScene経由でテーマパラメータの月データ5フィールドから更新
 - `astronomy/AstronomyAdapter.ts` — astronomy-engineラッパー。AstronomyPort実装。Observer/SunPosition/Horizon/MoonPhase/Illumination使用。getSolarDeclinationAndGHA()ヘルパー（terminator UI用）
 - `climate/ClimateGridAdapter.ts` — ClimateGridPort実装。`createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルJSONを注入。36lat×72lon 5度解像度、双線形補間、海洋スナッピング
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
@@ -256,7 +258,7 @@ EventBus（UI/インフラ通知）:
 **ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）。`SceneLights`にfill（フィルライト: DirectionalLight 0xb0c4de、castShadow=false、位置(0,2,5)）を追加。`applyThemeToScene()`内でexposure逆数ベースの非線形補正によりfill intensityを動的調整（日中≈0.01、夜間≈0.56）
 - `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
@@ -290,7 +292,8 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/ClimateData.test.ts` — CITY_PRESETS・interpolateToKouClimate・estimateTemperature・temperatureToGroundColor（15テスト）
 - `domain/environment/Timezone.test.ts` — resolveTimezone・getLocationTime・formatTimezoneLabel・DST対応・境界補正（16テスト）
 - `domain/environment/WeatherDecision.test.ts` — mulberry32決定論性・decideWeather確率分布・computeParticleCount範囲・cloudDensityToLevel（18テスト）
-- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial・computeLightDirection（19テスト）
+- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial（月光ブースト・moonPosition・moonOpacity含む）・computeLightDirection（26テスト）
+- `domain/environment/MoonPhase.test.ts` — generateMoonPhasePixels（新月暗部・満月明部・上弦/下弦左右・illumination明度・角透明・サイズ変更、8テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `domain/shared/ExportData.test.ts` — エクスポートデータバリデーション（正常系、不正形式、バージョン互換性、フィールド欠損、24テスト）
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル

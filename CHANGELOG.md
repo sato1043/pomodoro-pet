@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-21
+
+### Added
+- 3D月オブジェクト — 天文計算による月位置に球体メッシュを配置。Canvasテクスチャで満ち欠け（terminator曲線）を描画、BackSide半透明球でグロー演出。水平線フェード（altitude -2°〜+5°）と天気による不透明度減衰
+- 月光照明ブースト — 満月の夜間が視覚的に明るくなるよう照明パラメータを強化（nightExposure上限0.30→0.45、nightAmbientIntensity上限0.25→0.40、DirectionalLight月光intensity係数0.4→0.8、地面色の月光色ブレンド）
+- MoonPhase純粋関数 — 月位相テクスチャ生成（generateMoonPhasePixels）。Three.js非依存のドメイン層関数
+- EnvironmentThemeParamsに月データ5フィールド追加（moonPosition/moonPhaseDeg/moonIllumination/moonIsVisible/moonOpacity）。既存のテーマ遷移パイプライン（30秒lerp）で滑らか補間
+- フィルライト — カメラ方向からの補助DirectionalLight（0xb0c4de）。exposureの逆数で非線形にintensityを調整し、日中は控えめ（実効≈0.01）・夜間は強め（実効≈0.56）でキャラクターの顔の視認性を維持
+
 ## [0.11.2] - 2026-03-21
 
 ### Changed

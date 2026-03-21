@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.11.2**（= package.json）
+**バージョン: 0.12.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -272,6 +272,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.12.0 | 機能追加 | 3D月オブジェクト（満ち欠けCanvasテクスチャ+グロー+水平線フェード+天気減衰）+ 月光照明ブースト（exposure/ambient/DirectionalLight/地面月光ブレンド強化）。EnvironmentThemeParamsに月データ5フィールド追加 |
 | 0.11.2 | リファクタリング | 環境設定（天気・地域・候）を独立AppScene `environment` に分離（SceneEnvironment + EnvironmentCoordinator） |
 | 0.11.1 | バグ修正 | butler CLIインストール方法をsetup-butler Actionに変更（broth.itch.ovh DNS解決失敗対策） |
 | 0.11.0 | インフラ | itch.io butler CLI自動アップロード統合、alpha/betaリリースチャネル開発インフラ整備、REGISTRATION_GUIDE.txt購入URL本番差し替え |

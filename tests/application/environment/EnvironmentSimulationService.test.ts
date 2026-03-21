@@ -106,6 +106,16 @@ describe('EnvironmentSimulationService', () => {
     expect(themeTransition.applyImmediate).toHaveBeenCalled()
   })
 
+  it('start()で生成されるテーマに月データフィールドが含まれる', () => {
+    service.start(DEFAULT_CLIMATE, 'meadow')
+    const themeParams = vi.mocked(themeTransition.applyImmediate).mock.calls[0][0]
+    expect(themeParams.moonPosition).toBeDefined()
+    expect(typeof themeParams.moonPhaseDeg).toBe('number')
+    expect(typeof themeParams.moonIllumination).toBe('number')
+    expect(typeof themeParams.moonIsVisible).toBe('boolean')
+    expect(typeof themeParams.moonOpacity).toBe('number')
+  })
+
   it('start()で気温が推定される', () => {
     service.start(DEFAULT_CLIMATE, 'meadow')
     expect(service.currentEstimatedTempC).not.toBeNull()
