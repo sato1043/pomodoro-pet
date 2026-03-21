@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.13.3**（= package.json）
+**バージョン: 0.13.4**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -272,6 +272,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.13.4 | UI改善 | About画面にCheck for Updateボタン追加、自動アップデートチェック3秒+1時間間隔、dev環境のChecking...固まり修正 |
 | 0.13.3 | バグ修正 | FeatureLockedOverlay・LicenseToastのストアURLをVITE_STORE_URL環境変数化 |
 | 0.13.2 | バグ修正 | アップデートエラー表示追加、DEBUG_LICENSE時のアップデートチェック修正、VITE_DEBUG_AUTO_UPDATE環境変数追加 |
 | 0.13.1 | インフラ | GitHub Actions checkout v4→v6、setup-node v4→v6（Node.js 24対応） |

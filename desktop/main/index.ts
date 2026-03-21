@@ -53,7 +53,14 @@ function createWindow(): void {
   // autoUpdater初期化
   initAutoUpdater(mainWindow)
 
-  // 起動後10秒でライセンスチェック + アップデートチェック
+  // アップデートチェック実行（ライセンスモードに応じてガード）
+  function runUpdateCheck(): void {
+    const state = getLicenseState()
+    if (state.mode === 'expired' || state.mode === 'restricted') return
+    autoUpdater.checkForUpdates().catch(() => {})
+  }
+
+  // 起動後3秒でライセンスチェック + アップデートチェック
   // HEARTBEAT_URL未設定 → 初期状態（trial）を維持
   // __DEBUG_LICENSE__設定時 → 固定値をpushしてresolveLicenseをスキップ
   setTimeout(async () => {
@@ -64,7 +71,7 @@ function createWindow(): void {
       }
       // VITE_DEBUG_AUTO_UPDATE設定時はデバッグビルドでもアップデートチェックを実行
       if (__DEBUG_AUTO_UPDATE__ === 'true') {
-        autoUpdater.checkForUpdates().catch(() => {})
+        runUpdateCheck()
       }
       return
     }
@@ -76,9 +83,16 @@ function createWindow(): void {
     }
     // アップデートチェック（registered/trial のみ）
     if (state.mode === 'registered' || state.mode === 'trial') {
-      autoUpdater.checkForUpdates().catch(() => {})
+      runUpdateCheck()
     }
-  }, 10000)
+  }, 3000)
+
+  // 1時間ごとに定期アップデートチェック
+  setInterval(() => {
+    if (!mainWindow || mainWindow.isDestroyed()) return
+    if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return
+    runUpdateCheck()
+  }, 60 * 60 * 1000)
 }
 
 app.whenReady().then(() => {

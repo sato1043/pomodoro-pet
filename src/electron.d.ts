@@ -42,7 +42,7 @@ interface ElectronAPI {
   checkLicense(): Promise<LicenseState>
 
   // アップデート関連
-  checkForUpdate(): Promise<void>
+  checkForUpdate(): Promise<string | void>
   downloadUpdate(): Promise<void>
   installUpdate(): Promise<void>
 

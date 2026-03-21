@@ -205,7 +205,7 @@ VITE_DEBUG_AUTO_UPDATE=true
 
 ### Vite環境変数の仕組み
 
-`VITE_HEARTBEAT_URL`/`VITE_STORE_URL`は`electron.vite.config.ts`の`loadEnv()`で読み込まれ、メインプロセスの`define`で`__HEARTBEAT_URL__`/`__STORE_URL__`としてビルド時に埋め込まれる。ライセンス状態の初期値は`trial`。`__HEARTBEAT_URL__`が設定されている場合のみ起動10秒後にハートビートを実行し、結果に基づき状態遷移する。未設定の場合は`trial`を維持する。この制御はdev/prodに関わらず`__HEARTBEAT_URL__`の有無だけで決まる。
+`VITE_HEARTBEAT_URL`/`VITE_STORE_URL`は`electron.vite.config.ts`の`loadEnv()`で読み込まれ、メインプロセスの`define`で`__HEARTBEAT_URL__`/`__STORE_URL__`としてビルド時に埋め込まれる。ライセンス状態の初期値は`trial`。`__HEARTBEAT_URL__`が設定されている場合のみ起動3秒後にハートビートを実行し（以降1時間間隔で定期チェック）、結果に基づき状態遷移する。未設定の場合は`trial`を維持する。この制御はdev/prodに関わらず`__HEARTBEAT_URL__`の有無だけで決まる。
 
 `VITE_DEBUG_LICENSE`は`electron.vite.config.ts`で`__DEBUG_LICENSE__`としてメインプロセスに埋め込まれ、レンダラーでは`import.meta.env.VITE_DEBUG_LICENSE`として参照される。設定するとハートビートをスキップし、指定モードの`LicenseState`をレンダラーにpushする。`VITE_HEARTBEAT_URL`との併用時は`VITE_DEBUG_LICENSE`が優先される。
 
