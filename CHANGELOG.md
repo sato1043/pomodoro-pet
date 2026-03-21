@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-03-21
+
+### Changed
+- GitHub Actions: actions/checkout v4→v6、actions/setup-node v4→v6（Node.js 24ランタイム対応）
+
 ## [0.13.0] - 2026-03-21
 
 ### Added
