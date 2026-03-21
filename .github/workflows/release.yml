@@ -79,4 +79,4 @@ jobs:
         shell: bash
         run: |
           VERSION="${GITHUB_REF#refs/tags/v}"
-          butler push "release/Pomodoro Pet Setup ${VERSION}.exe" updaterllc/pomodoropet:windows --userversion "$VERSION"
+          butler push "release/Pomodoro-Pet-Setup-${VERSION}.exe" updaterllc/pomodoropet:windows --userversion "$VERSION"
