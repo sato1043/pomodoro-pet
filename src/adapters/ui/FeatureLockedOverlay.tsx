@@ -8,7 +8,7 @@ interface FeatureLockedOverlayProps {
 
 export function FeatureLockedOverlay({ onDismiss }: FeatureLockedOverlayProps): JSX.Element {
   const handleOpenStore = (): void => {
-    window.electronAPI?.openExternal?.('https://www.updater.cc')
+    window.electronAPI?.openExternal?.(import.meta.env.VITE_STORE_URL || 'https://www.updater.cc')
   }
 
   return createPortal(

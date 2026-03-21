@@ -22,7 +22,7 @@ export function UpdateNotification({ pomodoroActive }: UpdateNotificationProps):
   if (!status) return null
   if (dismissed) return null
   if (pomodoroActive) return null
-  if (status.state !== 'available' && status.state !== 'downloading' && status.state !== 'downloaded') return null
+  if (status.state !== 'available' && status.state !== 'downloading' && status.state !== 'downloaded' && status.state !== 'error') return null
 
   const handleDownload = (): void => {
     window.electronAPI?.downloadUpdate?.()
@@ -61,6 +61,18 @@ export function UpdateNotification({ pomodoroActive }: UpdateNotificationProps):
       )}
       {status.state === 'downloading' && (
         <span>Downloading... {Math.round(status.percent ?? 0)}%</span>
+      )}
+      {status.state === 'error' && (
+        <>
+          <span>Update failed: {status.message ?? 'Unknown error'}</span>
+          <button
+            className={styles.laterButton}
+            data-testid="update-error-dismiss-btn"
+            onClick={handleLater}
+          >
+            Dismiss
+          </button>
+        </>
       )}
       {status.state === 'downloaded' && (
         <>
