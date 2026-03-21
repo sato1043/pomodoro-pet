@@ -1,6 +1,6 @@
 {
   "name": "pomodoro-pet",
-  "version": "0.13.4",
+  "version": "0.13.5",
   "description": "3Dバーチャルペット型ポモドーロタイマー",
   "license": "SEE LICENSE IN LICENSE",
   "author": "sato1043@updater.cc",
@@ -60,7 +60,8 @@
     "nsis": {
       "oneClick": true,
       "license": "licenses/EULA.txt"
-    }
+    },
+    "artifactName": "Pomodoro-Pet-Setup-${version}.${ext}"
   },
   "dependencies": {
     "@types/tz-lookup": "^6.1.2",

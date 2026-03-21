@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.5] - 2026-03-21
+
+### Fixed
+- 自動アップデートのダウンロードが失敗する問題を修正 — インストーラーファイル名にスペースが含まれGitHub Releasesでドットに変換されるため、latest.ymlのURL（ハイフン区切り）と不一致だった。artifactNameを`Pomodoro-Pet-Setup-{version}.exe`に固定
+
 ## [0.13.4] - 2026-03-21
 
 ### Added
