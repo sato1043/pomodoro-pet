@@ -31,7 +31,7 @@ export function LicenseToast({ licenseMode, serverMessage }: LicenseToastProps):
   if (!showOfflineNotice && !showExpiredNotice && !showRestrictedNotice) return null
 
   const handleOpenStore = (): void => {
-    window.electronAPI?.openExternal?.('https://www.updater.cc')
+    window.electronAPI?.openExternal?.(import.meta.env.VITE_STORE_URL || 'https://www.updater.cc')
   }
 
   let message = ''

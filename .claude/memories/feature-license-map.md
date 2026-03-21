@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.13.2**（= package.json）
+**バージョン: 0.13.3**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -272,6 +272,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.13.3 | バグ修正 | FeatureLockedOverlay・LicenseToastのストアURLをVITE_STORE_URL環境変数化 |
 | 0.13.2 | バグ修正 | アップデートエラー表示追加、DEBUG_LICENSE時のアップデートチェック修正、VITE_DEBUG_AUTO_UPDATE環境変数追加 |
 | 0.13.1 | インフラ | GitHub Actions checkout v4→v6、setup-node v4→v6（Node.js 24対応） |
 | 0.13.0 | 機能追加 | 月高度UI（Moon行: Horizon/Low/Mid/High/Auto）、月齢・左右位置の高度連動、地球照効果、月表示位置の画面内リマップ、月配置距離300拡大 |

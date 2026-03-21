@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.3] - 2026-03-21
+
+### Fixed
+- FeatureLockedOverlay・LicenseToastのストアURLをハードコードからVITE_STORE_URL環境変数に変更（itch.ioリンク先が正しく設定される）
+
 ## [0.13.2] - 2026-03-21
 
 ### Fixed
