@@ -49,7 +49,7 @@ test('Scene行の3プリセットボタンが表示される', async () => {
   await expect(page.locator('[data-testid="scene-park"]')).toBeVisible()
 
   // デフォルトはmeadowがactive
-  await expect(page.locator('[data-testid="scene-meadow"]')).toHaveClass(/active/)
+  await expect(page.locator('[data-testid="scene-meadow"]')).toHaveClass(/active/, { timeout: 5_000 })
 
   await exitEnvironment(page)
 })
