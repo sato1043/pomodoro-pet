@@ -517,6 +517,11 @@ function ImportIcon(): JSX.Element {
 function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse }: FreeSettingsEditorProps): JSX.Element {
   const [exportImportStatus, setExportImportStatus] = useState<string | null>(null)
   const [showLocked, setShowLocked] = useState(false)
+  const [appVersion, setAppVersion] = useState<string | null>(null)
+
+  useEffect(() => {
+    window.electronAPI?.loadAbout?.().then(d => setAppVersion(d.version)).catch(() => {})
+  }, [])
 
   const handleExport = async (): Promise<void> => {
     if (!canUse('dataExportImport')) { setShowLocked(true); return }
@@ -607,6 +612,12 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         <button className={aboutStyles.aboutLinkButton} onClick={onPrivacyClick} data-testid="privacy-link">Privacy</button>
         <button className={aboutStyles.aboutLinkButton} onClick={onLicensesClick} data-testid="licenses-link">Third-party</button>
       </div>
+      {appVersion && (
+        <div style={{ display: 'flex', justifyContent: 'center', gap: 12, fontSize: 11, opacity: 0.4, marginTop: 8 }} data-testid="app-version">
+          <span>v{appVersion}</span>
+          <span>&copy; 2026 sato1043</span>
+        </div>
+      )}
       {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
     </>
   )
