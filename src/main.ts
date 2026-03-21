@@ -40,6 +40,7 @@ import { bridgeTimerToStatistics } from './application/statistics/StatisticsBrid
 import { createPomodoroOrchestrator, type PomodoroOrchestrator } from './application/timer/PomodoroOrchestrator'
 import { createFureaiCoordinator, type FureaiCoordinator } from './application/fureai/FureaiCoordinator'
 import { createGalleryCoordinator, type GalleryCoordinator } from './application/gallery/GalleryCoordinator'
+import { createEnvironmentCoordinator, type EnvironmentCoordinator } from './application/environment/EnvironmentCoordinator'
 import { createCabbageObject } from './infrastructure/three/CabbageObject'
 import { createAppleObject } from './infrastructure/three/AppleObject'
 import { createFeedingInteractionAdapter, DEFAULT_CAMERA, FUREAI_CAMERA, type FeedingInteractionAdapter } from './adapters/three/FeedingInteractionAdapter'
@@ -428,6 +429,9 @@ async function main(): Promise<void> {
   let galleryCoordinator: GalleryCoordinator = createGalleryCoordinator({
     bus, sceneManager, onBehaviorChange: switchPreset, charHandle: galleryCharHandle
   })
+  let environmentCoordinator: EnvironmentCoordinator = createEnvironmentCoordinator({
+    bus, sceneManager
+  })
 
   // React UIマウント
   const appRoot: Root = createRoot(document.getElementById('app-root')!)
@@ -436,7 +440,7 @@ async function main(): Promise<void> {
       bus, session, config: settingsService.currentConfig, orchestrator,
       settingsService, audio, sfx: sfxPlayer, debugTimer: isDebugTimer,
       character, behaviorSM, charHandle, statisticsService, fureaiCoordinator,
-      galleryCoordinator, emotionHistoryService, envSimService,
+      galleryCoordinator, environmentCoordinator, emotionHistoryService, envSimService,
       climateGridPort: climateGridAdapter
     }
     appRoot.render(createElement(App, { deps }))
@@ -454,6 +458,9 @@ async function main(): Promise<void> {
     })
     galleryCoordinator = createGalleryCoordinator({
       bus, sceneManager, onBehaviorChange: switchPreset, charHandle: galleryCharHandle
+    })
+    environmentCoordinator = createEnvironmentCoordinator({
+      bus, sceneManager
     })
     renderReactUI()
   })

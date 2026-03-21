@@ -60,24 +60,25 @@ test('統計パネル時にstats-closeが表示され他ボタンが非表示', 
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
-test('天気パネル時にweather-closeが表示され他ボタンが非表示', async () => {
+test('environmentシーン遷移時にfreeモードのUIが非表示になり復帰する', async () => {
   const { page } = app
 
+  // environmentシーンに遷移
   await page.locator('[data-testid="weather-toggle"]').click()
-  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible({ timeout: 5_000 })
 
-  // weather-closeが表示
-  await expect(page.locator('[data-testid="weather-close"]')).toBeVisible()
+  // environment-exitが表示
+  await expect(page.locator('[data-testid="environment-exit"]')).toBeVisible()
 
-  // 他ボタンが非表示
+  // freeモードのUIが非表示
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).not.toBeVisible()
   await expect(page.locator('[data-testid="stats-toggle"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="settings-toggle"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="fureai-entry"]')).not.toBeVisible()
 
-  // 後片付け: 閉じる
-  await page.locator('[data-testid="weather-close"]').click()
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
+  // 後片付け: freeに戻る
+  await page.locator('[data-testid="environment-exit"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible({ timeout: 5_000 })
 })
 
 test('各パネルを順番に開閉すると全ボタンが毎回復帰する', async () => {
@@ -103,9 +104,10 @@ test('各パネルを順番に開閉すると全ボタンが毎回復帰する',
   await page.locator('[data-testid="stats-close"]').click()
   await allButtons()
 
-  // 天気パネル
+  // environmentシーン（blackout遷移あり）
   await page.locator('[data-testid="weather-toggle"]').click()
-  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
-  await page.locator('[data-testid="weather-close"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible({ timeout: 5_000 })
+  await page.locator('[data-testid="environment-exit"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible({ timeout: 5_000 })
   await allButtons()
 })

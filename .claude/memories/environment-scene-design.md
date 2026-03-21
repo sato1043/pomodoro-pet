@@ -34,6 +34,7 @@
 | `src/application/settings/AppSettingsService.ts` | 天気設定の読み書き・永続化・WeatherConfigChangedイベント発行 |
 | `src/application/settings/SettingsEvents.ts` | WeatherConfigChanged等の設定変更イベント定義 |
 | `src/application/environment/ThemeTransitionService.ts` | テーマ遷移の状態管理・tick駆動の補間実行 |
+| `src/application/environment/EnvironmentCoordinator.ts` | 環境設定シーンのcoordinator。enter/exit + WeatherPreviewOpenイベント発行 |
 
 ### インフラ層
 
@@ -54,8 +55,8 @@
 | ファイル | 役割 |
 |---|---|
 | `src/adapters/ui/WeatherPanel.tsx` | 天気設定UI（Weather/Cloud/Time/Scene選択） |
-| `src/adapters/ui/WeatherButton.tsx` | WeatherPanel表示トグルボタン |
-| `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合 |
+| `src/adapters/ui/WeatherButton.tsx` | environmentシーン遷移ボタン（freeモードに配置） |
+| `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合（WeatherButtonクリックでenvironmentシーンに遷移） |
 | `src/adapters/ui/EnvironmentContext.tsx` | 環境パラメータのReact Context一元管理（climate/currentKou/solarAltitude/isDaytime/timezone/kouDateRanges）。KouDateRangesComputedEvent購読でkouDateRangesを更新 |
 | `src/adapters/ui/hooks/useResolvedTheme.ts` | ThemePreference→ResolvedTheme解決（system/light/dark/auto） |
 
@@ -100,9 +101,10 @@
 
 | ファイル | 役割 |
 |---|---|
+| `src/adapters/ui/SceneEnvironment.tsx` | environmentシーンコンテナ。WeatherPanel+KouSelector+WorldMapModal+EnvironmentExitButtonを統合。内部状態`view: 'weather' | 'worldMap'`で表示切替 |
+| `src/adapters/ui/EnvironmentExitButton.tsx` | environmentモードからfreeモードへの戻るボタン |
 | `src/adapters/ui/WorldMapModal.tsx` | 世界地図SVGモーダル。terminator描画・都市ピン・クリック選択 |
-| `src/adapters/ui/WorldMapButton.tsx` | フリーモードの地球アイコンボタン |
-| `src/adapters/ui/KouSelector.tsx` | 七十二候セレクタ。カレンダー日付範囲形式ドロップダウン（`# 1 |  1/ 5 -  1/ 9`）+Autoボタン。kouDateRangesから日付範囲を表示 |
+| `src/adapters/ui/KouSelector.tsx` | 七十二候セレクタ。SceneEnvironmentのweatherビュー内で表示。カレンダー日付範囲形式ドロップダウン+Autoボタン |
 | `src/adapters/ui/OverlayTitle.tsx` | フリーモード日付ヘッダ。currentKou propで節気名+候位相を日本語表示（例: `小寒 初候　3/10 Tue`） |
 
 **アセット・スクリプト**:
@@ -1455,7 +1457,7 @@ function decideWeather(
 ```
 autoWeather=false: WeatherPanelで手動選択。天文計算ベースのテーマ生成は継続（手動天気をテーマ計算に渡す）
 autoWeather=true:  decideWeather()で天気を自動決定。WeatherPanelのWeather/Cloud/Time行はグレーアウト
-地点設定: autoWeatherの状態に関わらず常に利用可能（LocationButton・WorldMapModal）
+地点設定: autoWeatherの状態に関わらず常に利用可能（environmentシーン内WorldMapModal）
 天文計算: autoWeatherの状態に関わらずenvSimServiceが常に稼働し天体位置・候・テーマを生成
 ```
 
@@ -1686,11 +1688,11 @@ autoWeather=false 時:
 
 ### 5.5i: 世界地図UI
 
-フリーモードに地球アイコンボタンを設置し、押下で世界地図モーダルを表示する。地図上でプリセット都市を選択するか、任意の地点をクリックして緯度経度を設定する。
+environmentシーンのWeatherPanel Scene行のLocationボタンから世界地図モーダルを表示する。地図上でプリセット都市を選択するか、任意の地点をクリックして緯度経度を設定する。
 
-#### ボタン配置
+#### アクセス経路
 
-フリーモード画面の左下エリア（WeatherButtonの隣）に地球アイコンボタンを配置。
+environmentシーン内のWeatherPanel Scene行右端のLocationボタン（地球アイコン）をクリック→worldMapビューに遷移。
 
 #### 世界地図の実装
 
@@ -2495,7 +2497,7 @@ autoWeather=true時の表示挙動:
 - Autoボタンは天気アイコン（Sunny/Cloudy/Rainy/Snowy）と排他選択。Autoクリック→autoWeather=true、Weather/Time行のボタンクリック→autoWeather=false
 - autoWeather=true時はAutoのみがactive。Weather/Cloud/Time行のボタンはactive表示されない
 - Scene行は常に操作可能（autoモードでもscenePresetは手動選択、autoWeatherに影響しない）
-- Locationボタン（GlobeIcon）はフリーモードに常時配置、かつWeatherPanel Scene行の右端にも配置（`marginLeft: 'auto'`で右寄せ）。WeatherPanel内のLocationボタンクリックでWeatherPanelを閉じてWorldMapModalを開き、WorldMapModal閉じるとWeatherPanelに自動復帰（`openedFromWeather`フラグで制御）
+- Locationボタン（GlobeIcon）はWeatherPanel Scene行の右端に配置（`marginLeft: 'auto'`で右寄せ）。クリックでenvironmentシーン内のworldMapビューに遷移し、WorldMapのcloseでweatherビューに復帰
 
 ---
 

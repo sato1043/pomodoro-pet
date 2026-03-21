@@ -5,7 +5,7 @@
 4層の階層的状態マシンで構成される。上位レイヤーが下位レイヤーの文脈を決定する。
 
 ```
-Layer 1: AppScene          — free | pomodoro | settings
+Layer 1: AppScene          — free | pomodoro | settings | fureai | gallery | environment
 Layer 2: PomodoroState     — work | break | long-break | congrats （+ running）
 Layer 3: CharacterBehavior — autonomous | march-cycle | rest-cycle | joyful-rest | celebrate
 Layer 4: CharacterState    — idle | wander | march | sit | sleep | happy | ...

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppDeps } from './AppContext'
 import { resolveTimeOfDay, cloudPresetLevel } from '../../domain/environment/value-objects/WeatherConfig'
@@ -215,15 +215,6 @@ export function WeatherPanel({ onLocationClick }: WeatherPanelProps): JSX.Elemen
       return next
     })
   }
-
-  // マウント時: カメラ後退、アンマウント時: カメラ復帰
-  useEffect(() => {
-    bus.publish('WeatherPreviewOpen', { open: true })
-    return () => {
-      bus.publish('WeatherPreviewOpen', { open: false })
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
 
   function btnClass(active: boolean, disabled?: boolean): string {
     let cls = styles.iconBtn

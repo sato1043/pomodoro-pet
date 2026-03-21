@@ -8,6 +8,8 @@ export interface AppSceneManager {
   exitFureai(): AppSceneEvent[]
   enterGallery(): AppSceneEvent[]
   exitGallery(): AppSceneEvent[]
+  enterEnvironment(): AppSceneEvent[]
+  exitEnvironment(): AppSceneEvent[]
 }
 
 export function createAppSceneManager(): AppSceneManager {
@@ -52,6 +54,18 @@ export function createAppSceneManager(): AppSceneManager {
 
     exitGallery(): AppSceneEvent[] {
       if (currentScene !== 'gallery') return []
+      currentScene = 'free'
+      return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
+    },
+
+    enterEnvironment(): AppSceneEvent[] {
+      if (currentScene !== 'free') return []
+      currentScene = 'environment'
+      return [{ type: 'AppSceneChanged', scene: 'environment', timestamp: now() }]
+    },
+
+    exitEnvironment(): AppSceneEvent[] {
+      if (currentScene !== 'environment') return []
       currentScene = 'free'
       return [{ type: 'AppSceneChanged', scene: 'free', timestamp: now() }]
     }

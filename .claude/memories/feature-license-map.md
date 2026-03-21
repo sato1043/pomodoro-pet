@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.11.1**（= package.json）
+**バージョン: 0.11.2**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -181,10 +181,10 @@
 | 66 | 天気エフェクト描画 | RainEffect.ts, SnowEffect.ts, CloudEffect.ts | 自動 | （制限不要） | 選択された天気の描画（設定UIを制限すれば十分）。opacityフェード（fadeIn/fadeOut）でテーマ遷移と同期。雲は密度変更時に退場バッチクロスフェード |
 | 67 | ライティング | main.ts, EnvironmentTheme.ts | 自動 | （制限不要） | 時間帯×天気のルックアップテーブル適用 |
 | 68 | オートタイムオブデイ | main.ts | 自動 | （制限不要） | 1分間隔の時間帯更新 |
-| 69 | 天気プレビューカメラ | main.ts | 自動 | weatherSettings | パネル表示中のカメラ後退 |
+| 69 | 天気プレビューカメラ | main.ts | 自動 | weatherSettings | environmentシーン遷移時のカメラ後退 |
 | 100 | 天文計算シミュレーション | EnvironmentSimulationService.ts | 自動 | （制限不要） | astronomy-engineによる太陽/月位置→環境パラメータ連続生成 |
-| 101 | 七十二候セレクタ | KouSelector.tsx | 操作 | （制限不要） | ウィンドウ上端ドロップダウン+Autoボタン。Auto/手動切替で候を選択→気候データ・天気決定に反映 |
-| 102 | 世界地図UI | WorldMapModal.tsx, LocationButton.tsx | 操作 | （制限不要） | SVG世界地図+terminator+都市プリセット+座標選択。LocationButtonはフリーモードに常時配置（autoWeather非依存）。WeatherPanelからのLocationボタンは削除済み |
+| 101 | 七十二候セレクタ | KouSelector.tsx | 操作 | （制限不要） | environmentシーンのweatherビュー内ドロップダウン+Autoボタン。Auto/手動切替で候を選択→気候データ・天気決定に反映 |
+| 102 | 世界地図UI | WorldMapModal.tsx | 操作 | （制限不要） | SVG世界地図+terminator+都市プリセット+座標選択。environmentシーン内WeatherPanelのLocationボタンからアクセス（autoWeather非依存） |
 | 103 | 気候プロファイル | ClimateData.ts, ClimateGridAdapter.ts | 自動 | （制限不要） | 緯度経度から72候分気候データ自動生成 |
 | 104 | 天気自動決定 | WeatherDecision.ts | 自動 | （制限不要） | 気候データ+気温→天気タイプ確率的決定 |
 | 105 | 雨量連動パーティクル | RainEffect.ts, SnowEffect.ts | 自動 | （制限不要） | 降水強度→粒子数動的変更 |
@@ -272,6 +272,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.11.2 | リファクタリング | 環境設定（天気・地域・候）を独立AppScene `environment` に分離（SceneEnvironment + EnvironmentCoordinator） |
 | 0.11.1 | バグ修正 | butler CLIインストール方法をsetup-butler Actionに変更（broth.itch.ovh DNS解決失敗対策） |
 | 0.11.0 | インフラ | itch.io butler CLI自動アップロード統合、alpha/betaリリースチャネル開発インフラ整備、REGISTRATION_GUIDE.txt購入URL本番差し替え |
 | 0.10.0 | 機能追加 | リリースチャネル機能追加（stable/beta/alpha 3チャネル切替、チャネル×ライセンスモード2軸判定、ChannelBadge表示） |

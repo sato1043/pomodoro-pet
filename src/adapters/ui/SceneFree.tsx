@@ -11,27 +11,18 @@ import { SettingsCloseButton } from './SettingsCloseButton'
 import { StatsCloseButton } from './StatsCloseButton'
 import { StatsDrawer } from './StatsDrawer'
 import { WeatherButton } from './WeatherButton'
-import { WeatherCloseButton } from './WeatherCloseButton'
-import { WeatherPanel } from './WeatherPanel'
 import { GalleryEntryButton } from './GalleryEntryButton'
 import { FeatureLockedOverlay } from './FeatureLockedOverlay'
-import { LocationButton } from './LocationButton'
-import { WorldMapModal } from './WorldMapModal'
-import { KouSelector } from './KouSelector'
-import coastlineData from '../../../assets/data/coastline-path.json'
 
 export function SceneFree(): JSX.Element {
   const { canUse } = useLicenseMode()
-  const { fureaiCoordinator, galleryCoordinator, climateGridPort, settingsService, bus } = useAppDeps()
-  const { climate, currentKou, timezone, kouDateRanges, updateClimate } = useEnvironment()
+  const { fureaiCoordinator, galleryCoordinator, environmentCoordinator } = useAppDeps()
+  const { timezone, currentKou } = useEnvironment()
   const [showStats, setShowStats] = useState(false)
   const [settingsExpanded, setSettingsExpanded] = useState(false)
-  const [showWeather, setShowWeather] = useState(false)
   const [showLocked, setShowLocked] = useState(false)
-  const [showWorldMap, setShowWorldMap] = useState(false)
-  const [openedFromWeather, setOpenedFromWeather] = useState(false)
   const toggleSettingsRef = useRef<() => void>(() => {})
-  const hideButtons = showStats || settingsExpanded || showWeather
+  const hideButtons = showStats || settingsExpanded
 
   const handleToggleRef = useCallback((toggle: () => void) => {
     toggleSettingsRef.current = toggle
@@ -53,9 +44,17 @@ export function SceneFree(): JSX.Element {
     }
   }
 
+  const handleEnvironmentClick = (): void => {
+    if (canUse('weatherSettings')) {
+      environmentCoordinator.enterEnvironment()
+    } else {
+      setShowLocked(true)
+    }
+  }
+
   return (
     <>
-      {!showStats && !showWeather && (
+      {!showStats && (
         <OverlayFree
           expanded={settingsExpanded}
           onExpandedChange={setSettingsExpanded}
@@ -66,49 +65,14 @@ export function SceneFree(): JSX.Element {
       )}
       {showStats && <StatsDrawer onClose={() => setShowStats(false)} />}
       {showStats && <StatsCloseButton onClick={() => setShowStats(false)} />}
-      {showWeather && <WeatherPanel onLocationClick={() => { setShowWeather(false); setShowWorldMap(true); setOpenedFromWeather(true) }} />}
-      {showWeather && <WeatherCloseButton onClick={() => setShowWeather(false)} />}
       {!hideButtons && <StartPomodoroButton />}
       {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
       {!hideButtons && <SettingsButton onClick={() => toggleSettingsRef.current()} />}
       {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
       {!hideButtons && <FureaiEntryButton onClick={handleFureaiClick} />}
-      {!hideButtons && <LocationButton
-        onClick={() => { setShowWorldMap(true); setOpenedFromWeather(false) }}
-        label={climate.label}
-      />}
-      {!hideButtons && canUse('weatherSettings') && <WeatherButton onClick={() => setShowWeather(true)} />}
+      {!hideButtons && <WeatherButton onClick={handleEnvironmentClick} />}
       {!hideButtons && <GalleryEntryButton onClick={handleGalleryClick} />}
-      {showWorldMap && (
-        <WorldMapModal
-          isOpen={showWorldMap}
-          currentClimate={climate}
-          coastlinePath={(coastlineData as { path: string; idlPath: string }).path}
-          idlPath={(coastlineData as { path: string; idlPath: string }).idlPath}
-          onClose={() => { setShowWorldMap(false); if (openedFromWeather) { setShowWeather(true); setOpenedFromWeather(false) } }}
-          onApply={updateClimate}
-          getMonthlyClimate={climateGridPort.isLoaded ? climateGridPort.getMonthlyClimate : undefined}
-        />
-      )}
       {showLocked && <FeatureLockedOverlay onDismiss={() => setShowLocked(false)} />}
-      {!showWorldMap && (
-        <KouSelector
-          currentKou={currentKou}
-          autoKou={settingsService.weatherConfig.autoKou}
-          manualKouIndex={settingsService.weatherConfig.manualKouIndex}
-          kouDateRanges={kouDateRanges}
-          onKouChange={(index) => {
-            const next = { ...settingsService.weatherConfig, autoKou: false, manualKouIndex: index }
-            bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
-            settingsService.updateWeatherConfig({ autoKou: false, manualKouIndex: index })
-          }}
-          onAutoToggle={(auto) => {
-            const next = { ...settingsService.weatherConfig, autoKou: auto }
-            bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
-            settingsService.updateWeatherConfig({ autoKou: auto })
-          }}
-        />
-      )}
     </>
   )
 }

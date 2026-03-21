@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.11.2] - 2026-03-21
+
+### Changed
+- 環境設定（天気・地域・候）を独立したAppScene `environment` に分離 — WeatherPanel・WorldMapModal・KouSelectorをSceneFreeからSceneEnvironmentに移動。EnvironmentCoordinatorでシーン遷移とカメラ制御を管理。SceneFreeの状態管理を簡素化（6 state → 3 state）
+
 ## [0.11.1] - 2026-03-15
 
 ### Fixed
