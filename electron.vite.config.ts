@@ -18,6 +18,7 @@ export default defineConfig({
       __STORE_URL__: JSON.stringify(process.env.STORE_URL || env.VITE_STORE_URL || 'https://www.updater.cc'),
       __RELEASE_CHANNEL__: JSON.stringify(env.VITE_RELEASE_CHANNEL || 'stable'),
       __DEBUG_LICENSE__: JSON.stringify(env.VITE_DEBUG_LICENSE || ''),
+      __DEBUG_AUTO_UPDATE__: JSON.stringify(env.VITE_DEBUG_AUTO_UPDATE || ''),
       __DEV_TOOLS__: JSON.stringify(env.VITE_DEV_TOOLS || ''),
     },
     build: {

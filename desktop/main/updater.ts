@@ -3,8 +3,10 @@ import { autoUpdater } from 'electron-updater'
 import type { UpdateInfo, ProgressInfo } from 'electron-updater'
 import type { UpdateStatus } from './types'
 
+declare const __DEBUG_AUTO_UPDATE__: string
+
 export function initAutoUpdater(win: BrowserWindow): void {
-  if (!app.isPackaged) return
+  if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return
 
   autoUpdater.autoDownload = false
   autoUpdater.autoInstallOnAppQuit = true

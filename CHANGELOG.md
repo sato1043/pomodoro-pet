@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.2] - 2026-03-21
+
+### Fixed
+- アップデートダウンロードエラー時にエラーメッセージを表示（従来は通知バナーが消えるだけだった）
+- VITE_DEBUG_LICENSE設定時にアップデートチェックが実行されない問題を修正
+
+### Added
+- VITE_DEBUG_AUTO_UPDATE環境変数 — trueに設定するとデバッグビルドでもautoUpdaterが動作する
+
 ## [0.13.1] - 2026-03-21
 
 ### Changed

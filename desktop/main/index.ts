@@ -11,6 +11,7 @@ app.commandLine.appendSwitch('enable-unsafe-swiftshader')
 // Windowsトースト通知に必須。ビルド時にpackage.jsonのbuild.appIdから埋め込まれる
 declare const __APP_ID__: string
 declare const __HEARTBEAT_URL__: string
+declare const __DEBUG_AUTO_UPDATE__: string
 declare const __DEV_TOOLS__: string
 
 if (__APP_ID__) {
@@ -60,6 +61,10 @@ function createWindow(): void {
     if (debugLicenseMode) {
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.webContents.send('license:changed', getLicenseState())
+      }
+      // VITE_DEBUG_AUTO_UPDATE設定時はデバッグビルドでもアップデートチェックを実行
+      if (__DEBUG_AUTO_UPDATE__ === 'true') {
+        autoUpdater.checkForUpdates().catch(() => {})
       }
       return
     }

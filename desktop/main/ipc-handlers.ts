@@ -7,6 +7,7 @@ import { getLicenseState, setLicenseState, resolveLicense } from './license'
 import { handleExportData, handleImportData } from './export-import'
 
 declare const __HEARTBEAT_URL__: string
+declare const __DEBUG_AUTO_UPDATE__: string
 
 let sleepBlockerId: number | null = null
 
@@ -169,14 +170,14 @@ export function registerIpcHandlers(): void {
   // --- アップデート ---
 
   ipcMain.handle('update:check', async () => {
-    if (!app.isPackaged) return
+    if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return
     const state = getLicenseState()
     if (state.mode === 'expired' || state.mode === 'restricted') return
     await autoUpdater.checkForUpdates()
   })
 
   ipcMain.handle('update:download', async () => {
-    if (!app.isPackaged) return
+    if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return
     const state = getLicenseState()
     if (state.mode === 'expired' || state.mode === 'restricted') return
     await autoUpdater.downloadUpdate()

@@ -197,6 +197,10 @@ VITE_STORE_URL=https://www.updater.cc
 # alpha に設定すると実験的機能（LLM関連等）のUIが出現する
 # beta/alpha ではウィンドウ左下にチャネルバッジが表示される
 VITE_RELEASE_CHANNEL=alpha
+
+# 自動アップデートチェック（デバッグ用）
+# true にするとdev環境でもautoUpdaterが動作する（VITE_DEBUG_LICENSEと併用）
+VITE_DEBUG_AUTO_UPDATE=true
 ```
 
 ### Vite環境変数の仕組み
@@ -206,6 +210,8 @@ VITE_RELEASE_CHANNEL=alpha
 `VITE_DEBUG_LICENSE`は`electron.vite.config.ts`で`__DEBUG_LICENSE__`としてメインプロセスに埋め込まれ、レンダラーでは`import.meta.env.VITE_DEBUG_LICENSE`として参照される。設定するとハートビートをスキップし、指定モードの`LicenseState`をレンダラーにpushする。`VITE_HEARTBEAT_URL`との併用時は`VITE_DEBUG_LICENSE`が優先される。
 
 `VITE_RELEASE_CHANNEL`は`electron.vite.config.ts`で`__RELEASE_CHANNEL__`としてメインプロセスに埋め込まれ、レンダラーでは`import.meta.env.VITE_RELEASE_CHANNEL`として参照される。チャネル×ライセンスモードの2軸で機能有効化を判定する。デフォルトは`stable`。詳細は[release-channel-design.md](release-channel-design.md)を参照。
+
+`VITE_DEBUG_AUTO_UPDATE`は`electron.vite.config.ts`で`__DEBUG_AUTO_UPDATE__`としてメインプロセスに埋め込まれる。`true`に設定すると`app.isPackaged`ガードをバイパスし、開発ビルドでもautoUpdater（チェック・ダウンロード・インストール）が動作する。`VITE_DEBUG_LICENSE`と併用することで、デバッグ環境でアップデートフロー全体をテストできる。
 
 Viteは`NODE_ENV`に応じてenvファイルを選択する:
 
