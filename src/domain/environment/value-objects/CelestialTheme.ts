@@ -137,9 +137,9 @@ export function computeThemeFromCelestial(
 
   // --- 14パラメータ導出 ---
 
-  // 1. exposure
+  // 1. exposure（月光ブースト: 満月時により明るく）
   const dayExposure = lerpFloat(0.15, 1.2, rangedSmoothstep(altitude, -6, 40))
-  const nightExposure = lerpFloat(0.05, 0.3, moonBrightness)
+  const nightExposure = lerpFloat(0.08, 0.45, moonBrightness)
   const exposure = altitude > 0 ? dayExposure
     : altitude > -6 ? lerpFloat(nightExposure, dayExposure, twilightFactor)
     : nightExposure
@@ -168,10 +168,10 @@ export function computeThemeFromCelestial(
     : altitude > -6 ? lerpHexColor(moonAmbient, dayAmbientColor, twilightFactor)
     : moonAmbient
 
-  // 9. ambientIntensity
+  // 9. ambientIntensity（月光ブースト: 満月時により明るく）
   const dayAmbientIntensity = lerpFloat(0.15, 0.6, rangedSmoothstep(altitude, -12, 20))
     * WEATHER_DIMMING[weather]
-  const nightAmbientIntensity = lerpFloat(0.05, 0.25, moonBrightness)
+  const nightAmbientIntensity = lerpFloat(0.08, 0.40, moonBrightness)
   const ambientIntensity = altitude > 0 ? dayAmbientIntensity
     : altitude > -6 ? lerpFloat(nightAmbientIntensity, dayAmbientIntensity, twilightFactor)
     : nightAmbientIntensity
@@ -179,8 +179,12 @@ export function computeThemeFromCelestial(
   // 10. hemiSkyColor = skyColor
   const hemiSkyColor = skyColor
 
-  // 13. groundColor
-  const groundColor = temperatureToGroundColor(estimatedTempC, scenePreset, avgPrecipMm)
+  // 13. groundColor（夜間: 月光で地面色をMOONLIGHT_COLOR方向にブレンド）
+  const baseGroundColor = temperatureToGroundColor(estimatedTempC, scenePreset, avgPrecipMm)
+  const groundMoonBlend = altitude <= 0 ? moonBrightness * 0.3 : 0
+  const groundColor = groundMoonBlend > 0
+    ? lerpHexColor(baseGroundColor, MOONLIGHT_COLOR, groundMoonBlend)
+    : baseGroundColor
 
   // 11. hemiGroundColor = groundColor
   const hemiGroundColor = groundColor
@@ -191,12 +195,31 @@ export function computeThemeFromCelestial(
   // 14. sunPosition: ダミー値。EnvironmentSimulationServiceでcomputeLightDirectionの結果で上書き
   const sunPosition = { x: 0, y: 10, z: 0 }
 
+  // 15-19. 月データ5フィールド
+  const moonDir = celestialToDirection(lunar.azimuth, lunar.altitude)
+  const moonDistance = 50
+  const moonPosition = {
+    x: moonDir.x * moonDistance,
+    y: moonDir.y * moonDistance,
+    z: moonDir.z * moonDistance,
+  }
+  const moonPhaseDeg = lunar.phaseDeg
+  const moonIllumination = lunar.illuminationFraction
+  const moonIsVisible = lunar.isAboveHorizon && lunar.altitude > -2
+  // 水平線フェード: altitude -2°〜+5°で0→1
+  const horizonFade = lunar.isAboveHorizon
+    ? Math.max(0, Math.min(1, (lunar.altitude - (-2)) / (5 - (-2))))
+    : 0
+  const moonWeatherDim = MOON_WEATHER_DIMMING[weather]
+  const moonOpacity = horizonFade * moonWeatherDim
+
   const params: EnvironmentThemeParams = {
     skyColor, fogColor, fogNear, fogFar,
     ambientColor, ambientIntensity,
     hemiSkyColor, hemiGroundColor, hemiIntensity,
     sunColor, sunIntensity, sunPosition,
     groundColor, exposure,
+    moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity,
   }
 
   return applyPresetOverride(params, scenePreset)
@@ -243,7 +266,7 @@ export function computeLightDirection(
 
     if (lunar.isAboveHorizon) {
       const moonDir = celestialToDirection(lunar.azimuth, lunar.altitude)
-      const moonIntensity = lunar.illuminationFraction * 0.4 * (1 - twilightFactor)
+      const moonIntensity = lunar.illuminationFraction * 0.8 * (1 - twilightFactor)
       return {
         position: {
           x: lerpFloat(moonDir.x, sunDir.x, twilightFactor),
@@ -264,7 +287,7 @@ export function computeLightDirection(
     return {
       position,
       color: MOONLIGHT_COLOR,
-      intensity: lunar.illuminationFraction * 0.4,
+      intensity: lunar.illuminationFraction * 0.8,
     }
   }
 

@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test'
+import { test, expect, type Page } from '@playwright/test'
 import { launchApp, closeApp, type AppContext } from './helpers/launch'
 
 let app: AppContext
@@ -11,10 +11,28 @@ test.afterAll(async () => {
   await closeApp(app)
 })
 
-test('LocationButtonクリックでWorldMapModalが開く', async () => {
+// --- ヘルパー: environment シーン遷移（blackout考慮） ---
+
+async function enterEnvironment(page: Page): Promise<void> {
+  await page.locator('[data-testid="weather-toggle"]').click()
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible({ timeout: 5_000 })
+}
+
+async function exitEnvironment(page: Page): Promise<void> {
+  await page.locator('[data-testid="environment-exit"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible({ timeout: 5_000 })
+}
+
+async function openWorldMap(page: Page): Promise<void> {
+  await page.locator('[data-testid="weather-location"]').click()
+  await expect(page.locator('[data-testid="worldmap-presets"]')).toBeVisible()
+}
+
+test('environment内のLocationボタンでWorldMapModalが開く', async () => {
   const { page } = app
 
-  await page.locator('[data-testid="location-button"]').click()
+  await enterEnvironment(page)
+  await openWorldMap(page)
 
   // モーダル要素が表示される
   await expect(page.locator('[data-testid="worldmap-presets"]')).toBeVisible()
@@ -23,21 +41,26 @@ test('LocationButtonクリックでWorldMapModalが開く', async () => {
   await expect(page.locator('[data-testid="worldmap-back"]')).toBeVisible()
 })
 
-test('戻るボタンでモーダルが閉じる', async () => {
+test('戻るボタンでWorldMapが閉じWeatherPanelに復帰する', async () => {
   const { page } = app
 
-  // 前のテストでモーダルが開いている
+  // 前のテストでWorldMapが開いている
   await page.locator('[data-testid="worldmap-back"]').click()
 
-  // モーダルが閉じる
+  // WorldMapが閉じる
   await expect(page.locator('[data-testid="worldmap-presets"]')).not.toBeVisible()
+
+  // WeatherPanelに復帰する（environment内部のビュー切替）
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // 後続テストのためにWorldMapを再度開く
+  await openWorldMap(page)
 })
 
 test('プリセット都市ボタンで座標情報が更新される', async () => {
   const { page } = app
 
-  await page.locator('[data-testid="location-button"]').click()
-  await expect(page.locator('[data-testid="worldmap-presets"]')).toBeVisible()
+  // 前のテストでWorldMapが開いている
 
   // Tokyoプリセットをクリック
   await page.locator('[data-testid="worldmap-preset-tokyo"]').click()
@@ -51,7 +74,7 @@ test('プリセット都市ボタンで座標情報が更新される', async ()
 test('プリセット都市選択でケッペン気候区分が表示される', async () => {
   const { page } = app
 
-  // 前のテストでTokyo選択済み → ケッペン分類が表示されるはず
+  // 前のテストでTokyo選択済み
   const koppen = page.locator('[data-testid="worldmap-koppen"]')
   await expect(koppen).toBeVisible()
 
@@ -88,16 +111,19 @@ test('Reykjavikプリセットで高緯度の分類が表示される', async ()
   await expect(koppen).toBeVisible()
 })
 
-test('Set Locationでモーダルが閉じLocationButtonラベルが更新される', async () => {
+test('Set Locationでモーダルが閉じWeatherPanelに復帰する', async () => {
   const { page } = app
 
   // Tokyoを選択してSet Location
   await page.locator('[data-testid="worldmap-preset-tokyo"]').click()
   await page.locator('[data-testid="worldmap-set-location"]').click()
 
-  // モーダルが閉じる
+  // WorldMapが閉じる
   await expect(page.locator('[data-testid="worldmap-presets"]')).not.toBeVisible()
 
-  // LocationButtonのtitle属性がTokyoに更新される（アイコンのみのボタンのためテキストはtitleに格納）
-  await expect(page.locator('[data-testid="location-button"]')).toHaveAttribute('title', 'Location: Tokyo')
+  // WeatherPanelに復帰する（environment内部のビュー切替）
+  await expect(page.locator('[data-testid="weather-sunny"]')).toBeVisible()
+
+  // freeに戻る
+  await exitEnvironment(page)
 })

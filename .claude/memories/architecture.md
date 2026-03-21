@@ -135,7 +135,8 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/Kou.ts` — KouDefinition型、KOU_DEFINITIONS定数（本朝七十二候全72候、和名/読み/英名/説明）、resolveKou(eclipticLon)、kouProgress(eclipticLon)
 - `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()、classifyKoppen()（ケッペン気候区分算出、30分類）
 - `environment/value-objects/WeatherDecision.ts` — WeatherDecision型、mulberry32（決定論的PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
-- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成）、computeLightDirection()（太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成、月データ5フィールド計算含む）、computeLightDirection()（太陽/月クロスフェード、月光intensity係数0.8）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/MoonPhase.ts` — generateMoonPhasePixels(phaseDeg, size, illumination) → Uint8ClampedArray。Three.js非依存の月位相テクスチャ生成純粋関数。terminator曲線算出、リムライト、マリア模様、ソフトエッジ
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
@@ -166,6 +167,7 @@ EventBus（UI/インフラ通知）:
 - `statistics/StatisticsService.ts` — 日次統計CRUD+永続化サービス。getDailyStats/getRange/addWorkPhase/addBreakPhase/addCompletedCycle/addAbortedCycle。データバリデーション付きload。更新ごとに即座にsaveToStorage
 - `statistics/StatisticsBridge.ts` — EventBus購読→StatisticsService更新。PhaseCompleted(work/break/long-break)→addWorkPhase/addBreakPhase、PomodoroCompleted→addCompletedCycle、PomodoroAborted→addAbortedCycle。NotificationBridgeと同パターン
 - `environment/ThemeTransitionService.ts` — テーマ遷移サービス。`transitionTo(target, durationMs)`で補間開始、`applyImmediate(target)`で即座適用、`tick(deltaMs)`で補間更新（変化時のみパラメータ返却）。currentParams=null時のtransitionToは即座適用にフォールバック。補間中の新transitionToは現在の中間値をfromとして再補間
+- `environment/EnvironmentCoordinator.ts` — 環境設定シーンのcoordinator。enterEnvironment()でシーン遷移+WeatherPreviewOpen発行（カメラ後退）、exitEnvironment()でWeatherPreviewOpen解除+シーン遷移（カメラ復帰）。FureaiCoordinator/GalleryCoordinatorと同パターン
 - `environment/EnvironmentSimulationService.ts` — 天文計算ベース環境シミュレーション統合オーケストレーター。start(climate, scenePreset)/tick(deltaMs)/onClimateChanged()/stop()。30秒間隔で天体位置更新→テーマ生成→ThemeTransitionService適用。日単位で天気再決定。setAutoWeather/setManualWeather/setManualTimeOfDay（擬似太陽/月位置によるテーマオーバーライド）。手動操作時の遷移時間1.5秒（通常tick時30秒）。KouChanged/WeatherDecisionChangedイベント発行
 - `environment/ScrollUseCase.ts` — チャンク位置計算・リサイクル判定（Three.js非依存）
 
@@ -177,9 +179,11 @@ EventBus（UI/インフラ通知）:
 - `ui/App.tsx` — Reactルートコンポーネント。`AppProvider`で依存注入し、`EnvironmentProvider` → `ThemeProvider` → `LicenseProvider` → `SceneRouter`の順で配置
 - `ui/AppContext.tsx` — `AppDeps`インターフェース定義とReact Context。`useAppDeps()`フックで全依存を取得
 - `ui/LicenseContext.tsx` — ライセンスReact Context。`LicenseProvider`が`onLicenseChanged`購読+`checkLicenseStatus`初期ロード。`useLicenseMode()`フックで`{ licenseMode, serverMessage, canUse }`を返す。`canUse(feature)`は`licenseMode ?? 'trial'`で`isFeatureEnabled()`を呼ぶヘルパー（null時はtrial扱い。trialではfureai/galleryが無効）
-- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGalleryを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態+リリースチャネルを取得しLicenseToast+TrialBadge+ChannelBadgeに渡す。WindowTitleBarをグローバル配置
+- `ui/SceneRouter.tsx` — AppScene切替コーディネーター。`AppSceneChanged`購読でSceneFree/ScenePomodoro/SceneFureai/SceneGallery/SceneEnvironmentを切替。シーン間遷移は常にblackout。`useLicenseMode()`でライセンス状態+リリースチャネルを取得しLicenseToast+TrialBadge+ChannelBadgeに渡す。WindowTitleBarをグローバル配置
 - `ui/WindowTitleBar.tsx` — カスタムタイトルバー（frame: false用）。createPortalでdocument.bodyに描画。透明背景+右上に最小化・閉じるボタン（インラインSVGアイコン）。-webkit-app-region: dragでウィンドウ移動。z-index: 9999、pointer-events: none（ボタンのみauto）で下層UIへのクリック透過を確保
-- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+WeatherPanel+FeatureLockedOverlay+LocationButton+WorldMapModal+KouSelectorを束ねる。showStats/settingsExpanded/showWeather/showWorldMap/openedFromWeatherで表示切替を管理。`canUse()`でStatsButton/WeatherButtonの表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示。WeatherPanelのLocationボタンからWorldMapModalを開くと`openedFromWeather=true`になり、WorldMapModal閉じるとWeatherPanelに自動復帰
+- `ui/SceneFree.tsx` — freeシーンコンテナ。OverlayFree+StartPomodoroButton+SettingsButton+StatsButton+FureaiEntryButton+WeatherButton+GalleryEntryButton+StatsDrawer+FeatureLockedOverlayを束ねる。showStats/settingsExpanded/showLockedで表示切替を管理。WeatherButtonクリックでenvironmentCoordinator.enterEnvironment()を呼びSceneEnvironmentへ遷移。`canUse()`でStatsButton/WeatherButton(環境設定)の表示を制御。FureaiEntryButton/GalleryEntryButtonは常時表示し、クリック時にcanUse判定→locked時はFeatureLockedOverlay表示
+- `ui/SceneEnvironment.tsx` — environmentシーンコンテナ。WeatherPanel+KouSelector+WorldMapModal+EnvironmentExitButtonを束ねる。内部状態`view: 'weather' | 'worldMap'`で表示切替。weatherビューでWeatherPanel+KouSelectorを表示、WeatherPanelのLocationボタンでworldMapビューに遷移、WorldMapModalのcloseでweatherビューに戻る
+- `ui/EnvironmentExitButton.tsx` — environmentモードからfreeモードへの戻るボタン。←矢印アイコン。environmentCoordinator.exitEnvironment()を呼ぶ
 - `ui/ScenePomodoro.tsx` — pomodoroシーンコンテナ。OverlayPomodoroを束ねる
 - `ui/SceneFureai.tsx` — fureaiシーンコンテナ。OverlayFureai+FureaiExitButton+PromptInput+HeartEffectを束ねる。FeedingSuccess購読でハートエフェクト発火
 - `ui/SceneGallery.tsx` — galleryシーンコンテナ。OverlayGallery+GalleryExitButtonを束ねる。useEffectでマウント時にapplyCharacterOffset()、アンマウント時にresetCharacterOffset()（暗転中に移動完了）
@@ -219,9 +223,9 @@ EventBus（UI/インフラ通知）:
 - `ui/TrialBadge.tsx` — trialモード中に右下に「Trial」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）
 - `ui/ChannelBadge.tsx` — beta/alphaチャネル時に左下に「Beta」「Alpha」を薄く常時表示（createPortalでbodyに描画、pointerEvents:none）。stableチャネルでは非表示
 - `ui/FeatureLockedOverlay.tsx` — trial中のプレミアム機能ボタン押下時に購入インセンティブ表示（スクリーンショット+キャッチコピー+Unlockボタン+✕閉じ）
-- `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。ウィンドウ上端中央（top:36px）に背景なし表示。3段構成: Row1（seasonラベル+#日付範囲）、Row2（英語名）、Row3（Autoアイコン+リストアイコン）。リストアイコンでフルスクリーン72候オーバーレイリスト表示（テーブル+詳細パネル、2クリック選択）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）をリストから選択。`data-testid="kou-selector"/"kou-list-btn"/"kou-auto"/"kou-list-overlay"/"kou-list-close"`
+- `ui/KouSelector.tsx` — 七十二候セレクタ。createPortalでdocument.bodyに描画。SceneEnvironmentのweatherビュー内で表示。3段構成: Row1（seasonラベル+#日付範囲）、Row2（英語名）、Row3（Autoアイコン+リストアイコン）。リストアイコンでフルスクリーン72候オーバーレイリスト表示（テーブル+詳細パネル、2クリック選択）。Auto時は天文計算候に逐次追従、手動時は任意の候（0-71）をリストから選択。`data-testid="kou-selector"/"kou-list-btn"/"kou-auto"/"kou-list-overlay"/"kou-list-close"`
 - `ui/WorldMapModal.tsx` — 世界地図SVGモーダル。等距円筒図法（viewBox "-180 -90 360 180"）。astronomy-engineによるterminator昼夜境界描画。8都市プリセットピン+クリック任意座標選択。選択地点中心スクロール（最短方向アニメーション）。1/3幅表示・全画面化。Natural Earth IDLライン描画。ClimateConfig生成
-- `ui/LocationButton.tsx` — フリーモード右端の地球アイコンボタン。クリックでWorldMapModal起動
+- `ui/LocationButton.tsx` — 地球アイコンボタン（現在未使用。環境設定はSceneEnvironmentに移行済み）
 - `ui/styles/kou-selector.css.ts` — 七十二候セレクタ用vanilla-extractスタイル
 - `ui/styles/world-map-modal.css.ts` — 世界地図モーダル用vanilla-extractスタイル
 - `ui/hooks/useEventBus.ts` — EventBus購読のReactフック。`useEventBus`（状態取得）、`useEventBusCallback`（コールバック実行）、`useEventBusTrigger`（再レンダリングトリガー）
@@ -244,6 +248,7 @@ EventBus（UI/インフラ通知）:
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（最大1200本、デフォルト650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。setDrawRange()で動的粒子数制御。WeatherEffectインターフェース定義（setParticleCount含む）
 - `three/SnowEffect.ts` — 雪エフェクト。Points（最大900個、デフォルト750個）sin/cosゆらゆら揺れ。setDrawRange()で動的粒子数制御
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
+- `three/MoonEffect.ts` — 3D月オブジェクト。SphereGeometry(1.0, 32, 32)スケール3.0 + BackSide半透明グローメッシュ。MoonPhase.tsのgenerateMoonPhasePixelsでCanvasテクスチャを動的更新（位相・illumination変化時のみ）。fog無効、距離50配置。applyThemeToScene経由でテーマパラメータの月データ5フィールドから更新
 - `astronomy/AstronomyAdapter.ts` — astronomy-engineラッパー。AstronomyPort実装。Observer/SunPosition/Horizon/MoonPhase/Illumination使用。getSolarDeclinationAndGHA()ヘルパー（terminator UI用）
 - `climate/ClimateGridAdapter.ts` — ClimateGridPort実装。`createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルJSONを注入。36lat×72lon 5度解像度、双線形補間、海洋スナッピング
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
@@ -253,7 +258,7 @@ EventBus（UI/インフラ通知）:
 **ミュート操作の制約**: VolumeControl（ミュート/音量UIを含む）はOverlayFreeにのみ配置されている。ポモドーロ実行中（work/break/long-break/congrats）にはミュート操作のUIが存在しない。そのためミュート中にフェーズが遷移してBGMのplayLoop呼び出しが早期リターンされるシナリオは発生しない
 
 ### src/ — エントリ
-- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）
+- `main.ts` — 全モジュール統合・レンダリングループ。起動時に`loadFromStorage()`で設定・統計データ復元。`SoundSettingsLoaded`でAudioAdapter+SfxPlayerの両方にvolume/mute適用。blur/focusイベントでバックグラウンド検出（`document.hasFocus()`はElectronで信頼できないため）。バックグラウンド時はsetInterval(1秒)でタイマーを継続（rAFはバックグラウンドで停止するため）。NotificationBridge・StatisticsBridge・shouldPlayAudioコールバック・setBackgroundMutedの初期化。`currentLicenseMode`変数でライセンス状態を管理し、`onLicenseChanged`で更新。`VITE_DEBUG_LICENSE`で初期モード設定。`isFeatureEnabled()`でEmotionService.tick/applyEvent・NotificationBridge isEnabledをガード。EmotionStateUpdatedイベントを1秒間隔スロットリングでpublish、感情イベント時は即時publish。`ThemeTransitionService`でテーマ遷移をlerp補間（rAFループ内でtick→applyThemeToScene）。`applyWeather(config, immediate)`で即座/補間切替（初回起動はimmediate=true、他はfalse）。`SceneLights`にfill（フィルライト: DirectionalLight 0xb0c4de、castShadow=false、位置(0,2,5)）を追加。`applyThemeToScene()`内でexposure逆数ベースの非線形補正によりfill intensityを動的調整（日中≈0.01、夜間≈0.56）
 - `electron.d.ts` — `window.electronAPI`型定義（platform, loadSettings, saveSettings, showNotification, startSleepBlocker, stopSleepBlocker, loadStatistics, saveStatistics, loadEmotionHistory, saveEmotionHistory, loadAbout, checkLicenseStatus, registerLicense, checkForUpdate, downloadUpdate, installUpdate, openExternal, onUpdateStatus, onLicenseChanged）。`LicenseMode`/`LicenseState`/`UpdateState`/`UpdateStatus`型定義
 - `index.html` — HTMLエントリ
 
@@ -287,7 +292,8 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/ClimateData.test.ts` — CITY_PRESETS・interpolateToKouClimate・estimateTemperature・temperatureToGroundColor（15テスト）
 - `domain/environment/Timezone.test.ts` — resolveTimezone・getLocationTime・formatTimezoneLabel・DST対応・境界補正（16テスト）
 - `domain/environment/WeatherDecision.test.ts` — mulberry32決定論性・decideWeather確率分布・computeParticleCount範囲・cloudDensityToLevel（18テスト）
-- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial・computeLightDirection（19テスト）
+- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial（月光ブースト・moonPosition・moonOpacity含む）・computeLightDirection（26テスト）
+- `domain/environment/MoonPhase.test.ts` — generateMoonPhasePixels（新月暗部・満月明部・上弦/下弦左右・illumination明度・角透明・サイズ変更、8テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `domain/shared/ExportData.test.ts` — エクスポートデータバリデーション（正常系、不正形式、バージョン互換性、フィールド欠損、24テスト）
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
@@ -345,8 +351,8 @@ Electronアプリの統合テスト。`npm run test:e2e`で実行。`VITE_DEBUG_
 - `e2e/free-mode.spec.ts` — 設定パネルトグル・ボタン選択・Set確定・BG Audio/Notifyトグル表示・操作・スナップショット復元
 - `e2e/pomodoro-flow.spec.ts` — モード遷移・Pause/Resume・Stop・タイマー完走→congrats→free自動復帰
 - `e2e/settings-ipc.spec.ts` — electronAPI存在確認・settings.json永続化・テーマ設定の再起動復元・showNotification API確認・BG設定永続化/復元・statistics API確認・天気設定永続化/再起動復元・autoWeather永続化/再起動復元（17テスト）
-- `e2e/weather-panel.spec.ts` — WeatherButton表示/クリック・パネル表示時の排他制御・CloseButton・天気タイプ切替active・autoWeather排他選択動作・autoWeather有効時disabled確認・時間帯切替・スナップショット復元・Stats/Weather排他表示・WeatherPanel Scene行Locationボタン表示・WeatherPanel→WorldMapModal→戻りでWeatherPanel復帰・LocationButton常時表示・KouSelector表示/Autoトグル/リスト手動選択Auto解除/日付範囲表示（24テスト）
-- `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計・天気パネル展開時）
+- `e2e/weather-panel.spec.ts` — environmentシーン遷移・freeUI非表示確認・天気タイプ切替active・autoWeather排他選択動作・autoWeather有効時disabled確認・時間帯切替・スナップショット復元・WeatherPanel Scene行Locationボタン表示・WeatherPanel→WorldMapModal→戻りでWeatherPanel復帰（environmentシーン内ビュー切替）・KouSelectorはenvironmentシーンのみ表示/Autoトグル/リスト手動選択Auto解除/日付範囲表示（22テスト）
+- `e2e/button-visibility.spec.ts` — ボタン排他表示制御（設定・統計パネル展開時・environmentシーン遷移時）
 - `e2e/stats-panel.spec.ts` — StatsButton・Statistics見出し・排他表示
 - `e2e/emotion-indicator.spec.ts` — 感情インジケーター表示/非表示・3アイコン存在・opacity整合性・ライセンス制限（6テスト）
 - `e2e/emotion-history.spec.ts` — 感情パラメータ永続化（初期状態範囲確認・全サイクル完走後satisfaction増加・emotionHistory IPC API存在・emotion-history.jsonファイル生成検証・アプリ再起動後復元）。cleanEmotionHistoryで前回テスト実行の永続化データをリセット

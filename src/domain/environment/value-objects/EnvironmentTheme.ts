@@ -16,9 +16,23 @@ export interface EnvironmentThemeParams {
   readonly sunPosition: { readonly x: number; readonly y: number; readonly z: number }
   readonly groundColor: number
   readonly exposure: number
+  readonly moonPosition: { readonly x: number; readonly y: number; readonly z: number }
+  readonly moonPhaseDeg: number          // 0=新月, 180=満月
+  readonly moonIllumination: number      // 0.0〜1.0
+  readonly moonIsVisible: boolean
+  readonly moonOpacity: number           // 0.0〜1.0（水平線フェード × 天気減衰）
 }
 
 type ThemeKey = `${WeatherType}-${TimeOfDay}`
+
+/** THEME_TABLEは静的テーブル。月データは天文計算で動的に決まるためデフォルト値（非表示）を設定 */
+const DEFAULT_MOON_FIELDS = {
+  moonPosition: { x: 0, y: -1, z: 0 },
+  moonPhaseDeg: 0,
+  moonIllumination: 0,
+  moonIsVisible: false,
+  moonOpacity: 0,
+} as const
 
 const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
   // --- sunny ---
@@ -37,6 +51,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 4, y: 8, z: 5 },
     groundColor: 0x5d8a3c,
     exposure: 1.0,
+    ...DEFAULT_MOON_FIELDS,
   },
   'sunny-day': {
     skyColor: 0x87ceeb,
@@ -53,6 +68,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 8, y: 12, z: 5 },
     groundColor: 0x5d8a3c,
     exposure: 1.2,
+    ...DEFAULT_MOON_FIELDS,
   },
   'sunny-evening': {
     skyColor: 0xff8844,
@@ -69,6 +85,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 10, y: 4, z: 5 },
     groundColor: 0x5d7a2c,
     exposure: 0.9,
+    ...DEFAULT_MOON_FIELDS,
   },
   'sunny-night': {
     skyColor: 0x0a0e2a,
@@ -85,6 +102,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: -6, y: 10, z: -3 },
     groundColor: 0x2a3a1c,
     exposure: 1.2,
+    ...DEFAULT_MOON_FIELDS,
   },
 
   // --- cloudy ---
@@ -103,6 +121,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 4, y: 8, z: 5 },
     groundColor: 0x5a8538,
     exposure: 1.0,
+    ...DEFAULT_MOON_FIELDS,
   },
   'cloudy-day': {
     skyColor: 0x6898e0,
@@ -119,6 +138,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 8, y: 12, z: 5 },
     groundColor: 0x588038,
     exposure: 1.05,
+    ...DEFAULT_MOON_FIELDS,
   },
   'cloudy-evening': {
     skyColor: 0x5068b0,
@@ -135,6 +155,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 10, y: 4, z: 5 },
     groundColor: 0x4a7028,
     exposure: 0.9,
+    ...DEFAULT_MOON_FIELDS,
   },
   'cloudy-night': {
     skyColor: 0x081848,
@@ -151,6 +172,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: -6, y: 10, z: -3 },
     groundColor: 0x2a3a1c,
     exposure: 1.1,
+    ...DEFAULT_MOON_FIELDS,
   },
 
   // --- rainy ---
@@ -169,6 +191,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 4, y: 8, z: 5 },
     groundColor: 0x588038,
     exposure: 1.1,
+    ...DEFAULT_MOON_FIELDS,
   },
   'rainy-day': {
     skyColor: 0x5888b8,
@@ -185,6 +208,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 8, y: 12, z: 5 },
     groundColor: 0x558038,
     exposure: 1.1,
+    ...DEFAULT_MOON_FIELDS,
   },
   'rainy-evening': {
     skyColor: 0x385898,
@@ -201,6 +225,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 10, y: 4, z: 5 },
     groundColor: 0x4a7028,
     exposure: 0.95,
+    ...DEFAULT_MOON_FIELDS,
   },
   'rainy-night': {
     skyColor: 0x061438,
@@ -217,6 +242,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: -6, y: 10, z: -3 },
     groundColor: 0x283818,
     exposure: 1.1,
+    ...DEFAULT_MOON_FIELDS,
   },
 
   // --- snowy ---
@@ -235,6 +261,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 4, y: 8, z: 5 },
     groundColor: 0xc8c8d0,
     exposure: 0.9,
+    ...DEFAULT_MOON_FIELDS,
   },
   'snowy-day': {
     skyColor: 0x78a8e8,
@@ -251,6 +278,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 8, y: 12, z: 5 },
     groundColor: 0xc0c0c8,
     exposure: 0.9,
+    ...DEFAULT_MOON_FIELDS,
   },
   'snowy-evening': {
     skyColor: 0x5068b0,
@@ -267,6 +295,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: 10, y: 4, z: 5 },
     groundColor: 0xa0a0b0,
     exposure: 0.75,
+    ...DEFAULT_MOON_FIELDS,
   },
   'snowy-night': {
     skyColor: 0x081848,
@@ -283,6 +312,7 @@ const THEME_TABLE: Record<string, EnvironmentThemeParams> = {
     sunPosition: { x: -6, y: 10, z: -3 },
     groundColor: 0x606878,
     exposure: 1.15,
+    ...DEFAULT_MOON_FIELDS,
   },
 }
 

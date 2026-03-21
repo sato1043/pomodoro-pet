@@ -163,6 +163,58 @@ describe('AppSceneManager', () => {
     })
   })
 
+  describe('enterEnvironment', () => {
+    it('environmentに遷移する', () => {
+      manager.enterEnvironment()
+      expect(manager.currentScene).toBe('environment')
+    })
+
+    it('AppSceneChanged(environment)イベントを返す', () => {
+      const events = manager.enterEnvironment()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'environment' })
+      )
+    })
+
+    it('既にenvironmentの時は空配列を返す', () => {
+      manager.enterEnvironment()
+      const events = manager.enterEnvironment()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('environment')
+    })
+
+    it('pomodoroからは遷移できない', () => {
+      manager.enterPomodoro()
+      const events = manager.enterEnvironment()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('pomodoro')
+    })
+  })
+
+  describe('exitEnvironment', () => {
+    it('freeに遷移する', () => {
+      manager.enterEnvironment()
+      manager.exitEnvironment()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('AppSceneChanged(free)イベントを返す', () => {
+      manager.enterEnvironment()
+      const events = manager.exitEnvironment()
+      expect(events).toHaveLength(1)
+      expect(events[0]).toEqual(
+        expect.objectContaining({ type: 'AppSceneChanged', scene: 'free' })
+      )
+    })
+
+    it('environment以外の時は空配列を返す', () => {
+      const events = manager.exitEnvironment()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('free')
+    })
+  })
+
   describe('状態遷移の全サイクル', () => {
     it('free → pomodoro → free の全遷移が正常に動作する', () => {
       expect(manager.currentScene).toBe('free')
@@ -213,6 +265,37 @@ describe('AppSceneManager', () => {
       const events = manager.enterFureai()
       expect(events).toHaveLength(0)
       expect(manager.currentScene).toBe('gallery')
+    })
+
+    it('free → environment → free の全遷移が正常に動作する', () => {
+      expect(manager.currentScene).toBe('free')
+
+      manager.enterEnvironment()
+      expect(manager.currentScene).toBe('environment')
+
+      manager.exitEnvironment()
+      expect(manager.currentScene).toBe('free')
+    })
+
+    it('environmentからpomodoroへは直接遷移できない', () => {
+      manager.enterEnvironment()
+      const events = manager.enterPomodoro()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('environment')
+    })
+
+    it('environmentからfureaiへは直接遷移できない', () => {
+      manager.enterEnvironment()
+      const events = manager.enterFureai()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('environment')
+    })
+
+    it('environmentからgalleryへは直接遷移できない', () => {
+      manager.enterEnvironment()
+      const events = manager.enterGallery()
+      expect(events).toHaveLength(0)
+      expect(manager.currentScene).toBe('environment')
     })
   })
 })

@@ -73,6 +73,11 @@ export function lerpThemeParams(
     sunPosition: lerpVec3(from.sunPosition, to.sunPosition, t),
     groundColor: lerpHexColor(from.groundColor, to.groundColor, t),
     exposure: lerpFloat(from.exposure, to.exposure, t),
+    moonPosition: lerpVec3(from.moonPosition, to.moonPosition, t),
+    moonPhaseDeg: lerpFloat(from.moonPhaseDeg, to.moonPhaseDeg, t),
+    moonIllumination: lerpFloat(from.moonIllumination, to.moonIllumination, t),
+    moonIsVisible: t < 0.5 ? from.moonIsVisible : to.moonIsVisible,
+    moonOpacity: lerpFloat(from.moonOpacity, to.moonOpacity, t),
   }
 }
 
@@ -93,7 +98,14 @@ export function themeParamsEqual(a: EnvironmentThemeParams, b: EnvironmentThemeP
     a.sunPosition.y === b.sunPosition.y &&
     a.sunPosition.z === b.sunPosition.z &&
     a.groundColor === b.groundColor &&
-    a.exposure === b.exposure
+    a.exposure === b.exposure &&
+    a.moonPosition.x === b.moonPosition.x &&
+    a.moonPosition.y === b.moonPosition.y &&
+    a.moonPosition.z === b.moonPosition.z &&
+    a.moonPhaseDeg === b.moonPhaseDeg &&
+    a.moonIllumination === b.moonIllumination &&
+    a.moonIsVisible === b.moonIsVisible &&
+    a.moonOpacity === b.moonOpacity
   )
 }
 

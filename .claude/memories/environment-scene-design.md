@@ -34,6 +34,7 @@
 | `src/application/settings/AppSettingsService.ts` | 天気設定の読み書き・永続化・WeatherConfigChangedイベント発行 |
 | `src/application/settings/SettingsEvents.ts` | WeatherConfigChanged等の設定変更イベント定義 |
 | `src/application/environment/ThemeTransitionService.ts` | テーマ遷移の状態管理・tick駆動の補間実行 |
+| `src/application/environment/EnvironmentCoordinator.ts` | 環境設定シーンのcoordinator。enter/exit + WeatherPreviewOpenイベント発行 |
 
 ### インフラ層
 
@@ -47,6 +48,7 @@
 | `src/infrastructure/three/CloudEffect.ts` | 雲エフェクト（6段階密度・天気色・クロスフェード） |
 | `src/infrastructure/three/RainEffect.ts` | 雨エフェクト（LineSegments残像+スプラッシュ） |
 | `src/infrastructure/three/SnowEffect.ts` | 雪エフェクト（sin/cosゆらゆら揺れ） |
+| `src/infrastructure/three/MoonEffect.ts` | 3D月オブジェクト（満ち欠けテクスチャ+グロー+水平線フェード） |
 | `src/infrastructure/three/EnvironmentBuilder.ts` | 環境構築の統合エントリーポイント |
 
 ### アダプター層
@@ -54,8 +56,8 @@
 | ファイル | 役割 |
 |---|---|
 | `src/adapters/ui/WeatherPanel.tsx` | 天気設定UI（Weather/Cloud/Time/Scene選択） |
-| `src/adapters/ui/WeatherButton.tsx` | WeatherPanel表示トグルボタン |
-| `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合 |
+| `src/adapters/ui/WeatherButton.tsx` | environmentシーン遷移ボタン（freeモードに配置） |
+| `src/adapters/ui/SceneFree.tsx` | freeモードの3Dシーン統合（WeatherButtonクリックでenvironmentシーンに遷移） |
 | `src/adapters/ui/EnvironmentContext.tsx` | 環境パラメータのReact Context一元管理（climate/currentKou/solarAltitude/isDaytime/timezone/kouDateRanges）。KouDateRangesComputedEvent購読でkouDateRangesを更新 |
 | `src/adapters/ui/hooks/useResolvedTheme.ts` | ThemePreference→ResolvedTheme解決（system/light/dark/auto） |
 
@@ -77,7 +79,8 @@
 | `src/domain/environment/value-objects/Kou.ts` | KouDefinition型（phaseNameEn/phaseNameJa含む）、KOU_DEFINITIONS定数（72候）、SOLAR_TERMS（`readonly [string, string][]`和英ペアタプル配列）、PHASES（`readonly [KouPhase, string, string][]`トリプルタプル配列）、resolveKou()、kouProgress() |
 | `src/domain/environment/value-objects/ClimateData.ts` | ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、interpolateToKouClimate()、estimateTemperature()、classifyKoppen()（ケッペン気候区分30分類算出） |
 | `src/domain/environment/value-objects/WeatherDecision.ts` | WeatherDecision型、decideWeather()、computeParticleCount() |
-| `src/domain/environment/value-objects/CelestialTheme.ts` | computeThemeFromCelestial()、computeLightDirection()、temperatureToGroundColor() |
+| `src/domain/environment/value-objects/CelestialTheme.ts` | computeThemeFromCelestial()（月データ5フィールド計算含む）、computeLightDirection()（月光intensity係数0.8） |
+| `src/domain/environment/value-objects/MoonPhase.ts` | generateMoonPhasePixels() — 月位相テクスチャ生成純粋関数（Three.js非依存） |
 | `src/domain/environment/value-objects/Terminator.ts` | TerminatorResult型、getSubSolarPoint()、getTerminatorPoints()、buildTerminatorPolygon() |
 | `src/domain/environment/value-objects/Timezone.ts` | resolveTimezone()（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime()、formatTimezoneLabel()。timezone-abbr.json参照 |
 
@@ -100,9 +103,10 @@
 
 | ファイル | 役割 |
 |---|---|
+| `src/adapters/ui/SceneEnvironment.tsx` | environmentシーンコンテナ。WeatherPanel+KouSelector+WorldMapModal+EnvironmentExitButtonを統合。内部状態`view: 'weather' | 'worldMap'`で表示切替 |
+| `src/adapters/ui/EnvironmentExitButton.tsx` | environmentモードからfreeモードへの戻るボタン |
 | `src/adapters/ui/WorldMapModal.tsx` | 世界地図SVGモーダル。terminator描画・都市ピン・クリック選択 |
-| `src/adapters/ui/WorldMapButton.tsx` | フリーモードの地球アイコンボタン |
-| `src/adapters/ui/KouSelector.tsx` | 七十二候セレクタ。カレンダー日付範囲形式ドロップダウン（`# 1 |  1/ 5 -  1/ 9`）+Autoボタン。kouDateRangesから日付範囲を表示 |
+| `src/adapters/ui/KouSelector.tsx` | 七十二候セレクタ。SceneEnvironmentのweatherビュー内で表示。カレンダー日付範囲形式ドロップダウン+Autoボタン |
 | `src/adapters/ui/OverlayTitle.tsx` | フリーモード日付ヘッダ。currentKou propで節気名+候位相を日本語表示（例: `小寒 初候　3/10 Tue`） |
 
 **アセット・スクリプト**:
@@ -120,7 +124,8 @@
 | `tests/domain/environment/Kou.test.ts` | 候解決ロジック |
 | `tests/domain/environment/ClimateData.test.ts` | グリッド補間・候按分・気温推定 |
 | `tests/domain/environment/WeatherDecision.test.ts` | 天気決定ロジック |
-| `tests/domain/environment/CelestialTheme.test.ts` | 天体→テーマ変換 |
+| `tests/domain/environment/CelestialTheme.test.ts` | 天体→テーマ変換（月光ブースト・moonPosition含む） |
+| `tests/domain/environment/MoonPhase.test.ts` | 月位相テクスチャ生成 |
 | `tests/domain/environment/Terminator.test.ts` | 昼夜境界線計算 |
 
 ---
@@ -219,6 +224,63 @@ seasideプリセットには追加オーバーライドあり:
 | 雪 (SnowEffect) | 750個 | 落下1.5m/s, 左右揺れ振幅0.8m, 周波数0.5-1.5Hz |
 
 全エフェクトは `fadeIn(durationMs)` / `fadeOut(durationMs)` でopacityフェード対応。
+
+### 3D月オブジェクト (MoonEffect)
+
+| パラメータ | 値 |
+|---|---|
+| ジオメトリ | SphereGeometry(1.0, 32, 32), scale 3.0 |
+| 配置距離 | celestialToDirection(azimuth, altitude) × 50（fog無効） |
+| テクスチャ | Canvas 128×128、generateMoonPhasePixels()で動的更新 |
+| グロー | BackSide半透明球（scale 1.3×月球体）、色0xaabbdd、opacity=0.15×moonOpacity×moonIllumination |
+| 水平線フェード | altitude -2°〜+5°で0→1 |
+| 天気減衰 | MOON_WEATHER_DIMMING: sunny=1.0, cloudy=0.4, rainy=0.1, snowy=0.1 |
+| テクスチャ更新閾値 | phaseDeg差<1° かつ illumination差<0.01 のときスキップ |
+
+月データはEnvironmentThemeParamsの5フィールド（moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity）として30秒間隔のlerp補間パイプラインを通過する。applyThemeToScene()内でmoonEffect.update(params)が呼ばれる。
+
+#### 月光照明ブースト
+
+| パラメータ | 旧値 | 新値 |
+|---|---|---|
+| DirectionalLight intensity（夜間月光係数） | frac × 0.4 | frac × 0.8 |
+| nightAmbientIntensity | lerp(0.05, 0.25) | lerp(0.08, 0.40) |
+| nightExposure | lerp(0.05, 0.3) | lerp(0.08, 0.45) |
+| 地面色（夜間） | 気温ベース固定 | moonBrightness×0.3でMOONLIGHT_COLOR方向にブレンド |
+
+#### フィルライト（補助照明）
+
+キャラクターの顔を最低限照らす補助DirectionalLight。主照明が弱い夜間でもキャラクターが真っ黒にならないようカメラ方向から常時照射。
+
+| パラメータ | 値 |
+|---|---|
+| 色 | 0xb0c4de（ライトスチールブルー） |
+| 位置 | (0, 2, 5) — カメラ正面やや上 |
+| castShadow | false |
+| intensity | exposureに応じて動的調整 |
+
+**動的intensity計算**:
+```
+dayNightT = clamp(1 - exposure / 1.2, 0, 1)
+fillTarget = 0.01 + (0.60 - 0.01) * dayNightT
+intensity = min(fillTarget / max(exposure, 0.05), 5.0)
+```
+
+| シーン | exposure | fillTarget | intensity | 実効照度 |
+|---|---|---|---|---|
+| 昼間 | 1.2 | 0.01 | 0.008 | 0.01 |
+| 満月の夜 | 0.45 | 0.37 | 0.82 | 0.37 |
+| 新月の夜 | 0.08 | 0.56 | 5.0(上限) | 0.40 |
+
+#### 月位相テクスチャ生成 (MoonPhase.ts)
+
+ドメイン層の純粋関数。`generateMoonPhasePixels(phaseDeg, size, illumination) → Uint8ClampedArray`。
+
+- phaseDegからterminator曲線（明暗境界）を球面座標で算出
+- リムライト効果（エッジ暗化）
+- マリア模様（sin関数による簡易パターン）
+- ソフトエッジアルファ（外周10%でフェードアウト）
+- 暗部は完全黒ではなく微かに可視（darkSide = 0.03 × brightness × 255）
 
 ### ThemeLerp補間
 
@@ -1455,7 +1517,7 @@ function decideWeather(
 ```
 autoWeather=false: WeatherPanelで手動選択。天文計算ベースのテーマ生成は継続（手動天気をテーマ計算に渡す）
 autoWeather=true:  decideWeather()で天気を自動決定。WeatherPanelのWeather/Cloud/Time行はグレーアウト
-地点設定: autoWeatherの状態に関わらず常に利用可能（LocationButton・WorldMapModal）
+地点設定: autoWeatherの状態に関わらず常に利用可能（environmentシーン内WorldMapModal）
 天文計算: autoWeatherの状態に関わらずenvSimServiceが常に稼働し天体位置・候・テーマを生成
 ```
 
@@ -1686,11 +1748,11 @@ autoWeather=false 時:
 
 ### 5.5i: 世界地図UI
 
-フリーモードに地球アイコンボタンを設置し、押下で世界地図モーダルを表示する。地図上でプリセット都市を選択するか、任意の地点をクリックして緯度経度を設定する。
+environmentシーンのWeatherPanel Scene行のLocationボタンから世界地図モーダルを表示する。地図上でプリセット都市を選択するか、任意の地点をクリックして緯度経度を設定する。
 
-#### ボタン配置
+#### アクセス経路
 
-フリーモード画面の左下エリア（WeatherButtonの隣）に地球アイコンボタンを配置。
+environmentシーン内のWeatherPanel Scene行右端のLocationボタン（地球アイコン）をクリック→worldMapビューに遷移。
 
 #### 世界地図の実装
 
@@ -2495,7 +2557,7 @@ autoWeather=true時の表示挙動:
 - Autoボタンは天気アイコン（Sunny/Cloudy/Rainy/Snowy）と排他選択。Autoクリック→autoWeather=true、Weather/Time行のボタンクリック→autoWeather=false
 - autoWeather=true時はAutoのみがactive。Weather/Cloud/Time行のボタンはactive表示されない
 - Scene行は常に操作可能（autoモードでもscenePresetは手動選択、autoWeatherに影響しない）
-- Locationボタン（GlobeIcon）はフリーモードに常時配置、かつWeatherPanel Scene行の右端にも配置（`marginLeft: 'auto'`で右寄せ）。WeatherPanel内のLocationボタンクリックでWeatherPanelを閉じてWorldMapModalを開き、WorldMapModal閉じるとWeatherPanelに自動復帰（`openedFromWeather`フラグで制御）
+- Locationボタン（GlobeIcon）はWeatherPanel Scene行の右端に配置（`marginLeft: 'auto'`で右寄せ）。クリックでenvironmentシーン内のworldMapビューに遷移し、WorldMapのcloseでweatherビューに復帰
 
 ---
 

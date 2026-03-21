@@ -12,6 +12,7 @@ import type { ThreeCharacterHandle } from '../three/ThreeCharacterAdapter'
 import type { StatisticsService } from '../../application/statistics/StatisticsService'
 import type { FureaiCoordinator } from '../../application/fureai/FureaiCoordinator'
 import type { GalleryCoordinator } from '../../application/gallery/GalleryCoordinator'
+import type { EnvironmentCoordinator } from '../../application/environment/EnvironmentCoordinator'
 import type { EmotionHistoryService } from '../../application/character/EmotionHistoryService'
 import type { EnvironmentSimulationService } from '../../application/environment/EnvironmentSimulationService'
 import type { ClimateGridPort } from '../../domain/environment/value-objects/ClimateData'
@@ -31,6 +32,7 @@ export interface AppDeps {
   readonly statisticsService: StatisticsService
   readonly fureaiCoordinator: FureaiCoordinator
   readonly galleryCoordinator: GalleryCoordinator
+  readonly environmentCoordinator: EnvironmentCoordinator
   readonly emotionHistoryService: EmotionHistoryService
   readonly envSimService: EnvironmentSimulationService
   readonly climateGridPort: ClimateGridPort

@@ -25,7 +25,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [architecture.md](./memories/architecture.md) — レイヤー構成・モジュール間通信パターン・全ソースファイルマップ・テストファイル一覧。ファイルの場所や依存関係を調べるときに参照
 - [pomodoro-state-transitions.md](./memories/pomodoro-state-transitions.md) — 4層階層的状態マシン（AppScene→PomodoroState→CharacterBehavior→CharacterState）の全遷移フロー図。タイマーやキャラクター行動の状態遷移を変更する際に参照
 - [hierarchical-state-design.md](./memories/hierarchical-state-design.md) — 階層的状態マシン導入の設計文書。旧アーキテクチャの課題分析と新設計の目標・状態階層定義。状態管理リファクタリング時に参照
-- [app-mode-design.md](./memories/app-mode-design.md) — AppScene型（free/pomodoro/settings）とAppSceneManagerの設計。関連ソースファイル・型定義・遷移ルールを記載。シーン管理を変更する際に参照
+- [app-mode-design.md](./memories/app-mode-design.md) — AppScene型（free/pomodoro/settings/fureai/gallery/environment）とAppSceneManager・各Coordinatorの設計。関連ソースファイル・型定義・遷移ルール・各シーンの責務を記載。シーン管理を変更する際に参照
 - [scene-transition-design.md](./memories/scene-transition-design.md) — DisplayScene（5種）と宣言的シーン遷移グラフ（DISPLAY_SCENE_GRAPH）の設計。暗転トランジション演出のレイヤー分離。画面遷移演出を変更する際に参照
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
@@ -47,6 +47,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [asset-licensing-distribution.md](./memories/asset-licensing-distribution.md) — 購入素材（FBX/BGM/効果音）のライセンス類型別配布可否と、public/privateリポジトリ分離方式の法的根拠。素材追加・配布方式変更時に参照
 - [source-code-licensing.md](./memories/source-code-licensing.md) — PolyForm Noncommercial 1.0.0の選定理由と比較検討（MIT/GPL/BSL/SSPL等）。ソースコード公開+有料配布を両立する構成。ライセンス方針の確認時に参照
 - [distribution-plan.md](./memories/distribution-plan.md) — itch.io「Direct to you」モードでの有料配布設計。価格$4.99・手数料・税務（W-8BEN）・返金ポリシー・インストーラー方針。配布・販売に関する判断時に参照
+- [itchio-page-content.md](./memories/2026-03-15_PomodoroPet/itchio-page-content.md) — itch.io販売ページのコンテンツ（説明文英語/日本語・EULA同意文言・SmartScreen注記・特定商取引法表示）。スクリーンショット8枚は同ディレクトリに保存
 
 ### リファレンス
 

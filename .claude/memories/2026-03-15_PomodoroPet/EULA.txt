@@ -1,0 +1,263 @@
+END USER LICENSE AGREEMENT
+
+Pomodoro Pet
+Version: 0.1.0
+Last Updated: 2026-02-22
+
+IMPORTANT: Please read this agreement carefully before
+purchasing, installing, or using the software. By
+purchasing, installing, or using the software, you agree to
+be bound by the terms of this agreement. If you do not
+agree, do not purchase, install, or use the software.
+
+
+1. DEFINITIONS
+
+"Licensor" means the developer of Pomodoro Pet
+(sato1043@updater.cc).
+
+"Software" means the Pomodoro Pet application, including
+all executable files, libraries, assets (3D models,
+textures, audio files, images), and documentation
+distributed as part of the application.
+
+"You" means the individual who has purchased or obtained
+the Software through an authorized distribution channel.
+
+
+2. LICENSE GRANT
+
+The Licensor grants You a limited, non-exclusive,
+non-transferable, non-sublicensable license to install and
+use the Software on Your personal devices for personal,
+non-commercial purposes only.
+
+
+3. RESTRICTIONS
+
+You may NOT:
+
+(a) Copy, redistribute, sell, rent, lease, or sublicense
+    the Software or any part of it.
+
+(b) Reverse engineer, decompile, disassemble, or otherwise
+    attempt to derive the source code of the Software,
+    except to the extent permitted by applicable law.
+
+(c) Extract, reuse, or redistribute any assets included in
+    the Software, including but not limited to 3D models,
+    textures, audio files, and images. These assets are
+    licensed to the Licensor by third parties and are not
+    licensed to You for standalone use.
+
+(d) Use the Software for any commercial purpose.
+
+(e) Modify the Software or create derivative works based on
+    it.
+
+(f) Remove or alter any copyright notices, trademarks, or
+    other proprietary notices contained in the Software.
+
+
+4. INTELLECTUAL PROPERTY
+
+The Software and all included assets are protected by
+copyright laws and international treaties. The Licensor
+retains all rights, title, and interest in the Software.
+Third-party assets included in the Software remain the
+property of their respective copyright holders and are used
+under license.
+
+
+5. SOURCE CODE
+
+The source code of Pomodoro Pet is separately available on
+GitHub under the PolyForm Noncommercial License 1.0.0. That
+license governs the source code only. This EULA governs the
+binary distribution of the Software, including all bundled
+assets. The two licenses are independent of each other.
+
+
+6. NO REFUNDS
+
+All sales are final. No refunds will be provided under any
+circumstances. By purchasing the Software, You acknowledge
+and accept this policy.
+
+
+7. DISCLAIMER OF WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS" WITHOUT WARRANTY OF ANY
+KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR
+PURPOSE, AND NONINFRINGEMENT. THE LICENSOR DOES NOT WARRANT
+THAT THE SOFTWARE WILL BE ERROR-FREE OR UNINTERRUPTED.
+
+
+8. LIMITATION OF LIABILITY
+
+TO THE MAXIMUM EXTENT PERMITTED BY APPLICABLE LAW, IN NO
+EVENT SHALL THE LICENSOR BE LIABLE FOR ANY INDIRECT,
+INCIDENTAL, SPECIAL, CONSEQUENTIAL, OR PUNITIVE DAMAGES
+ARISING OUT OF OR IN CONNECTION WITH THE USE OR INABILITY
+TO USE THE SOFTWARE. THE LICENSOR'S TOTAL LIABILITY SHALL
+NOT EXCEED THE AMOUNT YOU PAID FOR THE SOFTWARE.
+
+
+9. TERMINATION
+
+This license is effective until terminated. Your rights
+under this license terminate automatically without notice
+if You fail to comply with any of its terms. Upon
+termination, You must immediately uninstall and destroy all
+copies of the Software in Your possession.
+
+
+10. GOVERNING LAW AND JURISDICTION
+
+This agreement shall be governed by and construed in
+accordance with the laws of Japan. Any disputes arising out
+of or in connection with this agreement shall be submitted
+to the exclusive jurisdiction of the Tokyo District Court
+as the court of first instance.
+
+
+Copyright 2026 sato1043@updater.cc. All rights reserved.
+
+
+===========================================================
+
+END USER LICENSE AGREEMENT (Japanese Translation /
+Reference Only)
+
+This Japanese translation is provided for reference
+purposes only. In the event of any conflict between the
+English version and this Japanese translation, the English
+version shall prevail.
+
+===========================================================
+
+エンドユーザー使用許諾契約（日本語参考訳）
+
+本日本語訳は参考目的でのみ提供される。英語版と日本語訳の間
+に矛盾がある場合、英語版が優先される。
+
+Pomodoro Pet
+バージョン: 0.1.0
+最終更新日: 2026-02-22
+
+重要: 本ソフトウェアを購入、インストール、または使用する前
+に、本契約を注意深くお読みください。本ソフトウェアを購入、
+インストール、または使用することにより、本契約の条項に拘束
+されることに同意したものとみなされる。同意しない場合は、本
+ソフトウェアを購入、インストール、または使用しないこと。
+
+
+1. 定義
+
+「ライセンサー」とは、Pomodoro Petの開発者
+（sato1043@updater.cc）をいう。
+
+「本ソフトウェア」とは、Pomodoro Petアプリケーションをいい、
+アプリケーションの一部として配布されるすべての実行ファイル、
+ライブラリ、アセット（3Dモデル、テクスチャ、音声ファイル、
+画像）およびドキュメントを含む。
+
+「ユーザー」とは、正規の配布チャネルを通じて本ソフトウェア
+を購入または取得した個人をいう。
+
+
+2. 使用許諾
+
+ライセンサーはユーザーに対し、個人のデバイスに本ソフトウェ
+アをインストールし、個人的かつ非商用目的でのみ使用する、限
+定的、非独占的、譲渡不能、再許諾不能なライセンスを付与する。
+
+
+3. 制限事項
+
+ユーザーは以下の行為を行ってはならない。
+
+(a) 本ソフトウェアまたはその一部を複製、再配布、販売、賃貸、
+    リース、または再許諾すること。
+
+(b) 適用法により許容される範囲を除き、本ソフトウェアのソー
+    スコードをリバースエンジニアリング、逆コンパイル、逆ア
+    センブル、またはその他の方法で解読しようとすること。
+
+(c) 本ソフトウェアに含まれるアセット（3Dモデル、テクスチャ、
+    音声ファイル、画像を含むがこれらに限定されない）を抽出、
+    再利用、または再配布すること。これらのアセットは第三者
+    からライセンサーにライセンスされたものであり、ユーザー
+    に対して単独使用のライセンスは付与されていない。
+
+(d) 本ソフトウェアを商用目的で使用すること。
+
+(e) 本ソフトウェアを改変し、またはこれに基づく派生物を作成
+    すること。
+
+(f) 本ソフトウェアに含まれる著作権表示、商標、またはその他
+    の知的財産権に関する表示を削除または改変すること。
+
+
+4. 知的財産権
+
+本ソフトウェアおよびすべての同梱アセットは著作権法および国
+際条約により保護されている。ライセンサーは本ソフトウェアに
+関するすべての権利、権原および利益を保有する。本ソフトウェ
+アに含まれる第三者のアセットはそれぞれの著作権者の財産であ
+り、ライセンスに基づいて使用されている。
+
+
+5. ソースコード
+
+Pomodoro Petのソースコードは、PolyForm Noncommercial
+License 1.0.0のもとでGitHub上で別途公開されている。当該ライ
+センスはソースコードのみに適用される。本EULAは、すべてのバ
+ンドルアセットを含む本ソフトウェアのバイナリ配布に適用され
+る。両ライセンスは互いに独立したものである。
+
+
+6. 返金不可
+
+すべての売上は最終的なものである。いかなる状況においても返
+金は行われない。本ソフトウェアを購入することにより、ユーザー
+は本方針を了承し受諾したものとみなされる。
+
+
+7. 保証の免責
+
+本ソフトウェアは「現状のまま」提供され、商品性、特定目的へ
+の適合性、および非侵害性の保証を含むがこれらに限定されない、
+明示または黙示を問わず、いかなる種類の保証も伴わない。ライ
+センサーは本ソフトウェアにエラーがないこと、または中断なく
+動作することを保証しない。
+
+
+8. 責任の制限
+
+適用法により許容される最大限の範囲において、ライセンサーは
+本ソフトウェアの使用または使用不能に起因または関連して生じ
+る間接的、偶発的、特別、結果的、または懲罰的損害について、
+いかなる場合も責任を負わない。ライセンサーの総責任額は、ユー
+ザーが本ソフトウェアに対して支払った金額を超えないものとす
+る。
+
+
+9. 契約の終了
+
+本ライセンスは終了するまで有効である。ユーザーが本ライセン
+スの条項に違反した場合、本ライセンスに基づくユーザーの権利
+は予告なく自動的に終了する。終了時、ユーザーは所持するすべ
+ての本ソフトウェアのコピーを直ちにアンインストールし破棄し
+なければならない。
+
+
+10. 準拠法および管轄
+
+本契約は日本法に準拠し、日本法に従って解釈される。本契約に
+起因または関連する紛争は、第一審の専属的管轄裁判所として東
+京地方裁判所に提出されるものとする。
+
+
+Copyright 2026 sato1043@updater.cc. All rights reserved.

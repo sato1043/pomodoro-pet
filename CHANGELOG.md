@@ -7,10 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-03-21
+
+### Added
+- 3D月オブジェクト — 天文計算による月位置に球体メッシュを配置。Canvasテクスチャで満ち欠け（terminator曲線）を描画、BackSide半透明球でグロー演出。水平線フェード（altitude -2°〜+5°）と天気による不透明度減衰
+- 月光照明ブースト — 満月の夜間が視覚的に明るくなるよう照明パラメータを強化（nightExposure上限0.30→0.45、nightAmbientIntensity上限0.25→0.40、DirectionalLight月光intensity係数0.4→0.8、地面色の月光色ブレンド）
+- MoonPhase純粋関数 — 月位相テクスチャ生成（generateMoonPhasePixels）。Three.js非依存のドメイン層関数
+- EnvironmentThemeParamsに月データ5フィールド追加（moonPosition/moonPhaseDeg/moonIllumination/moonIsVisible/moonOpacity）。既存のテーマ遷移パイプライン（30秒lerp）で滑らか補間
+- フィルライト — カメラ方向からの補助DirectionalLight（0xb0c4de）。exposureの逆数で非線形にintensityを調整し、日中は控えめ（実効≈0.01）・夜間は強め（実効≈0.56）でキャラクターの顔の視認性を維持
+
+## [0.11.2] - 2026-03-21
+
+### Changed
+- 環境設定（天気・地域・候）を独立したAppScene `environment` に分離 — WeatherPanel・WorldMapModal・KouSelectorをSceneFreeからSceneEnvironmentに移動。EnvironmentCoordinatorでシーン遷移とカメラ制御を管理。SceneFreeの状態管理を簡素化（6 state → 3 state）
+
 ## [0.11.1] - 2026-03-15
 
 ### Fixed
 - butler CLIインストール方法をsetup-butler GitHub Actionに変更（broth.itch.ovh DNS解決失敗によるitch.ioアップロード失敗を修正）
+
+### Added
+- itch.io販売ページコンテンツ準備（説明文英語/日本語、EULA同意文言、SmartScreen注記、特定商取引法表示、スクリーンショット8枚）
+- GCPバックエンド: register API に itch.io download key 検証を実装（itch.io API連携）
 
 ## [0.11.0] - 2026-03-15
 
