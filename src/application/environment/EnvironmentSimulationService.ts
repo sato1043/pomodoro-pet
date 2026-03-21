@@ -55,6 +55,8 @@ export interface EnvironmentSimulationService {
   setManualTimeOfDay(timeOfDay: TimeOfDay | null): void
   /** 手動候を設定する。nullで天文計算による自動候に戻る */
   setManualKou(kouIndex: number | null): void
+  /** 手動月高度を設定する。nullで天文計算による自動月位置に戻る */
+  setManualMoonAltitude(altitudeDeg: number | null): void
   tick(deltaMs: number): void
   stop(): void
   readonly currentSolar: SolarPosition | null
@@ -99,14 +101,22 @@ function simulateSolarForTimeOfDay(timeOfDay: TimeOfDay, realSolar: SolarPositio
   }
 }
 
-function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay): LunarPosition {
+function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, altitudeOverride?: number): LunarPosition {
   if (timeOfDay === 'night') {
+    const alt = altitudeOverride ?? 33
+    // 高度→方位角連動: 月が東寄り(150°)から西寄り(210°)へ向かう（太陽と同じ左→右）
+    // CelestialTheme.tsのazimuthリマップが画面内に収める
+    const altFraction = Math.max(0, Math.min(1, (alt - 5) / (33 - 5)))
+    const azimuth = 150 + (210 - 150) * altFraction // 5°→150°(左寄り), 33°→210°(右寄り)
+    // 高度→月齢連動: 低い→半月、高い→満月（見栄えする面積を確保）
+    const phaseDeg = 90 + (180 - 90) * altFraction        // 90°(半月)→180°(満月)
+    const illumination = 0.50 + (1.0 - 0.50) * altFraction // 0.50→1.0
     return {
-      altitude: 40,
-      azimuth: 180,
-      phaseDeg: 90,
-      illuminationFraction: 0.5,
-      isAboveHorizon: true,
+      altitude: alt,
+      azimuth,
+      phaseDeg,
+      illuminationFraction: illumination,
+      isAboveHorizon: alt > 0,
     }
   }
   return {
@@ -131,6 +141,7 @@ export function createEnvironmentSimulationService(
   let isRunning = false
   let isAutoWeather = false
   let timeOfDayOverride: TimeOfDay | null = null
+  let moonAltitudeOverride: number | null = null
   let kouIndexOverride: number | null = null
   let cachedKouDateRanges: readonly KouDateRange[] = []
   let cachedKouDateRangesYear = -1
@@ -251,8 +262,10 @@ export function createEnvironmentSimulationService(
       ? simulateSolarForTimeOfDay(timeOfDayOverride, cachedSolar)
       : cachedSolar
     const themeLunar = timeOfDayOverride
-      ? simulateLunarForTimeOfDay(timeOfDayOverride)
-      : cachedLunar
+      ? simulateLunarForTimeOfDay(timeOfDayOverride, moonAltitudeOverride ?? undefined)
+      : moonAltitudeOverride !== null
+        ? simulateLunarForTimeOfDay('night', moonAltitudeOverride)
+        : cachedLunar
 
     const themeParams = computeThemeFromCelestial(
       themeSolar, themeLunar, effectiveWeather, currentEstimatedTempC, scenePreset, currentAvgPrecipMm
@@ -351,6 +364,15 @@ export function createEnvironmentSimulationService(
       }
     },
 
+    setManualMoonAltitude(altitudeDeg: number | null): void {
+      const changed = moonAltitudeOverride !== altitudeDeg
+      moonAltitudeOverride = altitudeDeg
+      if (changed && isRunning) {
+        pendingTransitionDurationMs = THEME_TRANSITION_DURATION_MANUAL_MS
+        timeSinceLastAstronomyUpdate = ASTRONOMY_UPDATE_INTERVAL_MS
+      }
+    },
+
     tick(deltaMs: number): void {
       if (!isRunning) return
 
@@ -369,6 +391,7 @@ export function createEnvironmentSimulationService(
       autoWeatherDecision = null
       currentKou = null
       timeOfDayOverride = null
+      moonAltitudeOverride = null
       kouIndexOverride = null
       cachedKouDateRanges = []
       cachedKouDateRangesYear = -1

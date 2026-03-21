@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppDeps } from './AppContext'
 import { resolveTimeOfDay, cloudPresetLevel } from '../../domain/environment/value-objects/WeatherConfig'
-import type { WeatherType, TimeOfDay, WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
+import type { WeatherType, TimeOfDay, MoonAltitude, WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
 import type { ScenePresetName } from '../../domain/environment/value-objects/ScenePreset'
 import * as styles from './styles/weather-panel.css'
 
@@ -178,6 +178,49 @@ const TIME_OPTIONS: Array<{ value: TimeOfDay; icon: () => JSX.Element; title: st
   { value: 'night', icon: NightIcon, title: 'Night' },
 ]
 
+// --- 月高度アイコン ---
+
+function MoonHorizonIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 18.79A9 9 0 1 1 11.21 9 7 7 0 0 0 21 18.79z" />
+      <line x1="1" y1="21" x2="23" y2="21" opacity="0.4" />
+    </svg>
+  )
+}
+
+function MoonLowIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 16.79A9 9 0 1 1 11.21 7 7 7 0 0 0 21 16.79z" />
+      <line x1="1" y1="21" x2="23" y2="21" opacity="0.4" />
+    </svg>
+  )
+}
+
+function MoonMidIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+    </svg>
+  )
+}
+
+function MoonHighIcon(): JSX.Element {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 8.79A9 9 0 1 1 11.21 -1 7 7 0 0 0 21 8.79z" />
+    </svg>
+  )
+}
+
+const MOON_OPTIONS: Array<{ value: MoonAltitude; icon: () => JSX.Element; title: string }> = [
+  { value: 'horizon', icon: MoonHorizonIcon, title: 'Horizon' },
+  { value: 'low', icon: MoonLowIcon, title: 'Low' },
+  { value: 'mid', icon: MoonMidIcon, title: 'Mid' },
+  { value: 'high', icon: MoonHighIcon, title: 'High' },
+]
+
 // --- コンポーネント ---
 
 function LocationIcon(): JSX.Element {
@@ -325,6 +368,32 @@ export function WeatherPanel({ onLocationClick }: WeatherPanelProps): JSX.Elemen
           onClick={() => updateDraft({ autoTimeOfDay: true })}
           title={`Auto (${resolveTimeOfDay(new Date().getHours())})`}
           data-testid="time-auto"
+        >
+          <AutoIcon />
+        </button>
+      </div>
+
+      <div className={styles.row}>
+        <span className={styles.rowLabel}>Moon</span>
+        {MOON_OPTIONS.map(opt => {
+          const Icon = opt.icon
+          return (
+            <button
+              key={opt.value}
+              className={btnClass(!draft.autoMoon && draft.moonAltitude === opt.value)}
+              onClick={() => updateDraft({ moonAltitude: opt.value, autoMoon: false })}
+              title={opt.title}
+              data-testid={`moon-${opt.value}`}
+            >
+              <Icon />
+            </button>
+          )
+        })}
+        <button
+          className={btnClass(draft.autoMoon)}
+          onClick={() => updateDraft({ autoMoon: true })}
+          title="Auto"
+          data-testid="moon-auto"
         >
           <AutoIcon />
         </button>

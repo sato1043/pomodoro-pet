@@ -47,7 +47,7 @@ import { createFeedingInteractionAdapter, DEFAULT_CAMERA, FUREAI_CAMERA, type Fe
 import type { CharacterBehavior } from './domain/character/value-objects/BehaviorPreset'
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
-import { resolveTimeOfDay } from './domain/environment/value-objects/WeatherConfig'
+import { resolveTimeOfDay, MOON_ALTITUDE_DEG } from './domain/environment/value-objects/WeatherConfig'
 // resolveEnvironmentTheme は envSimService が天文計算ベースでテーマ生成するため不要
 // EnvironmentTheme型はapplyThemeToSceneの引数型として間接的に使用される
 import type { EnvironmentThemeParams } from './domain/environment/value-objects/EnvironmentTheme'
@@ -520,6 +520,12 @@ async function main(): Promise<void> {
       envSimService.setManualTimeOfDay(null)
     }
 
+    if (!event.weather.autoMoon) {
+      envSimService.setManualMoonAltitude(MOON_ALTITUDE_DEG[event.weather.moonAltitude])
+    } else {
+      envSimService.setManualMoonAltitude(null)
+    }
+
     if (!event.weather.autoWeather) {
       envSimService.setManualWeather({
         weather: event.weather.weather,
@@ -649,6 +655,9 @@ async function main(): Promise<void> {
     // 手動timeOfDay: autoWeather=false かつ autoTimeOfDay=false の場合のみ
     if (!wc.autoWeather && !wc.autoTimeOfDay) {
       envSimService.setManualTimeOfDay(wc.timeOfDay)
+    }
+    if (!wc.autoMoon) {
+      envSimService.setManualMoonAltitude(MOON_ALTITUDE_DEG[wc.moonAltitude])
     }
     envSimService.start(climate, wc.scenePreset)
     // 起動時テーマを即座にシーンに反映（applyImmediateは内部状態のみ更新しtick()はnullを返すため）

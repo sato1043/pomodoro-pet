@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-03-21
+
+### Added
+- 月高度UI — 環境パネルのTime行の下にMoon行を追加（Horizon/Low/Mid/High/Autoの5ボタン）。月の天空上の高度を手動設定可能。高度に連動して月齢（半月→満月）と左右位置（東→西）が自動変化
+- 月位相テクスチャに地球照（earthshine）効果を追加。三日月時でも暗部がうっすら見える
+- 月表示位置の画面内リマップ — azimuthを北方向中心±25°に補正（東→画面左、西→画面右で太陽と同じ左→右の動き）。altitudeを22°〜36°にリマップし画面上半分に配置
+
+### Changed
+- 月配置距離を50→300に拡大（スケール3→18で見かけサイズ調整）
+- WeatherConfigにmoonAltitude/autoMoonフィールド追加（settings.jsonに永続化）
+
 ## [0.12.1] - 2026-03-21
 
 ### Fixed

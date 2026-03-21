@@ -218,9 +218,9 @@ describe('computeThemeFromCelestial', () => {
     const lunar = makeLunar(45, 1.0, true, 90)
     const result = computeThemeFromCelestial(solar, lunar, sunnyWeather, 10, 'meadow')
 
-    // moonPositionは距離50の球面上
+    // moonPositionは距離300の球面上
     const dist = Math.sqrt(result.moonPosition.x ** 2 + result.moonPosition.y ** 2 + result.moonPosition.z ** 2)
-    expect(dist).toBeCloseTo(50, 0)
+    expect(dist).toBeCloseTo(300, 0)
     expect(result.moonIsVisible).toBe(true)
     expect(result.moonPhaseDeg).toBe(180) // illuminationFraction=1.0 → phaseDeg=180
     expect(result.moonIllumination).toBe(1.0)

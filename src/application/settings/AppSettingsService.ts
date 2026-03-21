@@ -255,6 +255,7 @@ export function createAppSettingsService(
               }
             }
           }
+          const validMoonAltitudes = ['horizon', 'low', 'mid', 'high']
           currentWeather = {
             weather: w.weather as WeatherConfig['weather'],
             timeOfDay: w.timeOfDay as WeatherConfig['timeOfDay'],
@@ -267,6 +268,10 @@ export function createAppSettingsService(
               ? w.scenePreset as WeatherConfig['scenePreset']
               : 'meadow',
             climate: restoredClimate,
+            moonAltitude: typeof w.moonAltitude === 'string' && validMoonAltitudes.includes(w.moonAltitude)
+              ? w.moonAltitude as WeatherConfig['moonAltitude']
+              : DEFAULT_WEATHER.moonAltitude,
+            autoMoon: typeof w.autoMoon === 'boolean' ? w.autoMoon : DEFAULT_WEATHER.autoMoon,
           }
           publishWeatherChanged(currentWeather)
         }

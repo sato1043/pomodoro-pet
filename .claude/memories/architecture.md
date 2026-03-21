@@ -248,7 +248,7 @@ EventBus（UI/インフラ通知）:
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（最大1200本、デフォルト650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。setDrawRange()で動的粒子数制御。WeatherEffectインターフェース定義（setParticleCount含む）
 - `three/SnowEffect.ts` — 雪エフェクト。Points（最大900個、デフォルト750個）sin/cosゆらゆら揺れ。setDrawRange()で動的粒子数制御
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
-- `three/MoonEffect.ts` — 3D月オブジェクト。SphereGeometry(1.0, 32, 32)スケール3.0 + BackSide半透明グローメッシュ。MoonPhase.tsのgenerateMoonPhasePixelsでCanvasテクスチャを動的更新（位相・illumination変化時のみ）。fog無効、距離50配置。applyThemeToScene経由でテーマパラメータの月データ5フィールドから更新
+- `three/MoonEffect.ts` — 3D月オブジェクト。SphereGeometry(1.0, 32, 32)スケール18.0 + BackSide半透明グローメッシュ。MoonPhase.tsのgenerateMoonPhasePixels（地球照効果付き）でCanvasテクスチャを動的更新（位相・illumination変化時のみ）。fog無効、距離300配置。CelestialThemeでazimuth(北中心±25°)/altitude(22°-36°)リマップ
 - `astronomy/AstronomyAdapter.ts` — astronomy-engineラッパー。AstronomyPort実装。Observer/SunPosition/Horizon/MoonPhase/Illumination使用。getSolarDeclinationAndGHA()ヘルパー（terminator UI用）
 - `climate/ClimateGridAdapter.ts` — ClimateGridPort実装。`createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルJSONを注入。36lat×72lon 5度解像度、双線形補間、海洋スナッピング
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）

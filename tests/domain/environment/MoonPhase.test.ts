@@ -16,10 +16,10 @@ describe('generateMoonPhasePixels', () => {
     const cy = Math.floor(SIZE / 2)
     const idx = (cy * SIZE + cx) * 4
     // 新月ではlit=0に近い（terminatorCos=1で右端）、中心は暗い側
-    // 暗部の最低輝度darkSide = 0.03 * 0.5 * 255 ≈ 3.8
-    expect(pixels[idx]).toBeLessThan(30)
-    expect(pixels[idx + 1]).toBeLessThan(30)
-    expect(pixels[idx + 2]).toBeLessThan(30)
+    // 地球照+最低輝度で若干明るいが、満月より大幅に暗い
+    expect(pixels[idx]).toBeLessThan(60)
+    expect(pixels[idx + 1]).toBeLessThan(60)
+    expect(pixels[idx + 2]).toBeLessThan(60)
   })
 
   it('満月（phaseDeg=180）: 中心ピクセルが明るい', () => {
