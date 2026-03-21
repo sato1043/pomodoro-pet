@@ -30,7 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
 - [environment-scene-design.md](./memories/environment-scene-design.md) — 環境シーンシステム全体設計。Phase 1-3実装済み仕様（型定義・プリセット・テーマ・エフェクト・補間・UI・永続化）+ Phase 5.5未実装設計（astronomy-engine天文計算・七十二候・気候プロファイル・天気自動決定・雨量連動）。環境シーン変更時に参照
-- [release-channel-design.md](./memories/release-channel-design.md) — リリースチャネル（stable/beta/alpha）による機能セット切替の設計。2軸判定モデル（チャネル×ライセンスモード）、alpha機能の追加手順、自動アップデートチャネル分離のGCPインフラ設計。機能追加・チャネル管理時に参照
+- [release-infrastructure.md](./memories/release-infrastructure.md) — リリースインフラ統合設計。リリースチャネル（stable/beta/alpha）2軸判定モデル、CI/CDワークフロー（GitHub Actions release.yml）、GitHub Secrets（SSH Deploy Key・環境変数）、自動アップデートチャネル分離（GitHub Releases・GCPバックエンド・Firestore）、リリース手順・トラブルシューティング。機能追加・チャネル管理・CI/CD設定変更時に参照
 
 ### インフラ・技術
 
@@ -39,7 +39,6 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [development.md](./memories/development.md) — 開発コマンド一覧（dev/build/test/package/deploy等）・WSL2セットアップ手順・デバッグ設定・テスト方針。開発環境構築やコマンド確認時に参照
 - [known-issues.md](./memories/known-issues.md) — WSL2/Electron/Wine/Web Audio等の既知問題と回避策（15項目以上）。開発中のトラブルシュート時に参照
 - [e2e-coverage-gaps.md](./memories/e2e-coverage-gaps.md) — E2Eテスト（Playwright+Electron）のカバレッジ分析。技術的制約・カバー済み92テスト・未カバー項目の分類。E2Eテスト追加時に参照
-- [ci-release-setup.md](./memories/ci-release-setup.md) — GitHub Actionsリリースワークフローのセットアップ手順。SSH Deploy Key・Secrets設定・タグpushによる自動リリース。CI/CD設定変更時に参照
 - [gcp-update-server.md](./memories/gcp-update-server.md) — GCPバックエンド仕様（Cloud Functions + Firestore + Secret Manager）。heartbeat/register API仕様・Firestoreスキーマ・デプロイ手順・キー登録管理。バックエンド変更時に参照
 
 ### 法務・配布

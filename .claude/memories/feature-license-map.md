@@ -6,7 +6,7 @@
 
 ## リリースチャネル
 
-機能の利用可否は「チャネル」と「ライセンスモード」の2軸で判定される。詳細は[release-channel-design.md](release-channel-design.md)を参照。
+機能の利用可否は「チャネル」と「ライセンスモード」の2軸で判定される。詳細は[release-infrastructure.md](release-infrastructure.md)を参照。
 
 | チャネル | 用途 |
 |---|---|
