@@ -34,7 +34,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     ipcRenderer.invoke('license:check'),
 
   // アップデート関連
-  checkForUpdate: (): Promise<void> =>
+  checkForUpdate: (): Promise<string | void> =>
     ipcRenderer.invoke('update:check'),
   downloadUpdate: (): Promise<void> =>
     ipcRenderer.invoke('update:download'),

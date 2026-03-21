@@ -170,10 +170,11 @@ export function registerIpcHandlers(): void {
   // --- アップデート ---
 
   ipcMain.handle('update:check', async () => {
-    if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return
+    if (!app.isPackaged && __DEBUG_AUTO_UPDATE__ !== 'true') return 'not-available'
     const state = getLicenseState()
-    if (state.mode === 'expired' || state.mode === 'restricted') return
+    if (state.mode === 'expired' || state.mode === 'restricted') return 'not-available'
     await autoUpdater.checkForUpdates()
+    return 'ok'
   })
 
   ipcMain.handle('update:download', async () => {

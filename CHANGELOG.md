@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.13.4] - 2026-03-21
+
+### Added
+- About画面に「Check for Update」ボタン追加。チェック結果（Up to date / Update available! / Check failed）を表示
+- 自動アップデートチェックを1時間間隔で定期実行
+
+### Changed
+- 起動後の自動アップデートチェックを10秒→3秒に短縮
+
+### Fixed
+- dev環境でCheck for Updateが「Checking...」のまま止まる問題を修正（IPC戻り値でnot-available応答）
+
 ## [0.13.3] - 2026-03-21
 
 ### Fixed
