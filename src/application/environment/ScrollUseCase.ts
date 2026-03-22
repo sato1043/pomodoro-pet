@@ -14,7 +14,7 @@ export interface ScrollManager {
 
 function createInitialOffsets(chunkCount: number, depth: number): number[] {
   const offsets: number[] = []
-  const startOffset = -depth
+  const startOffset = -depth * 2
   for (let i = 0; i < chunkCount; i++) {
     offsets.push(startOffset + i * depth)
   }
@@ -27,7 +27,7 @@ export function createScrollManager(
   chunkCount: number
 ): ScrollManager {
   const depth = chunkSpec.depth
-  const recycleThreshold = (chunkCount - 1) * depth // 全チャンクが初期配置に収まる閾値
+  const recycleThreshold = (chunkCount - 2) * depth // カメラ後退時にも手前カバレッジを確保
 
   let chunkOffsets = createInitialOffsets(chunkCount, depth)
   let recycledChunkIndex: number | null = null

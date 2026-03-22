@@ -48,8 +48,6 @@ import type { CharacterBehavior } from './domain/character/value-objects/Behavio
 import type { PhaseTriggerMap } from './domain/timer/value-objects/PhaseTrigger'
 import type { WeatherConfig } from './domain/environment/value-objects/WeatherConfig'
 import { resolveTimeOfDay, MOON_ALTITUDE_DEG } from './domain/environment/value-objects/WeatherConfig'
-// resolveEnvironmentTheme は envSimService が天文計算ベースでテーマ生成するため不要
-// EnvironmentTheme型はapplyThemeToSceneの引数型として間接的に使用される
 import type { EnvironmentThemeParams } from './domain/environment/value-objects/EnvironmentTheme'
 import { isFeatureEnabled, resolveReleaseChannel } from './application/license/LicenseState'
 import type { LicenseMode, ReleaseChannel } from './application/license/LicenseState'

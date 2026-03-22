@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.14.2] - 2026-03-22
+
+### Fixed
+- 砂浜(seaside)プリセットの夜空が灰色になる問題を修正 — 昼間用の明度補正(lighten 25%+exposure×1.25)が夜間にも適用されていたため、夜間(altitude≤-6)は補正をスキップするよう変更。未使用のresolveEnvironmentTheme静的テーブルも削除
+- 環境モードのwalk中に手前の地面が周期的にフリッカーする問題を修正 — 環境モードのカメラ後退(z=5→7)によりチャンクの手前カバレッジが不足していた。startOffsetを-depth*2に拡張し、recycleThresholdを早期化して手前の地面を常にカバー
+
 ## [0.14.1] - 2026-03-22
 
 ### Changed

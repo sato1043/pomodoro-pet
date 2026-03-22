@@ -87,9 +87,11 @@ export function altitudeToSkyColor(altitude: number, weather: WeatherType): numb
 /** シーンプリセット補正 */
 function applyPresetOverride(
   params: EnvironmentThemeParams,
-  scenePreset: ScenePresetName
+  scenePreset: ScenePresetName,
+  altitude: number
 ): EnvironmentThemeParams {
   if (scenePreset === 'seaside') {
+    if (altitude <= -6) return params
     return {
       ...params,
       skyColor: lightenColor(params.skyColor, 0.25),
@@ -239,7 +241,7 @@ export function computeThemeFromCelestial(
     moonSunAngle,
   }
 
-  return applyPresetOverride(params, scenePreset)
+  return applyPresetOverride(params, scenePreset, altitude)
 }
 
 // --- 5.5c: 天体方位→光源の向き ---
