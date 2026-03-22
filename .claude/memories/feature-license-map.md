@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.14.0**（= package.json）
+**バージョン: 0.14.1**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -273,6 +273,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.14.1 | UI改善+バグ修正 | 月暗部を空色ティント。KouSelector/MoonPhaseSelectorのAutoボタンをリスト内に移動。KouSelectorリストにλ列追加。WeatherPanelのdraft外部変更同期修正 |
 | 0.14.0 | 機能追加+リファクタリング | 天球座標系をシーン座標系から分離（CelestialMapping統一変換）。月描画改善（CircleGeometry化+球面terminator+moonSunAngle回転）。月齢手動選択機能追加（#108、伝統的月齢名16種）。昼間月黒表示バグ修正。FOV 50→60、カメラlookAtY調整、月距離300→500。Start Pomodoroボタン視認性改善 |
 | 0.13.5 | バグ修正 | 自動アップデートダウンロード失敗修正（artifactNameをハイフン区切りに固定、GitHub Releasesのファイル名不一致を解消） |
 | 0.13.4 | UI改善 | About画面にCheck for Updateボタン追加、自動アップデートチェック3秒+1時間間隔、dev環境のChecking...固まり修正 |
