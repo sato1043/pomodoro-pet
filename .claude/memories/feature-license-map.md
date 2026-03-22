@@ -1,6 +1,6 @@
 # 機能一覧とライセンス制限マップ
 
-**バージョン: 0.13.5**（= package.json）
+**バージョン: 0.14.0**（= package.json）
 
 このドキュメントはアプリの全ユーザー向け機能を列挙し、`FeatureName`型（`src/application/license/LicenseState.ts`）とのマッピングを定義する。特定バージョンにおける全機能セットのスナップショットとして機能する。
 
@@ -188,6 +188,7 @@
 | 103 | 気候プロファイル | ClimateData.ts, ClimateGridAdapter.ts | 自動 | （制限不要） | 緯度経度から72候分気候データ自動生成 |
 | 104 | 天気自動決定 | WeatherDecision.ts | 自動 | （制限不要） | 気候データ+気温→天気タイプ確率的決定 |
 | 105 | 雨量連動パーティクル | RainEffect.ts, SnowEffect.ts | 自動 | （制限不要） | 降水強度→粒子数動的変更 |
+| 108 | 月齢セレクタ | MoonPhaseSelector.tsx, MoonPhaseName.ts | 操作 | （制限不要） | 伝統的月齢名16種から月の形を手動選択。Auto/手動切替。environmentシーン内に配置 |
 
 ### L. バックグラウンド動作
 
@@ -272,6 +273,7 @@
 
 | バージョン | 種別 | 概要 |
 |---|---|---|
+| 0.14.0 | 機能追加+リファクタリング | 天球座標系をシーン座標系から分離（CelestialMapping統一変換）。月描画改善（CircleGeometry化+球面terminator+moonSunAngle回転）。月齢手動選択機能追加（#108、伝統的月齢名16種）。昼間月黒表示バグ修正。FOV 50→60、カメラlookAtY調整、月距離300→500。Start Pomodoroボタン視認性改善 |
 | 0.13.5 | バグ修正 | 自動アップデートダウンロード失敗修正（artifactNameをハイフン区切りに固定、GitHub Releasesのファイル名不一致を解消） |
 | 0.13.4 | UI改善 | About画面にCheck for Updateボタン追加、自動アップデートチェック3秒+1時間間隔、dev環境のChecking...固まり修正 |
 | 0.13.3 | バグ修正 | FeatureLockedOverlay・LicenseToastのストアURLをVITE_STORE_URL環境変数化 |
