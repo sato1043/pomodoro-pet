@@ -6,7 +6,8 @@ export const container = style({
   flexDirection: 'column',
   textAlign: 'left',
   marginTop: 8,
-  height: 'calc(100vh - 220px)',
+  flex: 1,
+  minHeight: 0,
 })
 
 export const scrollContent = style({

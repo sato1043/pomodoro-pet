@@ -10,6 +10,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - ギャラリーモードボタンを画面左下から右下に移動（WeatherボタンとFureaiボタンの間の高さに配置）
 - Start Pomodoroボタンの視認性改善 — 白系半透明の縁取りと暗いドロップシャドウで背景との境界を明確化、ホバー時の強調表示を追加
+- フリーモードオーバーレイのビュー状態管理をFreeOverlayView型に統合（5つのboolean→単一enum）
+- ドキュメント画面（About/EULA等）の戻りを←ボタンに統一し、画面下部のCloseボタンを廃止
 
 ## [0.13.5] - 2026-03-21
 

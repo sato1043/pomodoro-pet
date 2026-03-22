@@ -308,12 +308,12 @@ test('About画面の表示と設定パネルへの復帰', async () => {
   // バージョン情報が含まれる
   await expect(page.locator('[data-testid="about-content"]')).toContainText('Version')
 
-  // SetボタンはAbout画面では非表示、Closeボタンが表示される
+  // SetボタンはAbout画面では非表示、←ボタンでdoc→設定パネルに戻る
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
-  await expect(page.locator('[data-testid="doc-close-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
 
-  // Closeボタンで設定パネルに戻る
-  await page.locator('[data-testid="doc-close-button"]').click()
+  // ←ボタンで設定パネルに戻る
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="about-content"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 

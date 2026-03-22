@@ -107,14 +107,14 @@ test('Registerリンクをクリックすると登録パネルが表示される
   await expect(page.locator('[data-testid="registration-input"]')).toBeVisible()
   await expect(page.locator('[data-testid="registration-submit"]')).toBeVisible()
 
-  // CloseButton（戻るボタン）が表示される（SetButtonではない）
-  await expect(page.locator('[data-testid="doc-close-button"]')).toBeVisible()
+  // ←ボタンが表示される（SetButtonではない）
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
 
   await electronApp.close()
 })
 
-test('CloseButtonで登録パネルから設定パネルに戻る', async () => {
+test('←ボタンで登録パネルから設定パネルに戻る', async () => {
   const { electronApp, page } = await launchFresh()
 
   // 設定パネルを展開 → Registerリンク → 登録パネル表示
@@ -123,8 +123,8 @@ test('CloseButtonで登録パネルから設定パネルに戻る', async () => 
   await page.locator('[data-testid="register-link"]').click()
   await expect(page.locator('[data-testid="registration-content"]')).toBeVisible()
 
-  // CloseButtonをクリック
-  await page.locator('[data-testid="doc-close-button"]').click()
+  // ←ボタンで設定パネルに戻る
+  await page.locator('[data-testid="settings-close"]').click()
 
   // 設定パネルに戻る（SetButtonが復帰）
   await expect(page.locator('[data-testid="registration-content"]')).not.toBeVisible()

@@ -5,6 +5,10 @@ import { vars } from './theme.css'
 
 export const freeMode = style({
   pointerEvents: 'auto',
+  flex: 1,
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
 })
 
 // === Top-right button container ===

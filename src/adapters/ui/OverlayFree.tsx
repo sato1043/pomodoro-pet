@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { TimerConfig } from '../../domain/timer/value-objects/TimerConfig'
 import type { PhaseType } from '../../domain/timer/value-objects/TimerPhase'
@@ -8,14 +8,13 @@ import type { ThemePreference } from '../../application/settings/SettingsEvents'
 import { useAppDeps } from './AppContext'
 import { useTheme } from './ThemeContext'
 import { useLicenseMode } from './LicenseContext'
-import type { FeatureName } from '../../application/license/LicenseState'
+import type { FeatureName, LicenseState } from '../../application/license/LicenseState'
 import type { AudioAdapter } from '../../infrastructure/audio/AudioAdapter'
 import type { SfxPlayer } from '../../infrastructure/audio/SfxPlayer'
 import type { KouDefinition } from '../../domain/environment/value-objects/Kou'
 import { useSettingsEditor, type SettingsEditorResult, type TimerSettings } from './hooks/useSettingsEditor'
 import { VolumeControl } from './VolumeControl'
 import { SetButton } from './SetButton'
-import { CloseButton } from './CloseButton'
 import { OverlayTitle } from './OverlayTitle'
 import { AboutContent } from './AboutContent'
 import { LegalDocContent } from './LegalDocContent'
@@ -460,9 +459,10 @@ interface FreeSummaryViewProps {
   readonly audio: AudioAdapter
   readonly sfx: SfxPlayer | null
   readonly timezone?: string
+  readonly onSoundChange: () => void
 }
 
-function FreeSummaryView({ editor, audio, sfx, timezone }: FreeSummaryViewProps): JSX.Element {
+function FreeSummaryView({ editor, audio, sfx, timezone, onSoundChange }: FreeSummaryViewProps): JSX.Element {
   return (
     <>
       <FreeTimerSummary timerConfig={editor.currentTimerConfig} timezone={timezone} />
@@ -470,7 +470,7 @@ function FreeSummaryView({ editor, audio, sfx, timezone }: FreeSummaryViewProps)
         audio={audio}
         sfx={sfx}
         showPresets={false}
-        onSoundChange={editor.handleSoundChange}
+        onSoundChange={onSoundChange}
         forceUpdateKey={editor.volumeKey}
       />
     </>
@@ -492,6 +492,7 @@ interface FreeSettingsEditorProps {
   readonly onRegisterClick: () => void
   readonly licenseKeyHint?: string
   readonly canUse: (feature: FeatureName) => boolean
+  readonly onSoundChange: () => void
 }
 
 function ExportIcon(): JSX.Element {
@@ -514,7 +515,7 @@ function ImportIcon(): JSX.Element {
   )
 }
 
-function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse }: FreeSettingsEditorProps): JSX.Element {
+function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange, onAboutClick, onEulaClick, onPrivacyClick, onLicensesClick, onRegisterClick, licenseKeyHint, canUse, onSoundChange }: FreeSettingsEditorProps): JSX.Element {
   const [exportImportStatus, setExportImportStatus] = useState<string | null>(null)
   const [showLocked, setShowLocked] = useState(false)
   const [appVersion, setAppVersion] = useState<string | null>(null)
@@ -558,7 +559,7 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
         audio={audio}
         sfx={sfx}
         showPresets={canUse('soundSettings')}
-        onSoundChange={editor.handleSoundChange}
+        onSoundChange={onSoundChange}
         forceUpdateKey={editor.volumeKey}
       />
       <ThemeToggles value={themePreference} onChange={onThemeChange} />
@@ -625,25 +626,26 @@ function FreeSettingsEditor({ editor, audio, sfx, themePreference, onThemeChange
 
 // --- メインコンポーネント ---
 
+type FreeOverlayView = 'summary' | 'editor' | 'about' | 'eula' | 'privacy' | 'licenses' | 'registration'
+
 interface OverlayFreeProps {
-  readonly expanded?: boolean
   readonly onExpandedChange?: (expanded: boolean) => void
   readonly onToggleRef?: (toggle: () => void) => void
+  readonly onDocBackRef?: (back: (() => void) | null) => void
   readonly timezone?: string
   readonly currentKou?: KouDefinition | null
 }
 
-export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone, currentKou }: OverlayFreeProps): JSX.Element {
+export function OverlayFree({ onExpandedChange, onToggleRef, onDocBackRef, timezone, currentKou }: OverlayFreeProps): JSX.Element {
   const { audio, sfx } = useAppDeps()
   const { themePreference, setThemePreference } = useTheme()
   const { canUse } = useLicenseMode()
   const editor = useSettingsEditor()
-  const [showAbout, setShowAbout] = useState(false)
-  const [showEula, setShowEula] = useState(false)
-  const [showPrivacy, setShowPrivacy] = useState(false)
-  const [showLicenses, setShowLicenses] = useState(false)
-  const [showRegistration, setShowRegistration] = useState(false)
+  const [view, setView] = useState<FreeOverlayView>('summary')
   const [licenseKeyHint, setLicenseKeyHint] = useState<string | undefined>(undefined)
+
+  const isExpanded = view !== 'summary'
+  const isDocView = view !== 'summary' && view !== 'editor'
 
   // ライセンス状態の購読
   useEffect(() => {
@@ -663,95 +665,100 @@ export function OverlayFree({ expanded, onExpandedChange, onToggleRef, timezone,
   }, [])
 
   useEffect(() => {
-    onExpandedChange?.(editor.expanded)
-  }, [editor.expanded, onExpandedChange])
+    onExpandedChange?.(isExpanded)
+  }, [isExpanded, onExpandedChange])
 
-  useEffect(() => {
-    if (!editor.expanded) {
-      setShowAbout(false)
-      setShowEula(false)
-      setShowPrivacy(false)
-      setShowLicenses(false)
-      setShowRegistration(false)
+  const toggleEditor = useCallback(() => {
+    if (view === 'summary') {
+      editor.openEditor()
+      setView('editor')
+    } else {
+      editor.closeEditor()
+      setView('summary')
     }
-  }, [editor.expanded])
+  }, [view, editor.openEditor, editor.closeEditor])
 
   useEffect(() => {
-    onToggleRef?.(editor.toggle)
-  }, [editor.toggle, onToggleRef])
+    onToggleRef?.(toggleEditor)
+  }, [toggleEditor, onToggleRef])
 
-  const className = expanded
-    ? `${overlayStyles.overlay} ${overlayStyles.overlayExpanded}`
-    : overlayStyles.overlay
+  useEffect(() => {
+    onDocBackRef?.(isDocView ? () => setView('editor') : null)
+  }, [isDocView, onDocBackRef])
+
+  const handleConfirm = useCallback(() => {
+    editor.confirm()
+    setView('summary')
+  }, [editor.confirm])
+
+  const className = isDocView
+    ? `${overlayStyles.overlay} ${overlayStyles.overlayDocView}`
+    : isExpanded
+      ? `${overlayStyles.overlay} ${overlayStyles.overlayExpanded}`
+      : overlayStyles.overlay
 
   const renderContent = (): JSX.Element => {
-    if (!editor.expanded) {
-      return <FreeSummaryView editor={editor} audio={audio} sfx={sfx} timezone={timezone} />
+    switch (view) {
+      case 'summary':
+        return (
+          <FreeSummaryView
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+            timezone={timezone}
+            onSoundChange={() => editor.handleSoundChange(false)}
+          />
+        )
+      case 'about':
+        return <AboutContent onBack={() => setView('editor')} />
+      case 'eula':
+        return <LegalDocContent title="EULA" field="eulaText" onBack={() => setView('editor')} />
+      case 'privacy':
+        return <LegalDocContent title="Privacy Policy" field="privacyPolicyText" onBack={() => setView('editor')} />
+      case 'licenses':
+        return <LegalDocContent title="Third-party Licenses" field="licensesText" onBack={() => setView('editor')} />
+      case 'registration':
+        return (
+          <RegistrationContent
+            onBack={() => setView('editor')}
+            onRegistered={() => {
+              if (window.electronAPI?.checkLicenseStatus) {
+                window.electronAPI.checkLicenseStatus().then((s) => {
+                  const state = s as LicenseState
+                  setLicenseKeyHint(state.keyHint)
+                })
+              }
+            }}
+            keyHint={licenseKeyHint}
+          />
+        )
+      case 'editor':
+        return (
+          <FreeSettingsEditor
+            editor={editor}
+            audio={audio}
+            sfx={sfx}
+            themePreference={themePreference}
+            onThemeChange={setThemePreference}
+            onAboutClick={() => setView('about')}
+            onEulaClick={() => setView('eula')}
+            onPrivacyClick={() => setView('privacy')}
+            onLicensesClick={() => setView('licenses')}
+            onRegisterClick={() => setView('registration')}
+            licenseKeyHint={licenseKeyHint}
+            canUse={canUse}
+            onSoundChange={() => editor.handleSoundChange(true)}
+          />
+        )
     }
-    if (showAbout) {
-      return <AboutContent onBack={() => setShowAbout(false)} />
-    }
-    if (showEula) {
-      return <LegalDocContent title="EULA" field="eulaText" onBack={() => setShowEula(false)} />
-    }
-    if (showPrivacy) {
-      return <LegalDocContent title="Privacy Policy" field="privacyPolicyText" onBack={() => setShowPrivacy(false)} />
-    }
-    if (showLicenses) {
-      return <LegalDocContent title="Third-party Licenses" field="licensesText" onBack={() => setShowLicenses(false)} />
-    }
-    if (showRegistration) {
-      return (
-        <RegistrationContent
-          onBack={() => setShowRegistration(false)}
-          onRegistered={() => {
-            if (window.electronAPI?.checkLicenseStatus) {
-              window.electronAPI.checkLicenseStatus().then((s) => {
-                const state = s as LicenseState
-                setLicenseKeyHint(state.keyHint)
-              })
-            }
-          }}
-          keyHint={licenseKeyHint}
-        />
-      )
-    }
-    return (
-      <FreeSettingsEditor
-        editor={editor}
-        audio={audio}
-        sfx={sfx}
-        themePreference={themePreference}
-        onThemeChange={setThemePreference}
-        onAboutClick={() => setShowAbout(true)}
-        onEulaClick={() => setShowEula(true)}
-        onPrivacyClick={() => setShowPrivacy(true)}
-        onLicensesClick={() => setShowLicenses(true)}
-        onRegisterClick={() => setShowRegistration(true)}
-        licenseKeyHint={licenseKeyHint}
-        canUse={canUse}
-      />
-    )
   }
-
-  const showDocPanel = showAbout || showEula || showPrivacy || showLicenses || showRegistration
-  const docBackHandler = showAbout
-    ? () => setShowAbout(false)
-    : showEula
-      ? () => setShowEula(false)
-      : showPrivacy
-        ? () => setShowPrivacy(false)
-        : showLicenses
-          ? () => setShowLicenses(false)
-          : () => setShowRegistration(false)
 
   return createPortal(
     <div data-testid="overlay-free" className={className}>
       <OverlayTitle currentKou={currentKou} />
       <div className={styles.freeMode}>
         {renderContent()}
-        {editor.expanded && !showDocPanel && <SetButton onClick={editor.confirm} />}
-        {editor.expanded && showDocPanel && <CloseButton onClick={docBackHandler} />}
+        {view === 'editor' && <SetButton onClick={handleConfirm} />}
       </div>
     </div>,
     document.body

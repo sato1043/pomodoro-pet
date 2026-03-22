@@ -195,7 +195,7 @@ EventBus（UI/インフラ通知）:
 - `ui/GalleryExitButton.tsx` — ギャラリーモードからfreeモードへの戻るボタン。←矢印アイコン
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeOverlayView型（`'summary' | 'editor' | 'about' | 'eula' | 'privacy' | 'licenses' | 'registration'`）で全ビュー状態を一元管理。useSettingsEditorフック（openEditor/closeEditor）でスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderのchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置。canUse('biorhythm')/'emotionAccumulation'で条件付き描画
 - `ui/BiorhythmChart.tsx` — バイオリズムグラフコンポーネント。3軸ネオンカラーサインカーブ（activity/sociability/focus）前後3日+カーブ上移動ドットアニメーション。buildBiorhythmCurves/pointsToPathをexport（テスト用）。OverlayFureaiがCompactHeaderのchildrenとして描画
 - `ui/EmotionIndicator.tsx` — 感情インジケーターUI。♥⚡★の3アイコンをopacity（0.15〜1.0）で表示。`EmotionStateUpdated`イベントをuseEventBusCallbackで購読。OverlayFureaiがcanUse('emotionAccumulation')で条件付き描画

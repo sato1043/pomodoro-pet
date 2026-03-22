@@ -22,10 +22,15 @@ export function SceneFree(): JSX.Element {
   const [settingsExpanded, setSettingsExpanded] = useState(false)
   const [showLocked, setShowLocked] = useState(false)
   const toggleSettingsRef = useRef<() => void>(() => {})
+  const docBackRef = useRef<(() => void) | null>(null)
   const hideButtons = showStats || settingsExpanded
 
   const handleToggleRef = useCallback((toggle: () => void) => {
     toggleSettingsRef.current = toggle
+  }, [])
+
+  const handleDocBackRef = useCallback((back: (() => void) | null) => {
+    docBackRef.current = back
   }, [])
 
   const handleFureaiClick = (): void => {
@@ -56,9 +61,9 @@ export function SceneFree(): JSX.Element {
     <>
       {!showStats && (
         <OverlayFree
-          expanded={settingsExpanded}
           onExpandedChange={setSettingsExpanded}
           onToggleRef={handleToggleRef}
+          onDocBackRef={handleDocBackRef}
           timezone={timezone}
           currentKou={currentKou}
         />
@@ -68,7 +73,13 @@ export function SceneFree(): JSX.Element {
       {!hideButtons && <StartPomodoroButton />}
       {!hideButtons && canUse('stats') && <StatsButton onClick={() => setShowStats(true)} />}
       {!hideButtons && <SettingsButton onClick={() => toggleSettingsRef.current()} />}
-      {settingsExpanded && <SettingsCloseButton onClick={() => toggleSettingsRef.current()} />}
+      {settingsExpanded && <SettingsCloseButton onClick={() => {
+        if (docBackRef.current) {
+          docBackRef.current()
+        } else {
+          toggleSettingsRef.current()
+        }
+      }} />}
       {!hideButtons && <FureaiEntryButton onClick={handleFureaiClick} />}
       {!hideButtons && <WeatherButton onClick={handleEnvironmentClick} />}
       {!hideButtons && <GalleryEntryButton onClick={handleGalleryClick} />}

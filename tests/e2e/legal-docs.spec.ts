@@ -36,12 +36,12 @@ test('EULAパネルの表示とCloseボタンで設定に戻る', async () => {
   await expect(page.locator('[data-testid="legal-doc-content"]')).toBeVisible()
   await expect(page.locator('[data-testid="legal-doc-content"]')).toContainText('EULA')
 
-  // Setボタン非表示、Closeボタン表示
+  // Setボタン非表示、←ボタンでdoc→設定パネルに戻る
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
-  await expect(page.locator('[data-testid="doc-close-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
 
-  // Closeで設定パネルに戻る
-  await page.locator('[data-testid="doc-close-button"]').click()
+  // ←ボタンで設定パネルに戻る
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="legal-doc-content"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
@@ -60,9 +60,9 @@ test('Privacy Policyパネルの表示とCloseボタンで設定に戻る', asyn
   await expect(page.locator('[data-testid="legal-doc-content"]')).toContainText('Privacy Policy')
 
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
-  await expect(page.locator('[data-testid="doc-close-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
 
-  await page.locator('[data-testid="doc-close-button"]').click()
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="legal-doc-content"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
@@ -81,9 +81,9 @@ test('Third-partyパネルの表示とCloseボタンで設定に戻る', async (
   await expect(page.locator('[data-testid="legal-doc-content"]')).toContainText('Third-party Licenses')
 
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
-  await expect(page.locator('[data-testid="doc-close-button"]')).toBeVisible()
+  await expect(page.locator('[data-testid="settings-close"]')).toBeVisible()
 
-  await page.locator('[data-testid="doc-close-button"]').click()
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="legal-doc-content"]')).not.toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
@@ -101,14 +101,14 @@ test('AboutにPolyFormライセンス本文が表示される', async () => {
   await expect(page.locator('[data-testid="about-content"]')).toBeVisible()
   await expect(page.locator('[data-testid="about-content"]')).toContainText('PolyForm Noncommercial')
 
-  await page.locator('[data-testid="doc-close-button"]').click()
+  await page.locator('[data-testid="settings-close"]').click()
   await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
 
   await page.locator('[data-testid="settings-close"]').click()
   await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
 })
 
-test('←ボタンでドキュメントパネルからfreeモードに戻る', async () => {
+test('←ボタンでドキュメントパネルから設定パネルに戻る', async () => {
   const { page } = app
 
   // 設定パネルを展開してEULAを開く
@@ -118,11 +118,13 @@ test('←ボタンでドキュメントパネルからfreeモードに戻る', a
   await page.locator('[data-testid="eula-link"]').click()
   await expect(page.locator('[data-testid="legal-doc-content"]')).toBeVisible()
 
-  // ←ボタン（settings-close）でfreeモードに戻る
+  // ←ボタンで設定パネルに戻る（1段階戻り）
   await page.locator('[data-testid="settings-close"]').click()
-
-  // freeモードに戻る（Start Pomodoroが見える、ドキュメントパネルは非表示）
-  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
   await expect(page.locator('[data-testid="legal-doc-content"]')).not.toBeVisible()
+  await expect(page.locator('[data-testid="set-button"]')).toBeVisible()
+
+  // もう一度←ボタンでfreeモードに戻る
+  await page.locator('[data-testid="settings-close"]').click()
+  await expect(page.getByRole('button', { name: 'Start Pomodoro' })).toBeVisible()
   await expect(page.locator('[data-testid="set-button"]')).not.toBeVisible()
 })
