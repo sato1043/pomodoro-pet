@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - 月齢（離角）手動選択機能 — 環境設定画面に月齢セレクタ追加。伝統的な日本語月齢名16種（朔・三日月・上弦・望・十六夜・下弦など）から選択可能
 
 ### Fixed
+- 砂浜(seaside)プリセットの夜空が灰色になる問題を修正 — 昼間用の明度補正(lighten 25%+exposure×1.25)が夜間にも適用されていたため、夜間は補正をスキップするよう変更。未使用のresolveEnvironmentTheme静的テーブルも削除
 - 昼間に月が黒く表示される問題を修正 — 月の表示位置とライティング方向が異なる座標系で計算されていたことが原因
 - フリーモードオーバーレイのビュー状態管理をFreeOverlayView型に統合（5つのboolean→単一enum）
 - ドキュメント画面（About/EULA等）の戻りを←ボタンに統一し、画面下部のCloseボタンを廃止
