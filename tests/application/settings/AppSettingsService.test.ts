@@ -207,6 +207,8 @@ describe('AppSettingsService', () => {
         scenePreset: 'meadow',
         moonAltitude: 'mid',
         autoMoon: true,
+        moonPhaseIndex: 7,
+        autoMoonPhase: true,
       })
     })
 
@@ -277,6 +279,8 @@ describe('AppSettingsService', () => {
         scenePreset: 'meadow',
         moonAltitude: 'mid',
         autoMoon: true,
+        moonPhaseIndex: 7,
+        autoMoonPhase: true,
       })
     })
 

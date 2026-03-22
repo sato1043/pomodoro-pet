@@ -86,7 +86,8 @@ EventBus（UI/インフラ通知）:
 - `Kou` — 七十二候。KouDefinition型、KOU_DEFINITIONS（72候定義）、resolveKou()、kouProgress()
 - `ClimateData` — 気候プロファイル。ClimateConfig（mode/presetName/latitude/longitude/label）、KouClimate、MonthlyClimateData、ClimateGridPort（ドメインポート）、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()
 - `WeatherDecision` — 天気自動決定。WeatherDecision型、mulberry32（PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
-- `CelestialTheme` — 天体→テーマ連続生成。computeThemeFromCelestial()、computeLightDirection()、altitudeToSunColor()、altitudeToSkyColor()
+- `CelestialMapping` — 天球座標系の型定義（CelestialCoordinate, CelestialMapping）、celestialToScene()統一変換、computeMoonSunAngle()
+- `CelestialTheme` — 天体→テーマ連続生成。computeThemeFromCelestial()（CelestialMapping経由）、computeLightDirection()、altitudeToSunColor()、altitudeToSkyColor()
 - `Timezone` — タイムゾーン解決。resolveTimezone()（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime()、formatTimezoneLabel()。事前生成済みtimezone-abbr.json（386エントリ）による略称マッピング
 
 ### 4. 統計
@@ -135,8 +136,10 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/Kou.ts` — KouDefinition型、KOU_DEFINITIONS定数（本朝七十二候全72候、和名/読み/英名/説明）、resolveKou(eclipticLon)、kouProgress(eclipticLon)
 - `environment/value-objects/ClimateData.ts` — ClimateConfig型、KouClimate型、MonthlyClimateData型、ClimateGridPortインターフェース、KoppenClassification型、CITY_PRESETS（8都市）、interpolateToKouClimate()、estimateTemperature()、temperatureToGroundColor()、eclipticLonToDayOfYear()、classifyKoppen()（ケッペン気候区分算出、30分類）
 - `environment/value-objects/WeatherDecision.ts` — WeatherDecision型、mulberry32（決定論的PRNG）、decideWeather()、computeParticleCount()、cloudDensityToLevel()
-- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（天体位置→EnvironmentThemeParams連続生成、月データ5フィールド計算含む）、computeLightDirection()（太陽/月クロスフェード、月光intensity係数0.8）、altitudeToSunColor()、altitudeToSkyColor()
-- `environment/value-objects/MoonPhase.ts` — generateMoonPhasePixels(phaseDeg, size, illumination) → Uint8ClampedArray。Three.js非依存の月位相テクスチャ生成純粋関数。terminator曲線算出、リムライト、マリア模様、ソフトエッジ
+- `environment/value-objects/CelestialMapping.ts` — CelestialCoordinate型、CelestialMapping型、DEFAULT_CELESTIAL_MAPPING（viewDirection=180, azimuthCompression=0.5）、celestialToScene()（天球→シーン座標統一変換）、computeMoonSunAngle()
+- `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（CelestialMapping経由で天体位置→EnvironmentThemeParams生成、moonSunAngle算出含む）、computeLightDirection()（CelestialMapping経由、太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
+- `environment/value-objects/MoonPhase.ts` — generateMoonPhasePixels(phaseDeg, size, illumination, rotationRad) → Uint8ClampedArray。Three.js非依存の月位相テクスチャ生成純粋関数。球面terminator（楕円カーブ）、moonSunAngle回転対応、リムライト、マリア模様、ソフトエッジ
+- `environment/value-objects/MoonPhaseName.ts` — MoonPhaseDefinition型、MOON_PHASE_DEFINITIONS（伝統的月齢名16種: 朔・繊月・三日月・上弦・十日夜月・十三夜月・小望月・望・十六夜・立待月・居待月・寝待月・更待月・下弦・有明月・晦）、findNearestMoonPhase()
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
@@ -191,11 +194,11 @@ EventBus（UI/インフラ通知）:
 - `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示+children prop対応。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用。OverlayFureaiではchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置
 - `ui/GalleryTopBar.tsx` — ギャラリーモード切替タブバー。Clips/States/Rulesの3モード。GalleryMode型をexport。createPortalでdocument.bodyに描画
 - `ui/GallerySideBar.tsx` — ギャラリーアニメーション選択サイドバー。GallerySideBarItem型（key/label/description）。createPortalでdocument.bodyに描画
-- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
+- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面右下のグリッドSVGアイコン（`bottom: 168`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
 - `ui/GalleryExitButton.tsx` — ギャラリーモードからfreeモードへの戻るボタン。←矢印アイコン
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る
-- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeTimerPanelを統合（editor.expandedでFreeSummaryView/FreeSettingsEditor/AboutContentを切替）。showAboutステートで設定パネル内のAbout表示を制御。useSettingsEditorフックでスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
+- `ui/OverlayFree.tsx` — freeモードオーバーレイ。createPortalでdocument.bodyに描画。タイトル+日付表示。FreeOverlayView型（`'summary' | 'editor' | 'about' | 'eula' | 'privacy' | 'licenses' | 'registration'`）で全ビュー状態を一元管理。useSettingsEditorフック（openEditor/closeEditor）でスナップショット/復元を管理。`canUse()`で設定エディタ内の制限適用（timerSettings無効→FreeTimerSettings非表示、soundSettings無効→プリセット選択非表示、backgroundNotify無効→通知トグルdisabled）
 - `ui/OverlayFureai.tsx` — fureaiモードオーバーレイ（`data-testid="overlay-fureai"`）。createPortalでdocument.bodyに描画。CompactHeaderのchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置。canUse('biorhythm')/'emotionAccumulation'で条件付き描画
 - `ui/BiorhythmChart.tsx` — バイオリズムグラフコンポーネント。3軸ネオンカラーサインカーブ（activity/sociability/focus）前後3日+カーブ上移動ドットアニメーション。buildBiorhythmCurves/pointsToPathをexport（テスト用）。OverlayFureaiがCompactHeaderのchildrenとして描画
 - `ui/EmotionIndicator.tsx` — 感情インジケーターUI。♥⚡★の3アイコンをopacity（0.15〜1.0）で表示。`EmotionStateUpdated`イベントをuseEventBusCallbackで購読。OverlayFureaiがcanUse('emotionAccumulation')で条件付き描画
@@ -248,7 +251,7 @@ EventBus（UI/インフラ通知）:
 - `three/RainEffect.ts` — 雨エフェクト。LineSegments（最大1200本、デフォルト650本）残像付き線分 + スプラッシュパーティクル（リングバッファ200個）。setDrawRange()で動的粒子数制御。WeatherEffectインターフェース定義（setParticleCount含む）
 - `three/SnowEffect.ts` — 雪エフェクト。Points（最大900個、デフォルト750個）sin/cosゆらゆら揺れ。setDrawRange()で動的粒子数制御
 - `three/CloudEffect.ts` — 雲エフェクト。半透明SphereGeometryクラスター、6段階密度（0-100個）、z方向ドリフト。天気別色（sunny=白emissive自発光、cloudy/rainy/snowy=灰色）
-- `three/MoonEffect.ts` — 3D月オブジェクト。SphereGeometry(1.0, 32, 32)スケール18.0 + BackSide半透明グローメッシュ。MoonPhase.tsのgenerateMoonPhasePixels（地球照効果付き）でCanvasテクスチャを動的更新（位相・illumination変化時のみ）。fog無効、距離300配置。CelestialThemeでazimuth(北中心±25°)/altitude(22°-36°)リマップ
+- `three/MoonEffect.ts` — 3D月オブジェクト。CircleGeometry(1.0, 64)スケール18.0 + BackSide半透明グローメッシュ。lookAt(0,0,0)でカメラ正対。MoonPhase.tsのgenerateMoonPhasePixels（球面terminator+moonSunAngle回転+地球照効果付き）でCanvasテクスチャを動的更新（位相・illumination・回転角変化時のみ）。fog無効、距離500配置。CelestialMapping経由でcelestialToScene統一変換
 - `astronomy/AstronomyAdapter.ts` — astronomy-engineラッパー。AstronomyPort実装。Observer/SunPosition/Horizon/MoonPhase/Illumination使用。getSolarDeclinationAndGHA()ヘルパー（terminator UI用）
 - `climate/ClimateGridAdapter.ts` — ClimateGridPort実装。`createClimateGridAdapter(data: ClimateGridJson)` でビルド時バンドルJSONを注入。36lat×72lon 5度解像度、双線形補間、海洋スナッピング
 - `audio/ProceduralSounds.ts` — Web Audio APIプロシージャル環境音（Rain/Forest/Wind）
@@ -292,8 +295,10 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/ClimateData.test.ts` — CITY_PRESETS・interpolateToKouClimate・estimateTemperature・temperatureToGroundColor（15テスト）
 - `domain/environment/Timezone.test.ts` — resolveTimezone・getLocationTime・formatTimezoneLabel・DST対応・境界補正（16テスト）
 - `domain/environment/WeatherDecision.test.ts` — mulberry32決定論性・decideWeather確率分布・computeParticleCount範囲・cloudDensityToLevel（18テスト）
-- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial（月光ブースト・moonPosition・moonOpacity含む）・computeLightDirection（26テスト）
+- `domain/environment/CelestialMapping.test.ts` — celestialToScene（viewDirection・圧縮率・高度・相対位置保存・単位ベクトル）、computeMoonSunAngle、DEFAULT_CELESTIAL_MAPPING（15テスト）
+- `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial（月光ブースト・moonPosition・moonOpacity・moonSunAngle含む）・computeLightDirection（35テスト）
 - `domain/environment/MoonPhase.test.ts` — generateMoonPhasePixels（新月暗部・満月明部・上弦/下弦左右・illumination明度・角透明・サイズ変更、8テスト）
+- `domain/environment/MoonPhaseName.test.ts` — MOON_PHASE_DEFINITIONS（定義数・index連番・phaseDeg昇順・illumination範囲・必須フィールド）、findNearestMoonPhase（14テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `domain/shared/ExportData.test.ts` — エクスポートデータバリデーション（正常系、不正形式、バージョン互換性、フィールド欠損、24テスト）
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル

@@ -5,7 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.14.0] - 2026-03-22
+
+### Changed
+- ギャラリーモードボタンを画面左下から右下に移動（WeatherボタンとFureaiボタンの間の高さに配置）
+- Start Pomodoroボタンの視認性改善 — 白系半透明の縁取りと暗いドロップシャドウで背景との境界を明確化、ホバー時の強調表示を追加
+- 天球座標系をThree.jsシーン座標系から分離 — CelestialMapping型とcelestialToScene統一変換関数を導入。太陽・月・ライティングが同一変換を通り空間的整合性を保証
+- 月の描画をSphereGeometryからCircleGeometryに変更 — UVマッピング歪み（蝶の羽状アーティファクト）を解消
+- 月のterminator（明暗境界）を直線から球面楕円カーブに改善 — 3D球面座標による正確な明暗判定
+- カメラFOVを50°→60°に変更、注視点を調整（lookAtY 1.5→1.8）
+- 月の配置距離を300→500に変更
+- 手動timeOfDay設定時も現実の月齢（phaseDeg, illumination）を引き継ぐよう改善
+
+### Added
+- 月齢（離角）手動選択機能 — 環境設定画面に月齢セレクタ追加。伝統的な日本語月齢名16種（朔・三日月・上弦・望・十六夜・下弦など）から選択可能
+
+### Fixed
+- 昼間に月が黒く表示される問題を修正 — 月の表示位置とライティング方向が異なる座標系で計算されていたことが原因
+- フリーモードオーバーレイのビュー状態管理をFreeOverlayView型に統合（5つのboolean→単一enum）
+- ドキュメント画面（About/EULA等）の戻りを←ボタンに統一し、画面下部のCloseボタンを廃止
 
 ## [0.13.5] - 2026-03-21
 

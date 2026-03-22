@@ -40,7 +40,6 @@ function settingsToTimerConfig(s: TimerSettings): TimerConfig {
 
 export interface SettingsEditorResult {
   settings: TimerSettings
-  expanded: boolean
   volumeKey: number
   currentTimerConfig: TimerConfig
   backgroundAudio: boolean
@@ -49,10 +48,11 @@ export interface SettingsEditorResult {
   setBackgroundAudio(value: boolean): void
   setBackgroundNotify(value: boolean): void
   setPreventSleep(value: boolean): void
-  toggle(): void
+  openEditor(): void
+  closeEditor(): void
   confirm(): void
   updateSetting(key: keyof TimerSettings, value: number): void
-  handleSoundChange(): void
+  handleSoundChange(isEditing: boolean): void
 }
 
 export function useSettingsEditor(): SettingsEditorResult {
@@ -60,7 +60,6 @@ export function useSettingsEditor(): SettingsEditorResult {
   const { themePreference, setThemePreference } = useTheme()
 
   const [settings, setSettings] = useState<TimerSettings>(() => settingsFromConfig(config))
-  const [expanded, setExpanded] = useState(false)
   const [volumeKey, setVolumeKey] = useState(0)
   const [backgroundAudio, setBackgroundAudio] = useState(() => settingsService.backgroundConfig.backgroundAudio)
   const [backgroundNotify, setBackgroundNotify] = useState(() => settingsService.backgroundConfig.backgroundNotify)
@@ -84,39 +83,36 @@ export function useSettingsEditor(): SettingsEditorResult {
 
   const currentTimerConfig = settingsToTimerConfig(settings)
 
-  const toggle = useCallback(() => {
-    setExpanded(prev => {
-      if (!prev) {
-        // 展開時: スナップショット保存
-        snapshotRef.current = {
-          settings: { ...settings },
-          preset: audio.currentPreset,
-          volume: audio.volume,
-          muted: audio.isMuted,
-          theme: themePreference,
-          backgroundAudio,
-          backgroundNotify,
-          preventSleep,
-        }
-        confirmedRef.current = false
-      } else if (!confirmedRef.current && snapshotRef.current) {
-        // Setを押さずに閉じた: スナップショット復元
-        const snap = snapshotRef.current
-        setSettings(snap.settings)
-        if (audio.currentPreset !== snap.preset) audio.switchPreset(snap.preset)
-        if (audio.isMuted !== snap.muted) audio.toggleMute()
-        audio.setVolume(snap.volume)
-        sfx?.setVolume(snap.volume)
-        sfx?.setMuted(snap.muted)
-        setThemePreference(snap.theme)
-        setBackgroundAudio(snap.backgroundAudio)
-        setBackgroundNotify(snap.backgroundNotify)
-        setPreventSleep(snap.preventSleep)
-        setVolumeKey(k => k + 1)
-      }
-      return !prev
-    })
-  }, [settings, audio, sfx, themePreference, setThemePreference, backgroundAudio, backgroundNotify, preventSleep])
+  const openEditor = useCallback(() => {
+    snapshotRef.current = {
+      settings: { ...settings },
+      preset: audio.currentPreset,
+      volume: audio.volume,
+      muted: audio.isMuted,
+      theme: themePreference,
+      backgroundAudio,
+      backgroundNotify,
+      preventSleep,
+    }
+    confirmedRef.current = false
+  }, [settings, audio, themePreference, backgroundAudio, backgroundNotify, preventSleep])
+
+  const closeEditor = useCallback(() => {
+    if (!confirmedRef.current && snapshotRef.current) {
+      const snap = snapshotRef.current
+      setSettings(snap.settings)
+      if (audio.currentPreset !== snap.preset) audio.switchPreset(snap.preset)
+      if (audio.isMuted !== snap.muted) audio.toggleMute()
+      audio.setVolume(snap.volume)
+      sfx?.setVolume(snap.volume)
+      sfx?.setMuted(snap.muted)
+      setThemePreference(snap.theme)
+      setBackgroundAudio(snap.backgroundAudio)
+      setBackgroundNotify(snap.backgroundNotify)
+      setPreventSleep(snap.preventSleep)
+      setVolumeKey(k => k + 1)
+    }
+  }, [audio, sfx, setThemePreference])
 
   const confirm = useCallback(() => {
     settingsService.updateTimerConfig({
@@ -134,11 +130,10 @@ export function useSettingsEditor(): SettingsEditorResult {
     settingsService.updateBackgroundConfig({ backgroundAudio, backgroundNotify })
     settingsService.updatePowerConfig({ preventSleep })
     confirmedRef.current = true
-    setExpanded(false)
   }, [settings, settingsService, audio, themePreference, backgroundAudio, backgroundNotify, preventSleep])
 
-  const handleSoundChange = useCallback(() => {
-    if (!expanded) {
+  const handleSoundChange = useCallback((isEditing: boolean) => {
+    if (!isEditing) {
       settingsService.updateSoundConfig({
         preset: audio.currentPreset,
         volume: audio.volume,
@@ -146,7 +141,7 @@ export function useSettingsEditor(): SettingsEditorResult {
       })
     }
     setVolumeKey(k => k + 1)
-  }, [expanded, settingsService, audio])
+  }, [settingsService, audio])
 
   const updateSetting = useCallback((key: keyof TimerSettings, value: number) => {
     setSettings(prev => ({ ...prev, [key]: value }))
@@ -154,7 +149,6 @@ export function useSettingsEditor(): SettingsEditorResult {
 
   return {
     settings,
-    expanded,
     volumeKey,
     currentTimerConfig,
     backgroundAudio,
@@ -163,7 +157,8 @@ export function useSettingsEditor(): SettingsEditorResult {
     setBackgroundAudio,
     setBackgroundNotify,
     setPreventSleep,
-    toggle,
+    openEditor,
+    closeEditor,
     confirm,
     updateSetting,
     handleSoundChange,

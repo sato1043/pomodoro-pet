@@ -21,6 +21,7 @@ export interface EnvironmentThemeParams {
   readonly moonIllumination: number      // 0.0〜1.0
   readonly moonIsVisible: boolean
   readonly moonOpacity: number           // 0.0〜1.0（水平線フェード × 天気減衰）
+  readonly moonSunAngle: number          // 月テクスチャ回転角（ラジアン）。シーン座標系での太陽→月方向
 }
 
 type ThemeKey = `${WeatherType}-${TimeOfDay}`
@@ -32,6 +33,7 @@ const DEFAULT_MOON_FIELDS = {
   moonIllumination: 0,
   moonIsVisible: false,
   moonOpacity: 0,
+  moonSunAngle: 0,
 } as const
 
 const THEME_TABLE: Record<string, EnvironmentThemeParams> = {

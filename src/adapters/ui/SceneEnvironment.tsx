@@ -3,6 +3,7 @@ import { useAppDeps } from './AppContext'
 import { useEnvironment } from './EnvironmentContext'
 import { WeatherPanel } from './WeatherPanel'
 import { KouSelector } from './KouSelector'
+import { MoonPhaseSelector } from './MoonPhaseSelector'
 import { WorldMapModal } from './WorldMapModal'
 import { EnvironmentExitButton } from './EnvironmentExitButton'
 import coastlineData from '../../../assets/data/coastline-path.json'
@@ -10,7 +11,7 @@ import coastlineData from '../../../assets/data/coastline-path.json'
 type EnvironmentView = 'weather' | 'worldMap'
 
 export function SceneEnvironment(): JSX.Element {
-  const { climateGridPort, settingsService, bus } = useAppDeps()
+  const { climateGridPort, settingsService, bus, envSimService } = useAppDeps()
   const { climate, currentKou, kouDateRanges, updateClimate } = useEnvironment()
   const [view, setView] = useState<EnvironmentView>('weather')
 
@@ -33,6 +34,21 @@ export function SceneEnvironment(): JSX.Element {
               const next = { ...settingsService.weatherConfig, autoKou: auto }
               bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
               settingsService.updateWeatherConfig({ autoKou: auto })
+            }}
+          />
+          <MoonPhaseSelector
+            currentPhaseDeg={envSimService.currentLunar?.phaseDeg ?? null}
+            autoMoonPhase={settingsService.weatherConfig.autoMoonPhase}
+            manualPhaseIndex={settingsService.weatherConfig.moonPhaseIndex}
+            onPhaseChange={(index) => {
+              const next = { ...settingsService.weatherConfig, autoMoonPhase: false, moonPhaseIndex: index }
+              bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
+              settingsService.updateWeatherConfig({ autoMoonPhase: false, moonPhaseIndex: index })
+            }}
+            onAutoToggle={(auto) => {
+              const next = { ...settingsService.weatherConfig, autoMoonPhase: auto }
+              bus.publish('WeatherConfigChanged', { type: 'WeatherConfigChanged', weather: next, timestamp: Date.now() })
+              settingsService.updateWeatherConfig({ autoMoonPhase: auto })
             }}
           />
         </>

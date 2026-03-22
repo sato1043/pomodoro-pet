@@ -1,4 +1,4 @@
-pomodoro-pet v0.13.5
+pomodoro-pet v0.14.0
 ==========
 
 A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
@@ -31,7 +31,7 @@ A 3D virtual pet pomodoro timer desktop app, aiming for Steam release.
 - **Statistics** — 13-week heatmap, daily / 7-day / monthly summaries of completed cycles and work time
 - **Fureai Mode** — Feed the character by dragging apples and cabbages. Prompt input for behavior commands (English / Japanese keywords)
 - **Weather Settings** — Choose scene preset (meadow / seaside / park), weather type (sunny / cloudy / rainy / snowy), cloud density (6 levels), and time of day (morning / day / evening / night / auto). Live preview with dynamic lighting and effects. Scene-linked ambient sounds (meadow→forest, seaside→wind, park→forest)
-- **Astronomy-based Environment** — Real-time sun/moon position calculation via astronomy-engine. Continuous sky color, exposure, and lighting direction derived from celestial altitude/azimuth. Twilight sun/moon crossfade. 3D moon object with phase texture (waxing/waning terminator) and glow effect, horizon fade, and weather-based opacity. Enhanced moonlight: full moon nights are visibly brighter (boosted exposure, ambient, and ground color moonlight blend). Weather auto-determination from climate data with precipitation-linked particle counts (rain 100-1200, snow 100-900)
+- **Astronomy-based Environment** — Real-time sun/moon position calculation via astronomy-engine. Celestial coordinate system separated from Three.js scene coordinates with unified `celestialToScene` mapping (viewDirection + azimuth compression). Continuous sky color, exposure, and lighting direction derived from celestial altitude/azimuth. Twilight sun/moon crossfade. 3D moon object with spherical terminator phase texture, moonSunAngle rotation, glow effect, horizon fade, and weather-based opacity. Manual moon phase selector with 16 traditional Japanese lunar phase names (朔・三日月・上弦・望・十六夜・下弦 etc.). Enhanced moonlight: full moon nights are visibly brighter (boosted exposure, ambient, and ground color moonlight blend). Weather auto-determination from climate data with precipitation-linked particle counts (rain 100-1200, snow 100-900)
 - **72 Microseasons (Shichijuni-kou)** — Japanese traditional 72 microseasons resolved from solar ecliptic longitude. Overlay display with fade animation on season change
 - **World Map Location Selector** — SVG equirectangular world map with day/night terminator. 8 city presets (Sydney / Tokyo / London / New York / Hawaii / Dubai / Reykjavik / Ushuaia) plus click-to-select custom coordinates. Timezone auto-resolved from coordinates (via tz-lookup) with pre-generated abbreviation mapping (386 entries). Free mode clock and timeline display local time with timezone label (JST, EST, AEDT, etc.)
 - **Sound** — Procedural ambient sounds (forest / rain / wind), timer SFX, break BGM with crossfade, volume and mute controls

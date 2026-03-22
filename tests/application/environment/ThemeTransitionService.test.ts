@@ -9,6 +9,7 @@ const MOON_DEFAULTS = {
   moonIllumination: 0,
   moonIsVisible: false,
   moonOpacity: 0,
+  moonSunAngle: 0,
 } as const
 
 const THEME_A: EnvironmentThemeParams = {

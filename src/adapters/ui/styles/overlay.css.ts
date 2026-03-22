@@ -18,10 +18,16 @@ export const overlay = style({
   userSelect: 'none',
   pointerEvents: 'none',
   transition: 'background 0.3s ease',
+  display: 'flex',
+  flexDirection: 'column',
 })
 
 export const overlayExpanded = style({
   bottom: 112,
+})
+
+export const overlayDocView = style({
+  bottom: 20,
 })
 
 export const title = style({

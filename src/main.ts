@@ -89,7 +89,7 @@ function createScene(): {
   const scene = new THREE.Scene()
 
   const camera = new THREE.PerspectiveCamera(
-    50,
+    60,
     window.innerWidth / window.innerHeight,
     0.1,
     1000
@@ -526,6 +526,12 @@ async function main(): Promise<void> {
       envSimService.setManualMoonAltitude(null)
     }
 
+    if (!event.weather.autoMoonPhase) {
+      envSimService.setManualMoonPhase(event.weather.moonPhaseIndex)
+    } else {
+      envSimService.setManualMoonPhase(null)
+    }
+
     if (!event.weather.autoWeather) {
       envSimService.setManualWeather({
         weather: event.weather.weather,
@@ -658,6 +664,9 @@ async function main(): Promise<void> {
     }
     if (!wc.autoMoon) {
       envSimService.setManualMoonAltitude(MOON_ALTITUDE_DEG[wc.moonAltitude])
+    }
+    if (!wc.autoMoonPhase) {
+      envSimService.setManualMoonPhase(wc.moonPhaseIndex)
     }
     envSimService.start(climate, wc.scenePreset)
     // 起動時テーマを即座にシーンに反映（applyImmediateは内部状態のみ更新しtick()はnullを返すため）

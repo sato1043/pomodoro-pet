@@ -24,6 +24,8 @@ export interface WeatherConfig {
   readonly climate?: ClimateConfig
   readonly moonAltitude: MoonAltitude
   readonly autoMoon: boolean
+  readonly moonPhaseIndex: number
+  readonly autoMoonPhase: boolean
 }
 
 const CLOUD_PRESET: Record<WeatherType, CloudDensityLevel> = {
@@ -49,6 +51,8 @@ export function createDefaultWeatherConfig(): WeatherConfig {
     scenePreset: 'meadow',
     moonAltitude: 'mid',
     autoMoon: true,
+    moonPhaseIndex: 7,   // 望（満月）
+    autoMoonPhase: true,
   }
 }
 

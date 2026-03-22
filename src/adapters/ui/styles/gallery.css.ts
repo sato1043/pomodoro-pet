@@ -3,8 +3,8 @@ import { vars } from './theme.css'
 
 export const entryButton = style({
   position: 'fixed',
-  bottom: 280,
-  left: 10,
+  bottom: 168,
+  right: 10,
   width: 48,
   height: 48,
   borderRadius: '50%',

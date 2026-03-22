@@ -2,7 +2,7 @@ import { style, keyframes } from '@vanilla-extract/css'
 import { vars } from './theme.css'
 
 export const bioSection = style({
-  paddingLeft: 30,
+  paddingLeft: 0,
   position: 'relative',
 })
 
@@ -53,8 +53,8 @@ export const bioCurveFocus = style({
 
 export const bioLegend = style({
   position: 'absolute',
-  top: 24,
-  left: 36,
+  top: 10,
+  left: 6,
   display: 'flex',
   flexDirection: 'column',
   gap: 4,

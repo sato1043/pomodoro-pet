@@ -7,6 +7,7 @@ import { DEFAULT_CLIMATE, interpolateToKouClimate, estimateTemperature } from '.
 import type { WeatherDecision } from '../../domain/environment/value-objects/WeatherDecision'
 import { mulberry32, decideWeather } from '../../domain/environment/value-objects/WeatherDecision'
 import { computeThemeFromCelestial, computeLightDirection } from '../../domain/environment/value-objects/CelestialTheme'
+import { MOON_PHASE_DEFINITIONS } from '../../domain/environment/value-objects/MoonPhaseName'
 import { THEME_TRANSITION_DURATION_MANUAL_MS } from '../../domain/environment/value-objects/ThemeLerp'
 import type { ThemeTransitionService } from './ThemeTransitionService'
 import type { EventBus } from '../../domain/shared/EventBus'
@@ -101,16 +102,16 @@ function simulateSolarForTimeOfDay(timeOfDay: TimeOfDay, realSolar: SolarPositio
   }
 }
 
-function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, altitudeOverride?: number): LunarPosition {
+function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, realLunar: LunarPosition | null, altitudeOverride?: number): LunarPosition {
+  // phaseDegとilluminationは実天文データを引き継ぐ（現実の月齢を反映）
+  const phaseDeg = realLunar?.phaseDeg ?? 90
+  const illumination = realLunar?.illuminationFraction ?? 0.5
+
   if (timeOfDay === 'night') {
     const alt = altitudeOverride ?? 33
     // 高度→方位角連動: 月が東寄り(150°)から西寄り(210°)へ向かう（太陽と同じ左→右）
-    // CelestialTheme.tsのazimuthリマップが画面内に収める
     const altFraction = Math.max(0, Math.min(1, (alt - 5) / (33 - 5)))
     const azimuth = 150 + (210 - 150) * altFraction // 5°→150°(左寄り), 33°→210°(右寄り)
-    // 高度→月齢連動: 低い→半月、高い→満月（見栄えする面積を確保）
-    const phaseDeg = 90 + (180 - 90) * altFraction        // 90°(半月)→180°(満月)
-    const illumination = 0.50 + (1.0 - 0.50) * altFraction // 0.50→1.0
     return {
       altitude: alt,
       azimuth,
@@ -122,8 +123,8 @@ function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, altitudeOverride?: numb
   return {
     altitude: -10,
     azimuth: 0,
-    phaseDeg: 180,
-    illuminationFraction: 0.5,
+    phaseDeg,
+    illuminationFraction: illumination,
     isAboveHorizon: false,
   }
 }
@@ -142,6 +143,7 @@ export function createEnvironmentSimulationService(
   let isAutoWeather = false
   let timeOfDayOverride: TimeOfDay | null = null
   let moonAltitudeOverride: number | null = null
+  let moonPhaseOverride: number | null = null // MOON_PHASE_DEFINITIONS[index].phaseDeg/illumination
   let kouIndexOverride: number | null = null
   let cachedKouDateRanges: readonly KouDateRange[] = []
   let cachedKouDateRangesYear = -1
@@ -261,17 +263,29 @@ export function createEnvironmentSimulationService(
     const themeSolar = timeOfDayOverride
       ? simulateSolarForTimeOfDay(timeOfDayOverride, cachedSolar)
       : cachedSolar
-    const themeLunar = timeOfDayOverride
-      ? simulateLunarForTimeOfDay(timeOfDayOverride, moonAltitudeOverride ?? undefined)
+    let themeLunar = timeOfDayOverride
+      ? simulateLunarForTimeOfDay(timeOfDayOverride, cachedLunar, moonAltitudeOverride ?? undefined)
       : moonAltitudeOverride !== null
-        ? simulateLunarForTimeOfDay('night', moonAltitudeOverride)
+        ? simulateLunarForTimeOfDay('night', cachedLunar, moonAltitudeOverride)
         : cachedLunar
+
+    // 月齢手動オーバーライド: phaseDegとilluminationを差し替え
+    if (moonPhaseOverride !== null && themeLunar) {
+      const def = MOON_PHASE_DEFINITIONS[moonPhaseOverride]
+      if (def) {
+        themeLunar = {
+          ...themeLunar,
+          phaseDeg: def.phaseDeg,
+          illuminationFraction: def.illumination,
+        }
+      }
+    }
 
     const themeParams = computeThemeFromCelestial(
       themeSolar, themeLunar, effectiveWeather, currentEstimatedTempC, scenePreset, currentAvgPrecipMm
     )
 
-    // Step 6: 光源方向
+    // Step 6: 光源方向（celestialToSceneで統一変換）
     const lightDir = computeLightDirection(themeSolar, themeLunar)
 
     // Step 7: テーマ遷移
@@ -373,6 +387,15 @@ export function createEnvironmentSimulationService(
       }
     },
 
+    setManualMoonPhase(phaseIndex: number | null): void {
+      const changed = moonPhaseOverride !== phaseIndex
+      moonPhaseOverride = phaseIndex
+      if (changed && isRunning) {
+        pendingTransitionDurationMs = THEME_TRANSITION_DURATION_MANUAL_MS
+        timeSinceLastAstronomyUpdate = ASTRONOMY_UPDATE_INTERVAL_MS
+      }
+    },
+
     tick(deltaMs: number): void {
       if (!isRunning) return
 
@@ -392,6 +415,7 @@ export function createEnvironmentSimulationService(
       currentKou = null
       timeOfDayOverride = null
       moonAltitudeOverride = null
+      moonPhaseOverride = null
       kouIndexOverride = null
       cachedKouDateRanges = []
       cachedKouDateRangesYear = -1

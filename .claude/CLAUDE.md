@@ -30,6 +30,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - [interaction-design.md](./memories/interaction-design.md) — 4種のインタラクション（クリック/摘まみ上げ/撫でる/餌やり）のジェスチャー判定フローと関連ソースファイル。新インタラクション追加時に参照
 - [character-animation-mapping.md](./memories/character-animation-mapping.md) — CharacterStateとFBXアニメーションクリップの対応表（11状態+追加5クリップ）+EnrichedAnimationResolverの16ルール。アニメーション追加・変更時に参照
 - [environment-scene-design.md](./memories/environment-scene-design.md) — 環境シーンシステム全体設計。Phase 1-3実装済み仕様（型定義・プリセット・テーマ・エフェクト・補間・UI・永続化）+ Phase 5.5未実装設計（astronomy-engine天文計算・七十二候・気候プロファイル・天気自動決定・雨量連動）。環境シーン変更時に参照
+- [celestial-mapping-design.md](./memories/celestial-mapping-design.md) — 天球座標系とシーン座標系のマッピング設計。天球座標系の分離、CelestialMapping統一変換、方位圧縮、月齢（離角）の現象解説、球面terminator、月描画（CircleGeometry+lookAt）。天体表示・ライティング変更時に参照
 - [release-infrastructure.md](./memories/release-infrastructure.md) — リリースインフラ統合設計。リリースチャネル（stable/beta/alpha）2軸判定モデル、CI/CDワークフロー（GitHub Actions release.yml）、GitHub Secrets（SSH Deploy Key・環境変数）、自動アップデートチャネル分離（GitHub Releases・GCPバックエンド・Firestore）、リリース手順・トラブルシューティング。機能追加・チャネル管理・CI/CD設定変更時に参照
 
 ### インフラ・技術
@@ -94,8 +95,7 @@ FBXファイル内のテクスチャ参照が `.psd` の場合、FBXLoaderは読
 - ドメイン層は純粋関数/オブジェクトで構成。Three.js やDOM への依存を持たない
 - `electron/` ディレクトリ名は使用禁止（`electron` npmパッケージ名と衝突する）。代わりに `desktop/` を使用
 - rendererの root は `src/`（`electron.vite.config.ts` の `renderer.root: 'src'`）
-- 実装完了時にドキュメントを更新したかを確認する
-- 実装完了時にテストコードとE2Eテストを更新したかを確認する
+- **コミット前調査**: コミットを指示されたらコミットする前に必ず、ドキュメント・テストコード・E2Eテスト・E2Eテストギャップ分析の更新が必要か確認し、作業提案する
 - **バージョン管理と変更記録**: すべての変更で[CHANGELOG.md](../CHANGELOG.md)への追記を義務付ける
   - 通常のドキュメント更新ではバージョン番号を更新しない。バージョン番号の更新はリリース時に行う。
   - **機能追加時**: package.json minor bump + feature-license-map.md更新（機能一覧+FeatureNameマッピング+冒頭バージョン+変更履歴） + `FeatureName`型/`ENABLED_FEATURES`更新（必要な場合） + CHANGELOG.md追記 + README.mdのFeaturesセクション更新 + README.md冒頭バージョン更新
