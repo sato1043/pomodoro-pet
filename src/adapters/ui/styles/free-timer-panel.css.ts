@@ -419,18 +419,20 @@ export const btnConfirm = style({
 
 export const btnPrimary = style({
   background: `rgb(${vars.color.work})`,
-  border: `2px solid rgb(${vars.color.work})`,
+  border: `2px solid rgba(255, 255, 255, 0.35)`,
   color: '#fff',
   fontSize: 33,
   padding: '20px 0',
   marginTop: 0,
   width: '100%',
   opacity: 1,
-  boxShadow: `0 2px 12px rgba(${vars.color.work}, 0.4)`,
+  boxShadow: `0 4px 20px rgba(0, 0, 0, 0.35), 0 2px 8px rgba(${vars.color.work}, 0.4)`,
   transition: 'background 0.2s',
   selectors: {
     '&:hover:not(:disabled)': {
-      background: `rgb(${vars.color.work})`,
+      background: `linear-gradient(rgba(255,255,255,0.15), rgba(255,255,255,0.15)), rgb(${vars.color.work})`,
+      boxShadow: `0 6px 28px rgba(0, 0, 0, 0.45), 0 2px 12px rgba(${vars.color.work}, 0.6)`,
+      borderColor: 'rgba(255, 255, 255, 0.55)',
     },
   },
 })
