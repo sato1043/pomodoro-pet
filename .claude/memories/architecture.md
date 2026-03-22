@@ -139,6 +139,7 @@ EventBus（UI/インフラ通知）:
 - `environment/value-objects/CelestialMapping.ts` — CelestialCoordinate型、CelestialMapping型、DEFAULT_CELESTIAL_MAPPING（viewDirection=180, azimuthCompression=0.5）、celestialToScene()（天球→シーン座標統一変換）、computeMoonSunAngle()
 - `environment/value-objects/CelestialTheme.ts` — computeThemeFromCelestial()（CelestialMapping経由で天体位置→EnvironmentThemeParams生成、moonSunAngle算出含む）、computeLightDirection()（CelestialMapping経由、太陽/月クロスフェード）、altitudeToSunColor()、altitudeToSkyColor()
 - `environment/value-objects/MoonPhase.ts` — generateMoonPhasePixels(phaseDeg, size, illumination, rotationRad) → Uint8ClampedArray。Three.js非依存の月位相テクスチャ生成純粋関数。球面terminator（楕円カーブ）、moonSunAngle回転対応、リムライト、マリア模様、ソフトエッジ
+- `environment/value-objects/MoonPhaseName.ts` — MoonPhaseDefinition型、MOON_PHASE_DEFINITIONS（伝統的月齢名16種: 朔・繊月・三日月・上弦・十日夜月・十三夜月・小望月・望・十六夜・立待月・居待月・寝待月・更待月・下弦・有明月・晦）、findNearestMoonPhase()
 - `environment/value-objects/Timezone.ts` — resolveTimezone(lat,lon)（tz-lookupラッパー+TZ_BOUNDARY_OVERRIDES境界補正）、getLocationTime(date,tz)、formatTimezoneLabel(tz,date)。timezone-abbr.json（386エントリ）による略称マッピング
 - `statistics/StatisticsTypes.ts` — DailyStats型、StatisticsData型、emptyDailyStats()、todayKey()、formatDateKey()
 - `shared/EventBus.ts` — Pub/Subイベントバス
@@ -297,6 +298,7 @@ EventBus（UI/インフラ通知）:
 - `domain/environment/CelestialMapping.test.ts` — celestialToScene（viewDirection・圧縮率・高度・相対位置保存・単位ベクトル）、computeMoonSunAngle、DEFAULT_CELESTIAL_MAPPING（15テスト）
 - `domain/environment/CelestialTheme.test.ts` — altitudeToSunColor・altitudeToSkyColor・computeThemeFromCelestial（月光ブースト・moonPosition・moonOpacity・moonSunAngle含む）・computeLightDirection（35テスト）
 - `domain/environment/MoonPhase.test.ts` — generateMoonPhasePixels（新月暗部・満月明部・上弦/下弦左右・illumination明度・角透明・サイズ変更、8テスト）
+- `domain/environment/MoonPhaseName.test.ts` — MOON_PHASE_DEFINITIONS（定義数・index連番・phaseDeg昇順・illumination範囲・必須フィールド）、findNearestMoonPhase（14テスト）
 - `domain/shared/EventBus.test.ts` — publish/subscribe基本動作
 - `domain/shared/ExportData.test.ts` — エクスポートデータバリデーション（正常系、不正形式、バージョン互換性、フィールド欠損、24テスト）
 - `application/app-scene/AppSceneManager.test.ts` — シーン遷移・enterPomodoro/exitPomodoro/enterFureai/exitFureai/enterGallery/exitGallery・全サイクル
