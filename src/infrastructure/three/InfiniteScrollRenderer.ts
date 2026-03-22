@@ -46,7 +46,7 @@ export function createInfiniteScrollRenderer(
     // 初期配置を反映（背景は進行方向の逆に配置）
     const depth = spec.depth
     for (let i = 0; i < chunks.length; i++) {
-      const offset = -depth + i * depth
+      const offset = -depth * 2 + i * depth
       chunks[i].group.position.x = -dir.x * offset
       chunks[i].group.position.z = -dir.z * offset
     }

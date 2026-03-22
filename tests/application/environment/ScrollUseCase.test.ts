@@ -17,9 +17,9 @@ describe('ScrollUseCase', () => {
   })
 
   describe('初期状態', () => {
-    it('3チャンクのオフセットが[-depth, 0, +depth]である', () => {
+    it('3チャンクのオフセットが[-depth*2, -depth, 0]である', () => {
       const state = manager.state
-      expect(state.chunkOffsets).toEqual([-depth, 0, depth])
+      expect(state.chunkOffsets).toEqual([-depth * 2, -depth, 0])
     })
 
     it('リサイクル対象がない', () => {
@@ -45,34 +45,34 @@ describe('ScrollUseCase', () => {
       manager.tick(1000, true)
       const offsets = manager.state.chunkOffsets
       // scrollSpeed=1.5, dt=1s → +1.5
-      expect(offsets[0]).toBeCloseTo(-depth + 1.5, 5)
-      expect(offsets[1]).toBeCloseTo(1.5, 5)
-      expect(offsets[2]).toBeCloseTo(depth + 1.5, 5)
+      expect(offsets[0]).toBeCloseTo(-depth * 2 + 1.5, 5)
+      expect(offsets[1]).toBeCloseTo(-depth + 1.5, 5)
+      expect(offsets[2]).toBeCloseTo(1.5, 5)
     })
 
     it('小さいdtでも正しく加算される', () => {
       manager.tick(100, true) // 0.1秒
       const offsets = manager.state.chunkOffsets
       // scrollSpeed=1.5, dt=0.1s → +0.15
-      expect(offsets[1]).toBeCloseTo(0.15, 5)
+      expect(offsets[1]).toBeCloseTo(-depth + 0.15, 5)
     })
   })
 
   describe('チャンクリサイクル', () => {
-    // recycleThreshold = (chunkCount - 1) * depth = 2 * 10 = 20
+    // recycleThreshold = (chunkCount - 2) * depth = 1 * 10 = 10
     it('オフセットがrecycleThresholdを超えたチャンクがリサイクルされる', () => {
-      // chunk[2]=10 → 20を超えるには (20-10)/1.5 = 6.67秒以上
+      // chunk[2]=0 → 10を超えるには 10/1.5 = 6.67秒以上
       manager.tick(7000, true) // 7秒 → +10.5
-      // chunk[2] = 10 + 10.5 = 20.5 > 20 → リサイクル
+      // chunk[2] = 0 + 10.5 = 10.5 > 10 → リサイクル
       expect(manager.state.recycledChunkIndex).toBe(2)
     })
 
     it('リサイクルされたチャンクはmin(offsets) - depthに再配置される', () => {
-      // 7秒スクロール: offsets = [0.5, 10.5, 20.5]
-      // chunk[2]がリサイクル → min(0.5) - 10 = -9.5
+      // 7秒スクロール: offsets = [-9.5, 0.5, 10.5]
+      // chunk[2]がリサイクル → min(-9.5) - 10 = -19.5
       manager.tick(7000, true)
       const offsets = manager.state.chunkOffsets
-      expect(offsets[2]).toBeCloseTo(-9.5, 5)
+      expect(offsets[2]).toBeCloseTo(-19.5, 5)
     })
 
     it('リサイクルが不要なtickではrecycledChunkIndexがnullになる', () => {
@@ -86,8 +86,8 @@ describe('ScrollUseCase', () => {
       expect(manager.state.recycledChunkIndex).toBe(2)
 
       // さらにスクロールして2回目のリサイクル
-      // 現在: chunk[0]=0.5, chunk[1]=10.5, chunk[2]=-9.5
-      // 14秒後: chunk[0]=21.5, chunk[1]=31.5, chunk[2]=11.5
+      // 現在: chunk[0]=-9.5, chunk[1]=0.5, chunk[2]=-19.5
+      // 14秒後: chunk[0]=11.5, chunk[1]=21.5, chunk[2]=1.5
       manager.tick(14000, true)
       expect(manager.state.recycledChunkIndex).toBe(0)
     })
@@ -97,7 +97,7 @@ describe('ScrollUseCase', () => {
     it('リセットで初期状態に戻る', () => {
       manager.tick(5000, true)
       manager.reset()
-      expect(manager.state.chunkOffsets).toEqual([-depth, 0, depth])
+      expect(manager.state.chunkOffsets).toEqual([-depth * 2, -depth, 0])
       expect(manager.state.recycledChunkIndex).toBeNull()
     })
   })
