@@ -81,11 +81,11 @@ export function pointsToPath(points: BioPoint[]): string {
 }
 
 const BIO_PAD_LEFT = 4
-const BIO_PAD_RIGHT = 50
-const BIO_PAD_TOP = 12
-const BIO_PAD_BOTTOM = 20
+const BIO_PAD_RIGHT = 4
+const BIO_PAD_TOP = 6
+const BIO_PAD_BOTTOM = 10
 const BIO_WIDTH = 320
-const BIO_HEIGHT = 100
+const BIO_HEIGHT = 50
 const BIO_CHART_W = BIO_WIDTH - BIO_PAD_LEFT - BIO_PAD_RIGHT
 const BIO_CHART_H = BIO_HEIGHT - BIO_PAD_TOP - BIO_PAD_BOTTOM
 
