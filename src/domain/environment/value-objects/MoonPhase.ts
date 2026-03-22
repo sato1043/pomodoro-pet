@@ -21,13 +21,15 @@ const MOON_DARK_B = 160
  * @param illumination - 照度割合（0.0〜1.0）。明るさの係数に使用
  * @param rotationRad - テクスチャ回転角（ラジアン）。moonSunAngleに基づき明暗境界を回転。
  *                      0=太陽が上、π/2=太陽が右、-π/2=太陽が左
+ * @param darkTintRGB - 暗部のティント色 [R, G, B]（0-255）。日中は空色を渡すことで暗部が空に馴染む
  * @returns RGBA形式のピクセルデータ（size × size × 4バイト）
  */
 export function generateMoonPhasePixels(
   phaseDeg: number,
   size: number,
   illumination: number,
-  rotationRad: number = 0
+  rotationRad: number = 0,
+  darkTintRGB: readonly [number, number, number] = [0, 0, 0]
 ): Uint8ClampedArray {
   const data = new Uint8ClampedArray(size * size * 4)
   const center = size / 2
@@ -105,11 +107,14 @@ export function generateMoonPhasePixels(
       const g = baseG * litValue
       const b = baseB * litValue
 
-      // 暗部の最低輝度
-      const darkSide = 0.05 * 255
-      data[idx] = Math.min(255, Math.round(Math.max(r, darkSide)))
-      data[idx + 1] = Math.min(255, Math.round(Math.max(g, darkSide)))
-      data[idx + 2] = Math.min(255, Math.round(Math.max(b, darkSide)))
+      // 暗部の最低輝度（darkTintRGBとブレンド: 日中は空色に寄せる）
+      const tintBlend = 0.65
+      const darkR = darkTintRGB[0] * tintBlend + 0.05 * 255 * (1 - tintBlend)
+      const darkG = darkTintRGB[1] * tintBlend + 0.05 * 255 * (1 - tintBlend)
+      const darkB = darkTintRGB[2] * tintBlend + 0.05 * 255 * (1 - tintBlend)
+      data[idx] = Math.min(255, Math.round(Math.max(r, darkR)))
+      data[idx + 1] = Math.min(255, Math.round(Math.max(g, darkG)))
+      data[idx + 2] = Math.min(255, Math.round(Math.max(b, darkB)))
 
       // エッジ: ソフトアルファ
       const edgeDist = Math.sqrt(distSq) / radius

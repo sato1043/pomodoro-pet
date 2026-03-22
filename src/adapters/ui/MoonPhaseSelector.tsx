@@ -52,7 +52,7 @@ export function MoonPhaseSelector({
   }, [showList])
 
   return createPortal(
-    <div className={styles.container} data-testid="moon-phase-selector" style={{ top: 225 }}>
+    <div className={styles.container} data-testid="moon-phase-selector" style={{ top: 198 }}>
       <div className={styles.row}>
         <span className={styles.label}>moon</span>
         <span className={styles.label}>
@@ -62,18 +62,16 @@ export function MoonPhaseSelector({
       <div className={styles.row}>
         <span className={styles.detail}>{selectedDef.nameEn}</span>
       </div>
+      <div className={styles.detailLarge}>
+        {selectedDef.nameJa}
+      </div>
+      <div className={styles.detail}>
+        （{selectedDef.readingJa}）
+      </div>
+      <div className={styles.detail}>
+        {selectedDef.description}
+      </div>
       <div className={styles.row}>
-        <button
-          className={`${styles.autoBtn}${autoMoonPhase ? ' active' : ''}`}
-          onClick={() => onAutoToggle(!autoMoonPhase)}
-          title={autoMoonPhase ? 'Auto (on)' : 'Auto (off)'}
-          data-testid="moon-phase-auto"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        </button>
         <button
           className={styles.listBtn}
           onClick={handleOpenList}
@@ -89,15 +87,6 @@ export function MoonPhaseSelector({
             <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </button>
-      </div>
-      <div className={styles.detailLarge}>
-        {selectedDef.nameJa}
-      </div>
-      <div className={styles.detail}>
-        （{selectedDef.readingJa}）
-      </div>
-      <div className={styles.detail}>
-        {selectedDef.description}
       </div>
       {showList && (() => {
         const detailIdx = hoveredIndex ?? previewIndex
@@ -191,6 +180,14 @@ export function MoonPhaseSelector({
               data-testid="moon-phase-list-close"
             >
               ✕
+            </button>
+            <button
+              className={styles.listCloseBtn}
+              style={{ left: 'auto', right: 10 }}
+              onClick={() => { onAutoToggle(true); setShowList(false); setPreviewIndex(null) }}
+              data-testid="moon-phase-list-auto"
+            >
+              Auto
             </button>
           </div>,
           document.body

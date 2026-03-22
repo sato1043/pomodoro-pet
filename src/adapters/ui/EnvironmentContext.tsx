@@ -16,6 +16,8 @@ export interface EnvironmentContextValue {
   readonly currentKou: KouDefinition | null
   /** 太陽高度角（度）。null = autoWeather無効またはenvSimService未起動 */
   readonly solarAltitude: number | null
+  /** 現在の月齢角度（度）。null = envSimService未起動 */
+  readonly currentPhaseDeg: number | null
   /** 昼間判定（太陽高度 > -6°: 市民薄明以上） */
   readonly isDaytime: boolean
   /** IANAタイムゾーン文字列 */
@@ -88,7 +90,12 @@ export function EnvironmentProvider({ children }: { children: React.ReactNode })
     }
   })
 
-  // solarAltitude定期更新
+  // currentPhaseDeg
+  const [currentPhaseDeg, setCurrentPhaseDeg] = useState<number | null>(
+    () => envSimService.currentLunar?.phaseDeg ?? null
+  )
+
+  // solarAltitude + currentPhaseDeg 定期更新
   const envSimRef = useRef(envSimService)
   envSimRef.current = envSimService
 
@@ -96,6 +103,7 @@ export function EnvironmentProvider({ children }: { children: React.ReactNode })
     const update = (): void => {
       const solar = envSimRef.current.currentSolar
       setSolarAltitude(solar?.altitude ?? null)
+      setCurrentPhaseDeg(envSimRef.current.currentLunar?.phaseDeg ?? null)
     }
     update()
     const id = setInterval(update, SOLAR_UPDATE_INTERVAL_MS)
@@ -124,6 +132,7 @@ export function EnvironmentProvider({ children }: { children: React.ReactNode })
       climate,
       currentKou,
       solarAltitude,
+      currentPhaseDeg,
       isDaytime,
       timezone,
       kouDateRanges,

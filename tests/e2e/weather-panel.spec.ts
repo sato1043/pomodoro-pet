@@ -451,49 +451,38 @@ test('KouSelectorがenvironmentシーンで表示される', async () => {
   const listBtn = page.locator('[data-testid="kou-list-btn"]')
   await expect(listBtn).toBeVisible()
 
-  const autoBtn = page.locator('[data-testid="kou-auto"]')
-  await expect(autoBtn).toBeVisible()
-
   await exitEnvironment(page)
 })
 
-test('KouSelector Autoボタンのトグル動作', async () => {
+test('KouSelector リスト内Autoボタンで自動モードに戻る', async () => {
   const { page } = app
 
   await enterEnvironment(page)
 
-  const autoBtn = page.locator('[data-testid="kou-auto"]')
-
-  // autoKouがtrueであることを保証
-  if (!(await autoBtn.evaluate(el => el.classList.contains('active')))) {
-    await autoBtn.click()
-  }
-  await expect(autoBtn).toHaveClass(/active/)
-
-  // Autoをオフ
-  await autoBtn.click()
-  await expect(autoBtn).not.toHaveClass(/active/)
-
-  // Autoを再度オン
-  await autoBtn.click()
-  await expect(autoBtn).toHaveClass(/active/)
-
-  await exitEnvironment(page)
-})
-
-test('KouSelectorリストから手動選択でAutoが解除される', async () => {
-  const { page } = app
-
-  await enterEnvironment(page)
-
-  const autoBtn = page.locator('[data-testid="kou-auto"]')
   const listBtn = page.locator('[data-testid="kou-list-btn"]')
 
-  // Autoをオンにする
-  if (!(await autoBtn.evaluate(el => el.classList.contains('active')))) {
-    await autoBtn.click()
-  }
-  await expect(autoBtn).toHaveClass(/active/)
+  // リストを開く
+  await listBtn.click()
+  const overlay = page.locator('[data-testid="kou-list-overlay"]')
+  await expect(overlay).toBeVisible()
+
+  // Autoボタンがリスト内に存在する
+  const autoBtn = page.locator('[data-testid="kou-list-auto"]')
+  await expect(autoBtn).toBeVisible()
+
+  // Autoボタンを押すとリストが閉じる
+  await autoBtn.click()
+  await expect(overlay).not.toBeVisible()
+
+  await exitEnvironment(page)
+})
+
+test('KouSelectorリストから手動選択', async () => {
+  const { page } = app
+
+  await enterEnvironment(page)
+
+  const listBtn = page.locator('[data-testid="kou-list-btn"]')
 
   // リストを開く
   await listBtn.click()
@@ -513,11 +502,12 @@ test('KouSelectorリストから手動選択でAutoが解除される', async ()
   // オーバーレイが閉じる
   await expect(overlay).not.toBeVisible()
 
-  // Autoが解除される
-  await expect(autoBtn).not.toHaveClass(/active/)
-
-  // Autoに戻す（後続テスト用）
+  // Autoに戻す（後続テスト用）: リストを開いてAutoボタンを押す
+  await listBtn.click()
+  await expect(overlay).toBeVisible()
+  const autoBtn = page.locator('[data-testid="kou-list-auto"]')
   await autoBtn.click()
+  await expect(overlay).not.toBeVisible()
 
   await exitEnvironment(page)
 })

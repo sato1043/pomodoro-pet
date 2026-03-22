@@ -16,6 +16,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - カメラFOVを50°→60°に変更、注視点を調整（lookAtY 1.5→1.8）
 - 月の配置距離を300→500に変更
 - 手動timeOfDay設定時も現実の月齢（phaseDeg, illumination）を引き継ぐよう改善
+- 月の暗部を空色でティントし背景との馴染みを改善
+- KouSelector/MoonPhaseSelectorのAutoボタンをリスト展開内に移動、リストボタンを最下段に配置
+- KouSelectorリストにλ（太陽黄経）列を追加
+- WeatherPanelのdraftを外部変更（MoonPhaseSelector等）と同期するよう修正
 
 ### Added
 - 月齢（離角）手動選択機能 — 環境設定画面に月齢セレクタ追加。伝統的な日本語月齢名16種（朔・三日月・上弦・望・十六夜・下弦など）から選択可能
