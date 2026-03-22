@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useAppDeps } from './AppContext'
+import { useEventBusCallback } from './hooks/useEventBus'
 import { resolveTimeOfDay, cloudPresetLevel } from '../../domain/environment/value-objects/WeatherConfig'
 import type { WeatherType, TimeOfDay, MoonAltitude, WeatherConfig } from '../../domain/environment/value-objects/WeatherConfig'
 import type { ScenePresetName } from '../../domain/environment/value-objects/ScenePreset'
@@ -241,6 +242,15 @@ export function WeatherPanel({ onLocationClick }: WeatherPanelProps): JSX.Elemen
   const { settingsService, bus } = useAppDeps()
 
   const [draft, setDraft] = useState<WeatherConfig>(() => settingsService.weatherConfig)
+
+  // 外部変更（MoonPhaseSelector/KouSelector等）のdraft同期
+  useEventBusCallback(bus, 'WeatherConfigChanged', (event: { weather: WeatherConfig }) => {
+    setDraft(prev => {
+      // 自身が発行したイベントは無視（timestampやweather参照が同一）
+      if (prev === event.weather) return prev
+      return { ...prev, ...event.weather }
+    })
+  })
 
   function applyConfig(next: WeatherConfig): void {
     bus.publish('WeatherConfigChanged', {

@@ -16,6 +16,7 @@ export interface MoonEffect {
     moonIsVisible: boolean
     moonOpacity: number
     moonSunAngle: number
+    skyColor: number
   }): void
   dispose(): void
 }
@@ -66,21 +67,29 @@ export function createMoonEffect(scene: THREE.Scene): MoonEffect {
   let lastPhaseDeg = -1
   let lastIllumination = -1
   let lastRotation = -999
+  let lastSkyColor = -1
 
-  function updateTexture(phaseDeg: number, illumination: number, rotationRad: number): void {
+  function updateTexture(phaseDeg: number, illumination: number, rotationRad: number, skyColor: number): void {
     // 変化が小さい場合はスキップ（パフォーマンス最適化）
     if (
       Math.abs(phaseDeg - lastPhaseDeg) < 1 &&
       Math.abs(illumination - lastIllumination) < 0.01 &&
-      Math.abs(rotationRad - lastRotation) < 0.02
+      Math.abs(rotationRad - lastRotation) < 0.02 &&
+      skyColor === lastSkyColor
     ) {
       return
     }
     lastPhaseDeg = phaseDeg
     lastIllumination = illumination
     lastRotation = rotationRad
+    lastSkyColor = skyColor
 
-    const pixels = generateMoonPhasePixels(phaseDeg, MOON_TEXTURE_SIZE, illumination, rotationRad)
+    const darkTintRGB: [number, number, number] = [
+      (skyColor >> 16) & 0xff,
+      (skyColor >> 8) & 0xff,
+      skyColor & 0xff,
+    ]
+    const pixels = generateMoonPhasePixels(phaseDeg, MOON_TEXTURE_SIZE, illumination, rotationRad, darkTintRGB)
     const imageData = new ImageData(pixels, MOON_TEXTURE_SIZE, MOON_TEXTURE_SIZE)
     ctx.putImageData(imageData, 0, 0)
     canvasTexture.needsUpdate = true
@@ -88,7 +97,7 @@ export function createMoonEffect(scene: THREE.Scene): MoonEffect {
 
   return {
     update(params) {
-      const { moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity, moonSunAngle } = params
+      const { moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity, moonSunAngle, skyColor } = params
 
       if (!moonIsVisible || moonOpacity <= 0) {
         moonMesh.visible = false
@@ -103,8 +112,8 @@ export function createMoonEffect(scene: THREE.Scene): MoonEffect {
       // CircleGeometryの正面をカメラ（原点付近）に向ける
       moonMesh.lookAt(0, 0, 0)
 
-      // テクスチャ更新（moonSunAngleで明暗境界を太陽方向に回転）
-      updateTexture(moonPhaseDeg, moonIllumination, moonSunAngle)
+      // テクスチャ更新（moonSunAngleで明暗境界を太陽方向に回転、skyColorで暗部ティント）
+      updateTexture(moonPhaseDeg, moonIllumination, moonSunAngle, skyColor)
 
       // 不透明度
       moonMaterial.opacity = moonOpacity

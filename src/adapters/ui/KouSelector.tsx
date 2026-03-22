@@ -77,24 +77,25 @@ export function KouSelector({
       <div className={styles.row}>
         <span className={styles.label}>season</span>
         <span className={styles.label}>
-          #{pad2(selectedIndex + 1)}{(() => { const r = rangeMap.get(selectedIndex); return r ? ` | ${formatDateRange(r)}` : '' })()}
+          {selected.eclipticLonStart}°{(() => { const r = rangeMap.get(selectedIndex); return r ? ` | ${formatDateRange(r)}` : '' })()}
         </span>
       </div>
       <div className={styles.row}>
         <span className={styles.detail}>{selected.nameEn}</span>
       </div>
+      <div className={styles.detailLarge}>
+        {selected.solarTermName} {selected.phaseNameJa}
+      </div>
+      <div className={styles.detailLarge}>
+        {selected.nameJa}
+      </div>
+      <div className={styles.detail}>
+        （{selected.readingJa}）
+      </div>
+      <div className={styles.detail}>
+        {selected.description}
+      </div>
       <div className={styles.row}>
-        <button
-          className={`${styles.autoBtn}${autoKou ? ' active' : ''}`}
-          onClick={() => onAutoToggle(!autoKou)}
-          title={autoKou ? 'Auto (on)' : 'Auto (off)'}
-          data-testid="kou-auto"
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
-          </svg>
-        </button>
         <button
           className={styles.listBtn}
           onClick={handleOpenList}
@@ -110,21 +111,6 @@ export function KouSelector({
             <line x1="3" y1="18" x2="3.01" y2="18" />
           </svg>
         </button>
-      </div>
-      <div className={styles.detailLarge}>
-        {selected.solarTermName} {selected.phaseNameJa}
-      </div>
-      <div className={styles.detailLarge}>
-        {selected.nameJa}
-      </div>
-      <div className={styles.detail}>
-        （{selected.readingJa}）
-      </div>
-      <div className={styles.detail}>
-        {selected.description}
-      </div>
-      <div className={styles.detail}>
-        λ={selected.eclipticLonStart}°
       </div>
       {showList && (() => {
         const detailIdx = hoveredIndex ?? previewIndex
@@ -146,6 +132,7 @@ export function KouSelector({
                 <table className={styles.listTable} style={{ width: '100%' }}>
                   <colgroup>
                     <col style={{ width: 32 }} />
+                    <col style={{ width: 40 }} />
                     <col style={{ width: 130 }} />
                     <col style={{ width: 50 }} />
                     <col />
@@ -153,6 +140,7 @@ export function KouSelector({
                   <thead>
                     <tr>
                       <th>#</th>
+                      <th>λ</th>
                       <th>日付範囲</th>
                       <th>節気</th>
                       <th>候名</th>
@@ -164,6 +152,7 @@ export function KouSelector({
                 <table className={styles.listTable} style={{ width: '100%' }}>
                   <colgroup>
                     <col style={{ width: 32 }} />
+                    <col style={{ width: 40 }} />
                     <col style={{ width: 130 }} />
                     <col style={{ width: 50 }} />
                     <col />
@@ -183,6 +172,7 @@ export function KouSelector({
                           onMouseLeave={() => setHoveredIndex(null)}
                         >
                           <td>{k.index + 1}</td>
+                          <td>{k.eclipticLonStart}°</td>
                           <td>{range ? formatDateRange(range) : ''}</td>
                           <td>{k.solarTermName}</td>
                           <td>{k.nameJa}</td>
@@ -225,6 +215,14 @@ export function KouSelector({
               data-testid="kou-list-close"
             >
               ✕
+            </button>
+            <button
+              className={styles.listCloseBtn}
+              style={{ left: 'auto', right: 10 }}
+              onClick={() => { onAutoToggle(true); setShowList(false); setPreviewIndex(null) }}
+              data-testid="kou-list-auto"
+            >
+              Auto
             </button>
           </div>,
           document.body
