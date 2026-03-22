@@ -7,6 +7,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- ギャラリーモードボタンを画面左下から右下に移動（WeatherボタンとFureaiボタンの間の高さに配置）
+
 ## [0.13.5] - 2026-03-21
 
 ### Fixed

@@ -191,7 +191,7 @@ EventBus（UI/インフラ通知）:
 - `ui/CompactHeader.tsx` — コンパクトヘッダーコンポーネント。タイトル「Pomodoro Pet」+時計表示+children prop対応。createPortalでdocument.bodyに描画。OverlayFureaiとOverlayGalleryで共用。OverlayFureaiではchildrenにBiorhythmChart+EmotionIndicator+CharacterNameEditorを配置
 - `ui/GalleryTopBar.tsx` — ギャラリーモード切替タブバー。Clips/States/Rulesの3モード。GalleryMode型をexport。createPortalでdocument.bodyに描画
 - `ui/GallerySideBar.tsx` — ギャラリーアニメーション選択サイドバー。GallerySideBarItem型（key/label/description）。createPortalでdocument.bodyに描画
-- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面左下のグリッドSVGアイコン（`bottom: 280`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
+- `ui/GalleryEntryButton.tsx` — ギャラリーモード遷移ボタン。画面右下のグリッドSVGアイコン（`bottom: 168`）。onClick propsで動作を外部から制御。createPortalでdocument.bodyに描画
 - `ui/GalleryExitButton.tsx` — ギャラリーモードからfreeモードへの戻るボタン。←矢印アイコン
 - `ui/HeartEffect.tsx` — 餌やり成功時のハートパーティクルエフェクト。createPortal+SVGハート+floatUpアニメーション
 - `ui/AboutContent.tsx` — About画面（`data-testid="about-content"`）。IPC経由でバージョン情報+THIRD_PARTY_LICENSES.txt取得。PolyForm Noncommercial 1.0.0表示。×ボタンで設定パネルに戻る

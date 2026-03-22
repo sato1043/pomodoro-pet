@@ -79,7 +79,7 @@
 
 | # | 機能名 | 実装箇所 | 種別 | FeatureName | 概要 |
 |---|---|---|---|---|---|
-| 81 | ギャラリーモード開始 | GalleryEntryButton.tsx | 操作 | gallery | 左下グリッドアイコンで遷移 |
+| 81 | ギャラリーモード開始 | GalleryEntryButton.tsx | 操作 | gallery | 右下グリッドアイコンで遷移 |
 | 82 | ギャラリーモード終了 | GalleryExitButton.tsx | 操作 | gallery | ←矢印で戻る |
 | 83 | クリップモード一覧 | OverlayGallery.tsx | 操作 | gallery | 13クリップFBXアニメーション個別再生 |
 | 84 | 状態モード一覧 | OverlayGallery.tsx | 操作 | gallery | 11状態アニメーション個別再生（loopオーバーライド対応） |
