@@ -848,22 +848,26 @@ function computeLightDirection(
 ): { position: { x: number; y: number; z: number }; color: number; intensity: number }
 ```
 
-#### 方位角・高度角→3Dベクトル変換
+#### 天球座標→シーン座標変換（CelestialMapping）
+
+天球座標系をThree.jsシーン座標系から分離し、`celestialToScene()`で統一変換する。詳細は [celestial-mapping-design.md](celestial-mapping-design.md) を参照。
 
 ```typescript
-function celestialToDirection(azimuth: number, altitude: number): { x: number; y: number; z: number } {
-  // x = -cos(altitude) * sin(azimuth)  （東西方向）
-  // y = sin(altitude)                   （高さ）
-  // z = -cos(altitude) * cos(azimuth)   （南北方向）
+// CelestialMapping.ts
+function celestialToScene(coord: CelestialCoordinate, mapping: CelestialMapping): Vec3 {
+  const sceneAzDeg = (coord.azimuth - mapping.viewDirection) * mapping.azimuthCompression
+  // viewDirection=180（南向き）, azimuthCompression=0.5（180°→90°圧縮）
 }
 ```
+
+太陽・月・ライティングの全てが同一変換を通るため、空間的整合性が保証される。
 
 #### 光源切替ロジック
 
 ```
 太陽altitude > 0°:
   → 主光源 = 太陽
-  → position = celestialToDirection(solar.azimuth, solar.altitude)
+  → position = celestialToScene({azimuth: solar.azimuth, altitude: solar.altitude}, mapping)
   → color = 暖色系 (0xfff4e6〜0xffffff、高度角で変化)
   → intensity = sin(solar.altitude * PI/180) * peakIntensity
 
@@ -874,7 +878,7 @@ function celestialToDirection(azimuth: number, altitude: number): { x: number; y
 太陽altitude < -6° (夜):
   → lunar.isAboveHorizon = true:
     → 主光源 = 月
-    → position = celestialToDirection(lunar.azimuth, lunar.altitude)
+    → position = celestialToScene({azimuth: lunar.azimuth, altitude: lunar.altitude}, mapping)
     → color = 月光色 (0x8899bb、青白い)
     → intensity = lunar.illuminationFraction * 0.4
   → lunar.isAboveHorizon = false:

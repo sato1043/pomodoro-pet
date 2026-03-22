@@ -6,6 +6,7 @@ import type { ScenePresetName } from './ScenePreset'
 import type { WeatherDecision } from './WeatherDecision'
 import { lerpFloat, lerpHexColor } from './ThemeLerp'
 import { temperatureToGroundColor } from './ClimateData'
+import { celestialToScene, computeMoonSunAngle, DEFAULT_CELESTIAL_MAPPING, type CelestialMapping } from './CelestialMapping'
 
 // --- ヘルパー ---
 
@@ -112,7 +113,8 @@ export function computeThemeFromCelestial(
   weatherDecision: WeatherDecision,
   estimatedTempC: number,
   scenePreset: ScenePresetName,
-  avgPrecipMm: number = 5
+  avgPrecipMm: number = 5,
+  mapping: CelestialMapping = DEFAULT_CELESTIAL_MAPPING
 ): EnvironmentThemeParams {
   const { altitude } = solar
   const weather = weatherDecision.weather
@@ -192,23 +194,16 @@ export function computeThemeFromCelestial(
   // 12. hemiIntensity
   const hemiIntensity = ambientIntensity * 0.85
 
-  // 14. sunPosition: ダミー値。EnvironmentSimulationServiceでcomputeLightDirectionの結果で上書き
+  // 14. sunPosition: celestialToSceneで天球→シーン座標に統一変換（ダミー値を廃止）
+  // ライティング用sunPositionは後段のcomputeLightDirectionで上書きされる
   const sunPosition = { x: 0, y: 10, z: 0 }
 
-  // 15-19. 月データ5フィールド
-  // azimuthをカメラ視野（北方向=350°中心）にリマップ（3Dオブジェクト表示用。ライティングは実azimuth）
-  // 符号反転: 東(90°)→画面左、西(270°)→画面右（太陽の動きと一致）
-  const MOON_AZ_CENTER = 0
-  const MOON_AZ_RANGE = 50
-  const normalizedAz = (((lunar.azimuth % 360) + 360) % 360) / 360 // 0〜1
-  const displayAzimuth = MOON_AZ_CENTER - (normalizedAz - 0.5) * MOON_AZ_RANGE
-  // 表示高度: 実高度を画面上半分（18°〜33°）にリマップ
-  const MOON_ALT_MIN = 22
-  const MOON_ALT_MAX = 36
-  const clampedAlt = Math.max(0, Math.min(90, lunar.altitude))
-  const displayAltitude = MOON_ALT_MIN + (MOON_ALT_MAX - MOON_ALT_MIN) * (clampedAlt / 90)
-  const moonDir = celestialToDirection(displayAzimuth, displayAltitude)
-  const moonDistance = 300
+  // 15-20. 月データ6フィールド — celestialToSceneで統一変換（個別リマップ廃止）
+  const moonDir = celestialToScene(
+    { azimuth: lunar.azimuth, altitude: lunar.altitude },
+    mapping
+  )
+  const moonDistance = 500
   const moonPosition = {
     x: moonDir.x * moonDistance,
     y: moonDir.y * moonDistance,
@@ -224,6 +219,16 @@ export function computeThemeFromCelestial(
   const moonWeatherDim = MOON_WEATHER_DIMMING[weather]
   const moonOpacity = horizonFade * moonWeatherDim
 
+  // moonSunAngle: シーン座標系での太陽→月方向（テクスチャ回転用）
+  const sunSceneDir = celestialToScene(
+    { azimuth: solar.azimuth, altitude: solar.altitude },
+    mapping
+  )
+  const moonSunAngle = computeMoonSunAngle(
+    { x: sunSceneDir.x, y: sunSceneDir.y },
+    { x: moonDir.x, y: moonDir.y }
+  )
+
   const params: EnvironmentThemeParams = {
     skyColor, fogColor, fogNear, fogFar,
     ambientColor, ambientIntensity,
@@ -231,6 +236,7 @@ export function computeThemeFromCelestial(
     sunColor, sunIntensity, sunPosition,
     groundColor, exposure,
     moonPosition, moonPhaseDeg, moonIllumination, moonIsVisible, moonOpacity,
+    moonSunAngle,
   }
 
   return applyPresetOverride(params, scenePreset)
@@ -252,16 +258,17 @@ export function celestialToDirection(
   }
 }
 
-/** 太陽・月の位置からDirectionalLightのパラメータを生成 */
+/** 太陽・月の位置からDirectionalLightのパラメータを生成。celestialToSceneで統一変換。 */
 export function computeLightDirection(
   solar: SolarPosition,
-  lunar: LunarPosition
+  lunar: LunarPosition,
+  mapping: CelestialMapping = DEFAULT_CELESTIAL_MAPPING
 ): { position: { x: number; y: number; z: number }; color: number; intensity: number } {
   const weather: WeatherType = 'sunny' // 光方向は天気に依存しない（強度は別途computeThemeFromCelestialで計算）
 
   if (solar.altitude > 0) {
     // 日中: 太陽が主光源
-    const position = celestialToDirection(solar.azimuth, solar.altitude)
+    const position = celestialToScene({ azimuth: solar.azimuth, altitude: solar.altitude }, mapping)
     const color = altitudeToSunColor(solar.altitude)
     const intensity = Math.sin(solar.altitude * Math.PI / 180) * PEAK_SUN_INTENSITY[weather]
     return { position, color, intensity }
@@ -271,12 +278,12 @@ export function computeLightDirection(
     // 薄明帯: 太陽光と月光のクロスフェード
     const twilightFactor = rangedSmoothstep(solar.altitude, -6, 0)
 
-    const sunDir = celestialToDirection(solar.azimuth, Math.max(0.1, solar.altitude))
+    const sunDir = celestialToScene({ azimuth: solar.azimuth, altitude: Math.max(0.1, solar.altitude) }, mapping)
     const sunColor = altitudeToSunColor(Math.max(0.1, solar.altitude))
     const sunIntensity = twilightFactor * 0.3
 
     if (lunar.isAboveHorizon) {
-      const moonDir = celestialToDirection(lunar.azimuth, lunar.altitude)
+      const moonDir = celestialToScene({ azimuth: lunar.azimuth, altitude: lunar.altitude }, mapping)
       const moonIntensity = lunar.illuminationFraction * 0.8 * (1 - twilightFactor)
       return {
         position: {
@@ -294,7 +301,7 @@ export function computeLightDirection(
 
   // 夜間
   if (lunar.isAboveHorizon) {
-    const position = celestialToDirection(lunar.azimuth, lunar.altitude)
+    const position = celestialToScene({ azimuth: lunar.azimuth, altitude: lunar.altitude }, mapping)
     return {
       position,
       color: MOONLIGHT_COLOR,

@@ -31,6 +31,7 @@ const THEME_A: EnvironmentThemeParams = {
   moonIllumination: 0,
   moonIsVisible: false,
   moonOpacity: 0,
+  moonSunAngle: 0,
 }
 
 const THEME_B: EnvironmentThemeParams = {
@@ -53,6 +54,7 @@ const THEME_B: EnvironmentThemeParams = {
   moonIllumination: 1.0,
   moonIsVisible: true,
   moonOpacity: 1.0,
+  moonSunAngle: Math.PI / 4,
 }
 
 describe('ThemeLerp', () => {

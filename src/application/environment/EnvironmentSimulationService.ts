@@ -101,16 +101,16 @@ function simulateSolarForTimeOfDay(timeOfDay: TimeOfDay, realSolar: SolarPositio
   }
 }
 
-function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, altitudeOverride?: number): LunarPosition {
+function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, realLunar: LunarPosition | null, altitudeOverride?: number): LunarPosition {
+  // phaseDegとilluminationは実天文データを引き継ぐ（現実の月齢を反映）
+  const phaseDeg = realLunar?.phaseDeg ?? 90
+  const illumination = realLunar?.illuminationFraction ?? 0.5
+
   if (timeOfDay === 'night') {
     const alt = altitudeOverride ?? 33
     // 高度→方位角連動: 月が東寄り(150°)から西寄り(210°)へ向かう（太陽と同じ左→右）
-    // CelestialTheme.tsのazimuthリマップが画面内に収める
     const altFraction = Math.max(0, Math.min(1, (alt - 5) / (33 - 5)))
     const azimuth = 150 + (210 - 150) * altFraction // 5°→150°(左寄り), 33°→210°(右寄り)
-    // 高度→月齢連動: 低い→半月、高い→満月（見栄えする面積を確保）
-    const phaseDeg = 90 + (180 - 90) * altFraction        // 90°(半月)→180°(満月)
-    const illumination = 0.50 + (1.0 - 0.50) * altFraction // 0.50→1.0
     return {
       altitude: alt,
       azimuth,
@@ -122,8 +122,8 @@ function simulateLunarForTimeOfDay(timeOfDay: TimeOfDay, altitudeOverride?: numb
   return {
     altitude: -10,
     azimuth: 0,
-    phaseDeg: 180,
-    illuminationFraction: 0.5,
+    phaseDeg,
+    illuminationFraction: illumination,
     isAboveHorizon: false,
   }
 }
@@ -262,16 +262,16 @@ export function createEnvironmentSimulationService(
       ? simulateSolarForTimeOfDay(timeOfDayOverride, cachedSolar)
       : cachedSolar
     const themeLunar = timeOfDayOverride
-      ? simulateLunarForTimeOfDay(timeOfDayOverride, moonAltitudeOverride ?? undefined)
+      ? simulateLunarForTimeOfDay(timeOfDayOverride, cachedLunar, moonAltitudeOverride ?? undefined)
       : moonAltitudeOverride !== null
-        ? simulateLunarForTimeOfDay('night', moonAltitudeOverride)
+        ? simulateLunarForTimeOfDay('night', cachedLunar, moonAltitudeOverride)
         : cachedLunar
 
     const themeParams = computeThemeFromCelestial(
       themeSolar, themeLunar, effectiveWeather, currentEstimatedTempC, scenePreset, currentAvgPrecipMm
     )
 
-    // Step 6: 光源方向
+    // Step 6: 光源方向（celestialToSceneで統一変換）
     const lightDir = computeLightDirection(themeSolar, themeLunar)
 
     // Step 7: テーマ遷移

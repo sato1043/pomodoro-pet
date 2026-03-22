@@ -78,6 +78,7 @@ export function lerpThemeParams(
     moonIllumination: lerpFloat(from.moonIllumination, to.moonIllumination, t),
     moonIsVisible: t < 0.5 ? from.moonIsVisible : to.moonIsVisible,
     moonOpacity: lerpFloat(from.moonOpacity, to.moonOpacity, t),
+    moonSunAngle: lerpFloat(from.moonSunAngle, to.moonSunAngle, t),
   }
 }
 
@@ -105,7 +106,8 @@ export function themeParamsEqual(a: EnvironmentThemeParams, b: EnvironmentThemeP
     a.moonPhaseDeg === b.moonPhaseDeg &&
     a.moonIllumination === b.moonIllumination &&
     a.moonIsVisible === b.moonIsVisible &&
-    a.moonOpacity === b.moonOpacity
+    a.moonOpacity === b.moonOpacity &&
+    a.moonSunAngle === b.moonSunAngle
   )
 }
 
